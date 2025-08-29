@@ -1,0 +1,61 @@
+{
+	"name": "qrbit",
+	"version": "0.1.0",
+	"description": "A fast QR code generator with logo embedding support",
+	"main": "dist/qrbit.js",
+	"types": "dist/qrbit.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "napi build dist --platform --release --js native.js && tsc",
+		"build:debug": "napi build dist --platform --js native.js && tsc",
+		"build:ts": "tsc",
+		"prepublishOnly": "napi prepublish -t npm",
+		"lint": "biome check --write --error-on-warnings src/ test/",
+		"test": "pnpm lint && vitest run --coverage",
+		"artifacts": "napi artifacts",
+		"version": "napi version"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.2",
+		"@napi-rs/cli": "^2.18.4",
+		"@types/node": "^20.10.0",
+		"@vitest/coverage-v8": "^1.0.0",
+		"tsup": "^8.0.0",
+		"typescript": "^5.3.0",
+		"vitest": "^1.0.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jaredwray/qrbit.git"
+	},
+	"keywords": [
+		"qr",
+		"qrcode",
+		"generator",
+		"svg",
+		"png",
+		"logo",
+		"rust",
+		"napi"
+	],
+	"author": "Jared Wray <me@jaredwray.com>",
+	"license": "MIT",
+	"napi": {
+		"name": "qrbit",
+		"triples": {
+			"defaults": true,
+			"additional": [
+				"x86_64-unknown-linux-musl",
+				"aarch64-unknown-linux-gnu",
+				"i686-pc-windows-msvc",
+				"armv7-unknown-linux-gnueabihf",
+				"aarch64-apple-darwin",
+				"aarch64-pc-windows-msvc",
+				"aarch64-unknown-linux-musl",
+				"x86_64-unknown-freebsd"
+			]
+		}
+	}
+}

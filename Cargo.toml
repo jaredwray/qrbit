@@ -1,0 +1,25 @@
+[package]
+name = "qrbit"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jared Wray <me@jaredwray.com>"]
+description = "A fast QR code generator with logo embedding support"
+license = "MIT"
+repository = "https://github.com/jaredwray/qrbit"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+qrcode = "0.14"
+image = { version = "0.25", features = ["png", "jpeg"] }
+imageproc = "0.25"
+svg = "0.17"
+napi = { version = "2.16", default-features = false, features = ["napi4"] }
+napi-derive = "2.16"
+
+[build-dependencies]
+napi-build = "2.1"
+
+[profile.release]
+lto = true

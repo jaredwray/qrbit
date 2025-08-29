@@ -107,6 +107,14 @@ dist
 # Docusaurus cache and generated files
 .docusaurus
 
+# Rust and NAPI specific
+*.node
+dist/
+target/
+.cargo-cache
+npm/
+test-logo.png
+
 # Serverless directories
 .serverless/
 
@@ -137,3 +145,6 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# AI
+.claude
