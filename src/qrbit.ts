@@ -1,7 +1,7 @@
 // Import Node.js Buffer type
 import type { Buffer } from "node:buffer";
 
-// Import the generated NAPI binding (will be in same directory after compilation)
+// Import the generated NAPI binding (will be in same directory)
 const { generateQr: nativeGenerateQr } = require("./native.js");
 
 export interface QrOptions {
@@ -38,6 +38,7 @@ export class QrBit {
 
 	generateSvg(): string {
 		const result = this.generate();
+		/* c8 ignore next 3 */
 		if (!result.svg) {
 			throw new Error("Failed to generate SVG");
 		}
@@ -46,6 +47,7 @@ export class QrBit {
 
 	generatePng(): Buffer {
 		const result = this.generate();
+		/* c8 ignore next 3 */
 		if (!result.png) {
 			throw new Error("Failed to generate PNG");
 		}

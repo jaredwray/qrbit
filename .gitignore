@@ -148,3 +148,7 @@ vite.config.ts.timestamp-*
 
 # AI
 .claude
+
+# build
+src/native.js
+src/native.d.ts

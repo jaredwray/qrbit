@@ -8,11 +8,11 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "napi build dist --platform --release --js native.js && tsc",
-		"build:debug": "napi build dist --platform --js native.js && tsc",
+		"build": "napi build src --platform --release --js native.js --dts native.d.ts && tsc && cp src/qrbit.*.node dist/ && cp src/native.* dist/",
+		"build:debug": "napi build src --platform --js native.js --dts native.d.ts && tsc && cp src/qrbit.*.node dist/ && cp src/native.* dist/",
 		"build:ts": "tsc",
 		"prepublishOnly": "napi prepublish -t npm",
-		"lint": "biome check --write --error-on-warnings src/ test/",
+		"lint": "biome check --write --error-on-warnings src/qrbit.ts test/",
 		"test": "pnpm lint && vitest run --coverage",
 		"artifacts": "napi artifacts",
 		"version": "napi version"

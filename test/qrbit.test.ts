@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { generatePng, generateQr, generateSvg, QrBit } from "../dist/qrbit";
+import { generatePng, generateQr, generateSvg, QrBit } from "../src/qrbit";
 
 // Create a test logo for logo embedding tests
 const testLogoPath = path.join(__dirname, "test-logo.png");
@@ -226,6 +226,12 @@ describe("Error Handling", () => {
 
 	it("should handle empty text", () => {
 		expect(() => new QrBit({ text: "" })).not.toThrow();
+	});
+
+	it("should test setLogo with sizeRatio parameter", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		const result = qr.setLogo("test.png", 0.5);
+		expect(result).toBeInstanceOf(QrBit);
 	});
 });
 
