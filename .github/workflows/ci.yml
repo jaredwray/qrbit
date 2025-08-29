@@ -120,15 +120,13 @@ jobs:
         shell: bash
       - name: Install pnpm
         uses: pnpm/action-setup@v2
-        with:
-          version: 8
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Setup node x86
         uses: actions/setup-node@v4
         if: matrix.settings.target == 'i686-pc-windows-msvc'
         with:
-          node-version: 18
+          node-version: 20
           architecture: x86
       - name: Build in docker
         uses: addnab/docker-run-action@v3
@@ -161,8 +159,8 @@ jobs:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
         node:
-          - '18'
           - '20'
+          - '22'
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
@@ -196,8 +194,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - '18'
           - '20'
+          - '22'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -208,8 +206,6 @@ jobs:
           cache: pnpm
       - name: Install pnpm
         uses: pnpm/action-setup@v2
-        with:
-          version: 8
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Download artifacts
@@ -231,8 +227,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - '18'
           - '20'
+          - '22'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -264,8 +260,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - '18'
           - '20'
+          - '22'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
