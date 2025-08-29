@@ -266,9 +266,4 @@ describe("Edge Cases", () => {
 		expect(result.width).toBe(50);
 		expect(result.height).toBe(50);
 	});
-
-	it("should handle zero logo size ratio", () => {
-		// Skip logo test if image processing is having issues
-		expect(true).toBe(true);
-	});
 });
