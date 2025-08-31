@@ -146,6 +146,9 @@ test-logo.png
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# PNPM
+pnpm-lock.yaml
+
 # AI
 .claude
 

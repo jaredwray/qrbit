@@ -8,10 +8,12 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "napi build src --platform --release --js native.js --dts native.d.ts && tsc && cp src/qrbit.*.node dist/ && cp src/native.* dist/",
-		"build:debug": "napi build src --platform --js native.js --dts native.d.ts && tsc && cp src/qrbit.*.node dist/ && cp src/native.* dist/",
+		"build:napi": "napi build src --platform --release --js native.js --dts native.d.ts",
+		"build": "pnpm build:clean && pnpm build:napi && pnpm build:ts && pnpm build:copy",
+		"build:debug": "napi build src --platform --js native.js --dts native.d.ts && pnpm build:ts && pnpm build:copy",
 		"build:ts": "tsc",
-		"prepublishOnly": "napi prepublish -t npm",
+		"build:copy": "cp src/qrbit.*.node dist/ && cp src/native.* dist/",
+		"build:clean": "rimraf dist ./src/*.node ./src/native.* target",
 		"lint": "biome check --write --error-on-warnings src/qrbit.ts test/",
 		"test": "pnpm lint && vitest run --coverage",
 		"artifacts": "napi artifacts",
@@ -57,5 +59,8 @@
 				"x86_64-unknown-freebsd"
 			]
 		}
+	},
+	"dependencies": {
+		"rimraf": "^6.0.1"
 	}
 }
