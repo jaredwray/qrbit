@@ -34,3 +34,6 @@ jobs:
 
       - name: Run Tests
         run: pnpm test:ci
+        env:
+          RUST_BACKTRACE: full
+          RUST_LOG: debug
