@@ -22,7 +22,7 @@
 		"build": "pnpm build:clean && pnpm build:napi:debug && pnpm build:ts && pnpm build:copy",
 		"build:ts": "tsup",
 		"build:copy": "cp src/qrbit.*.node dist/ && cp src/native.* dist/",
-		"build:clean": "rimraf dist ./src/*.node ./src/native.* target",
+		"build:clean": "rimraf dist && rimraf \"src/*.node\" && rimraf \"src/native.*\" && rimraf target",
 		"lint": "biome check --write --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "biome check --error-on-warnings && vitest run --coverage",
