@@ -22,8 +22,9 @@
 		"build:ts": "tsup",
 		"build:copy": "cp src/qrbit.*.node dist/ && cp src/native.* dist/",
 		"build:clean": "rimraf dist ./src/*.node ./src/native.* target",
-		"lint": "biome check --write --error-on-warnings src/qrbit.ts test/",
+		"lint": "biome check --write --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
+		"test:ci": "biome check --error-on-warnings && vitest run --coverage",
 		"artifacts": "napi artifacts",
 		"version": "napi version"
 	},
