@@ -41,11 +41,8 @@ jobs:
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
       
-      - name: Run Release Build
-        run: pnpm build:release:linux
-
       - name: Run Tests
-        run: pnpm test:ci
+        run: RUST_BACKTRACE=full pnpm build:release:debug-symbols && pnpm test:ci
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

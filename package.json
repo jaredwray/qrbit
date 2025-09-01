@@ -19,6 +19,8 @@
 		"build:napi:release": "napi build src --platform --release --js native.js --dts native.d.ts",
 		"build:release": "pnpm build:napi:release && pnpm build:ts && pnpm build:copy",
 		"build:release:linux": "napi build src --platform --release --target x86_64-unknown-linux-gnu --js native.js --dts native.d.ts && pnpm build:ts && pnpm build:copy",
+		"build:release:debug-symbols": "CARGO_PROFILE_RELEASE_DEBUG=true pnpm build:release",
+		"build:release:safe": "napi build src --platform --release --cargo-flags='--profile release-safe' --js native.js --dts native.d.ts && pnpm build:ts && pnpm build:copy",
 		"build:napi:debug": "napi build src --platform --js native.js --dts native.d.ts",
 		"build": "pnpm build:clean && pnpm build:napi:debug && pnpm build:ts && pnpm build:copy",
 		"build:ts": "tsup",

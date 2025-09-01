@@ -23,3 +23,13 @@ napi-build = "2.1"
 
 [profile.release]
 lto = true
+opt-level = 2
+debug = false
+panic = "abort"
+
+[profile.release-safe]
+inherits = "release"
+lto = false
+opt-level = 1
+overflow-checks = true
+debug = true
