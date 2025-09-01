@@ -1,4 +1,4 @@
-name: release
+name: platform-build
 
 on:
   workflow_dispatch:
@@ -8,8 +8,8 @@ on:
     branches: [ main ]
 
 jobs:
-  build-release:
-    name: release
+  build-platform-artifacts:
+    name: build-platform-artifacts
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -59,4 +59,3 @@ jobs:
           name: qrbit-${{ matrix.os }}
           path: |
             dist/*.node
-          retention-days: 60
