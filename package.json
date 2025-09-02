@@ -16,9 +16,9 @@
 		"dist"
 	],
 	"scripts": {
-		"build:napi:release": "napi build --platform --release --output-dir src --js native.js --dts native.d.ts",
+		"build:napi:release": "napi build --platform --release --esm --output-dir src --js native.js --dts native.d.ts",
 		"build:release": "pnpm build:napi:release && pnpm build:ts && pnpm build:copy",
-		"build:napi:debug": "napi build --platform --output-dir src --js native.js --dts native.d.ts",
+		"build:napi:debug": "napi build --platform --esm --output-dir src --js native.js --dts native.d.ts",
 		"build": "pnpm build:clean && pnpm build:napi:debug && pnpm build:ts && pnpm build:copy",
 		"build:ts": "tsup",
 		"build:copy": "cp src/qrbit.*.node dist/ && cp src/native.* dist/",
@@ -55,8 +55,7 @@
 	"author": "Jared Wray <me@jaredwray.com>",
 	"license": "MIT",
 	"napi": {
-		"name": "qrbit",
-		"binaryDir": "src",
+		"binaryName": "qrbit",
 		"targets": [
 			"x86_64-pc-windows-msvc",
 			"x86_64-apple-darwin",
