@@ -38,7 +38,7 @@ jobs:
         run: npm install -g pnpm && pnpm install
       
       - name: Run Release Build
-        run: cargo build --release --target 
+        run: pnpm build:release      
 
       - name: Show Dist Files
         run: |
