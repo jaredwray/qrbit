@@ -27,22 +27,18 @@ jobs:
           node-version: 22
 
       # Setup Rust
-      - name: Install Rust (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libssl-dev libfontconfig1-dev libfreetype6-dev libexpat1-dev libjpeg-dev libpng-dev libtiff-dev libwebp-dev
 
-      - name: Install Rust (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install Rust Targets
+        run: rustup target add x86_64-unknown-linux-gnu x86_64-unknown-linux-musl aarch64-unknown-linux-gnu aarch64-unknown-linux-musl
 
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
       
       - name: Run Release Build
-        run: pnpm build:release
+        run: cargo build --release --target 
 
       - name: Show Dist Files
         run: |
@@ -56,10 +52,3 @@ jobs:
 
       - name: Run Tests
         run: pnpm test:ci
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: qrbit-${{ matrix.os }}
-          path: |
-            dist/*.node
