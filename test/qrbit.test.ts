@@ -1,85 +1,7 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { generatePng, generateQr, generateSvg, QrBit } from "../src/qrbit";
 
-// Create a test logo for logo embedding tests
-const testLogoPath = path.join(__dirname, "test-logo.png");
-
-beforeAll(() => {
-	// Create a simple test logo (1x1 PNG) - valid minimal PNG
-	const pngData = Buffer.from([
-		0x89,
-		0x50,
-		0x4e,
-		0x47,
-		0x0d,
-		0x0a,
-		0x1a,
-		0x0a, // PNG signature
-		0x00,
-		0x00,
-		0x00,
-		0x0d,
-		0x49,
-		0x48,
-		0x44,
-		0x52, // IHDR chunk
-		0x00,
-		0x00,
-		0x00,
-		0x01,
-		0x00,
-		0x00,
-		0x00,
-		0x01, // 1x1 dimensions
-		0x08,
-		0x06,
-		0x00,
-		0x00,
-		0x00,
-		0x1f,
-		0x15,
-		0xc4, // RGBA, 8-bit
-		0x89,
-		0x00,
-		0x00,
-		0x00,
-		0x0b,
-		0x49,
-		0x44,
-		0x41, // IDAT chunk
-		0x54,
-		0x78,
-		0x9c,
-		0x62,
-		0x00,
-		0x02,
-		0x00,
-		0x00, // compressed data
-		0x05,
-		0x00,
-		0x01,
-		0x0d,
-		0x0a,
-		0x2d,
-		0xb4,
-		0x00, // end compressed data
-		0x00,
-		0x00,
-		0x00,
-		0x49,
-		0x45,
-		0x4e,
-		0x44,
-		0xae, // IEND chunk
-		0x42,
-		0x60,
-		0x82,
-	]);
-
-	fs.writeFileSync(testLogoPath, pngData);
-});
+//const testLogoPath = path.relative("fixtures", "test_logo.png");
 
 describe("QrBit Class", () => {
 	it("should create a QrBit instance with default options", () => {
@@ -160,15 +82,9 @@ describe("QrBit Class", () => {
 		expect(svg).toContain("rgb(255,0,0)"); // red background
 		expect(svg).toContain("rgb(0,0,255)"); // blue foreground
 	});
-
-	it("should embed logo when logoPath is provided", () => {
-		// Skip logo test if image processing is having issues
-		expect(true).toBe(true);
-	});
 });
 
 describe("Convenience Functions", () => {
-	/*
 	it("should generate QR with generateQr function", () => {
 		const result = generateQr({ text: "Test Message" });
 
@@ -203,9 +119,8 @@ describe("Convenience Functions", () => {
 		expect(svg).toContain('width="110"'); // 100 + 2*5
 		expect(svg).toContain("rgb(255,255,0)"); // yellow background
 	});
-	*/
 });
-/*
+
 describe("Error Handling", () => {
 	it("should handle invalid logo path gracefully", () => {
 		const qr = new QrBit({
@@ -269,4 +184,3 @@ describe("Edge Cases", () => {
 		expect(result.height).toBe(50);
 	});
 });
-*/

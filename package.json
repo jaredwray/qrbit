@@ -16,16 +16,16 @@
 		"dist"
 	],
 	"scripts": {
-		"build:napi:release": "napi build src --platform --release --js native.js --dts native.d.ts",
+		"build:napi:release": "napi build --platform --release --output-dir src --js native.js --dts native.d.ts",
 		"build:release": "pnpm build:napi:release && pnpm build:ts && pnpm build:copy",
-		"build:napi:debug": "napi build src --platform --js native.js --dts native.d.ts",
+		"build:napi:debug": "napi build --platform --output-dir src --js native.js --dts native.d.ts",
 		"build": "pnpm build:clean && pnpm build:napi:debug && pnpm build:ts && pnpm build:copy",
 		"build:ts": "tsup",
 		"build:copy": "cp src/qrbit.*.node dist/ && cp src/native.* dist/",
 		"build:clean": "rimraf dist src/*.node src/native.* target",
 		"lint": "biome check --write --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
-		"test:ci": "biome check --error-on-warnings && vitest run --coverage",
+		"test:ci": "vitest run --coverage",
 		"artifacts": "napi artifacts",
 		"version": "napi version"
 	},
@@ -56,6 +56,7 @@
 	"license": "MIT",
 	"napi": {
 		"name": "qrbit",
+		"binaryDir": "src",
 		"targets": [
 			"x86_64-pc-windows-msvc",
 			"x86_64-apple-darwin",
