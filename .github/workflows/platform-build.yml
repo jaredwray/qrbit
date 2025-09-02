@@ -37,11 +37,6 @@ jobs:
       - name: Run Release Build
         run: pnpm build:release      
 
-      - name: List src
-        run: |
-          echo "Contents of ./src:"
-          ls -alh ./src
-
       - name: Run Tests
         run: pnpm test:ci
 
@@ -50,4 +45,3 @@ jobs:
         with:
           name: qrbit-artifacts-${{ matrix.os }}
           path: dist/*.node
-          overwrite: true
