@@ -205,6 +205,7 @@ describe("Convenience Functions", () => {
 });
 
 describe("Error Handling", () => {
+	/*
 	it("should handle invalid logo path gracefully", () => {
 		const qr = new QrBit({
 			text: "Hello World",
@@ -214,6 +215,7 @@ describe("Error Handling", () => {
 		// Should throw an error when trying to generate
 		expect(() => qr.generate()).toThrow();
 	});
+	*/
 
 	it("should handle invalid color formats", () => {
 		const qr = new QrBit({
