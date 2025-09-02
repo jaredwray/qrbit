@@ -12,8 +12,8 @@ jobs:
     name: build-platform-artifacts
     strategy:
       matrix:
-        os: [ubuntu-latest]
-    
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -30,9 +30,6 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install Rust Targets
-        run: rustup target add x86_64-unknown-linux-gnu x86_64-unknown-linux-musl aarch64-unknown-linux-gnu aarch64-unknown-linux-musl
 
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
@@ -40,15 +37,16 @@ jobs:
       - name: Run Release Build
         run: pnpm build:release      
 
-      - name: Show Dist Files
-        run: |
-          echo "Contents of ./dist:"
-          ls -alh ./dist
-
-      - name: Show Src Files
+      - name: List src
         run: |
           echo "Contents of ./src:"
           ls -alh ./src
 
       - name: Run Tests
         run: pnpm test:ci
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: qrbit-artifacts-${{ matrix.os }}
+          path: dist/
