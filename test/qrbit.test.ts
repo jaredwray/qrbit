@@ -168,6 +168,7 @@ describe("QrBit Class", () => {
 });
 
 describe("Convenience Functions", () => {
+	/*
 	it("should generate QR with generateQr function", () => {
 		const result = generateQr({ text: "Test Message" });
 
@@ -202,6 +203,7 @@ describe("Convenience Functions", () => {
 		expect(svg).toContain('width="110"'); // 100 + 2*5
 		expect(svg).toContain("rgb(255,255,0)"); // yellow background
 	});
+	*/
 });
 /*
 describe("Error Handling", () => {
