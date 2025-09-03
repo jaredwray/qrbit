@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 import { QrBit } from "../src/qrbit";
 
@@ -5,12 +6,14 @@ const testLogoPath = "test/fixtures/test_logo.png";
 
 describe("QrBit Class", () => {
 	it("should create a QrBit instance with default options", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		expect(qr).toBeInstanceOf(QrBit);
 	});
 
 	it("should generate SVG output", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.person.fullName();
+		const qr = new QrBit({ text });
 		const svg = qr.generateSvg();
 
 		expect(typeof svg).toBe("string");
@@ -21,7 +24,8 @@ describe("QrBit Class", () => {
 	});
 
 	it("should generate PNG output", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		const png = qr.generatePng();
 
 		expect(png).toBeInstanceOf(Buffer);
@@ -34,7 +38,8 @@ describe("QrBit Class", () => {
 	});
 
 	it("should generate both SVG and PNG with generate()", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.lorem.paragraph();
+		const qr = new QrBit({ text });
 		const result = qr.generate();
 
 		expect(result).toHaveProperty("svg");
@@ -49,7 +54,8 @@ describe("QrBit Class", () => {
 	});
 
 	it("should support method chaining", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		qr.size = 300;
 		qr.margin = 30;
 		qr.backgroundColor = "#FF0000";
@@ -62,7 +68,7 @@ describe("QrBit Class", () => {
 
 	it("should accept custom size and margin", () => {
 		const qr = new QrBit({
-			text: "Hello World",
+			text: faker.internet.url(),
 			size: 150,
 			margin: 10,
 		});
@@ -74,7 +80,7 @@ describe("QrBit Class", () => {
 
 	it("should accept custom colors", () => {
 		const qr = new QrBit({
-			text: "Hello World",
+			text: faker.internet.url(),
 			backgroundColor: "#FF0000",
 			foregroundColor: "#0000FF",
 		});
@@ -87,15 +93,17 @@ describe("QrBit Class", () => {
 
 describe("QrBit Properties", () => {
 	it("should get and set text property", () => {
-		const qr = new QrBit({ text: "Hello World" });
-		expect(qr.text).toBe("Hello World");
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+		expect(qr.text).toBe(text);
 
 		qr.text = "New Text";
 		expect(qr.text).toBe("New Text");
 	});
 
 	it("should get and set size property", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		expect(qr.size).toBe(200); // default value
 
 		qr.size = 300;
@@ -103,7 +111,8 @@ describe("QrBit Properties", () => {
 	});
 
 	it("should get and set margin property", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		expect(qr.margin).toBe(20); // default value
 
 		qr.margin = 30;
@@ -111,7 +120,8 @@ describe("QrBit Properties", () => {
 	});
 
 	it("should get and set logoPath property", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		expect(qr.logoPath).toBe(""); // default value
 
 		qr.logoPath = "path/to/logo.png";
@@ -119,7 +129,8 @@ describe("QrBit Properties", () => {
 	});
 
 	it("should get and set logoSizeRatio property", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		expect(qr.logoSizeRatio).toBe(0.2); // default value
 
 		qr.logoSizeRatio = 0.5;
@@ -127,7 +138,8 @@ describe("QrBit Properties", () => {
 	});
 
 	it("should get and set backgroundColor property", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		expect(qr.backgroundColor).toBe("#FFFFFF"); // default value
 
 		qr.backgroundColor = "#FF0000";
@@ -135,7 +147,8 @@ describe("QrBit Properties", () => {
 	});
 
 	it("should get and set foregroundColor property", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		expect(qr.foregroundColor).toBe("#000000"); // default value
 
 		qr.foregroundColor = "#0000FF";
@@ -143,8 +156,9 @@ describe("QrBit Properties", () => {
 	});
 
 	it("should initialize with custom values", () => {
+		const text = faker.string.alphanumeric(20);
 		const qr = new QrBit({
-			text: "Custom Text",
+			text,
 			size: 150,
 			margin: 10,
 			logoPath: "logo.png",
@@ -153,7 +167,7 @@ describe("QrBit Properties", () => {
 			foregroundColor: "#FF00FF",
 		});
 
-		expect(qr.text).toBe("Custom Text");
+		expect(qr.text).toBe(text);
 		expect(qr.size).toBe(150);
 		expect(qr.margin).toBe(10);
 		expect(qr.logoPath).toBe("logo.png");
@@ -163,7 +177,8 @@ describe("QrBit Properties", () => {
 	});
 
 	it("should use properties when generating QR code", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		qr.size = 100;
 		qr.margin = 5;
 		qr.backgroundColor = "#FF0000";
@@ -181,8 +196,9 @@ describe("QrBit Properties", () => {
 
 describe("Error Handling", () => {
 	it("should handle invalid logo path gracefully", () => {
+		const text = faker.internet.url();
 		const qr = new QrBit({
-			text: "Hello World",
+			text,
 			logoPath: "/nonexistent/path/logo.png",
 		});
 
@@ -191,8 +207,9 @@ describe("Error Handling", () => {
 	});
 
 	it("should handle invalid color formats", () => {
+		const text = faker.internet.url();
 		const qr = new QrBit({
-			text: "Hello World",
+			text,
 			backgroundColor: "invalid-color",
 		});
 
@@ -204,7 +221,8 @@ describe("Error Handling", () => {
 	});
 
 	it("should test setLogo with sizeRatio parameter", () => {
-		const qr = new QrBit({ text: "Hello World" });
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
 		qr.logoPath = "test.png";
 		qr.logoSizeRatio = 0.5;
 		expect(qr).toBeInstanceOf(QrBit);
@@ -215,7 +233,7 @@ describe("Error Handling", () => {
 	it("should generate QR code with logo using testLogoPath", async () => {
 		console.log("Using logo path:", testLogoPath);
 		const qr = new QrBit({
-			text: "https://jaredwray.com",
+			text: faker.internet.url(),
 			logoPath: testLogoPath,
 		});
 
