@@ -1,7 +1,11 @@
 // Import Node.js Buffer type
 import type { Buffer } from "node:buffer";
 
-import { generateQr as nativeGenerateQr } from "./native.js";
+import {
+	generateQr as nativeGenerateQr,
+	generateQrPng as nativeGenerateQrPng,
+	generateQrSvg as nativeGenerateQrSvg,
+} from "./native.js";
 
 export interface QrOptions {
 	text: string;
@@ -36,21 +40,31 @@ export class QrBit {
 	}
 
 	generateSvg(): string {
-		const result = this.generate();
-		/* c8 ignore next 3 */
-		if (!result.svg) {
-			throw new Error("Failed to generate SVG");
-		}
-		return result.svg;
+		const nativeOptions = {
+			text: this.options.text,
+			size: this.options.size,
+			margin: this.options.margin,
+			logoPath: this.options.logoPath || undefined,
+			logoSizeRatio: this.options.logoSizeRatio,
+			backgroundColor: this.options.backgroundColor,
+			foregroundColor: this.options.foregroundColor,
+		};
+
+		return nativeGenerateQrSvg(nativeOptions);
 	}
 
 	generatePng(): Buffer {
-		const result = this.generate();
-		/* c8 ignore next 3 */
-		if (!result.png) {
-			throw new Error("Failed to generate PNG");
-		}
-		return result.png;
+		const nativeOptions = {
+			text: this.options.text,
+			size: this.options.size,
+			margin: this.options.margin,
+			logoPath: this.options.logoPath || undefined,
+			logoSizeRatio: this.options.logoSizeRatio,
+			backgroundColor: this.options.backgroundColor,
+			foregroundColor: this.options.foregroundColor,
+		};
+
+		return nativeGenerateQrPng(nativeOptions);
 	}
 
 	generate(): QrResult {
@@ -101,14 +115,32 @@ export function generateSvg(
 	text: string,
 	options?: Omit<QrOptions, "text">,
 ): string {
-	const qr = new QrBit({ text, ...options });
-	return qr.generateSvg();
+	const nativeOptions = {
+		text,
+		size: options?.size,
+		margin: options?.margin,
+		logoPath: options?.logoPath,
+		logoSizeRatio: options?.logoSizeRatio,
+		backgroundColor: options?.backgroundColor,
+		foregroundColor: options?.foregroundColor,
+	};
+
+	return nativeGenerateQrSvg(nativeOptions);
 }
 
 export function generatePng(
 	text: string,
 	options?: Omit<QrOptions, "text">,
 ): Buffer {
-	const qr = new QrBit({ text, ...options });
-	return qr.generatePng();
+	const nativeOptions = {
+		text,
+		size: options?.size,
+		margin: options?.margin,
+		logoPath: options?.logoPath,
+		logoSizeRatio: options?.logoSizeRatio,
+		backgroundColor: options?.backgroundColor,
+		foregroundColor: options?.foregroundColor,
+	};
+
+	return nativeGenerateQrPng(nativeOptions);
 }
