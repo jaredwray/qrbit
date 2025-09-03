@@ -27,6 +27,7 @@
 		"lint": "biome check --write --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "vitest run --coverage",
+		"benchmark:common": "tsx benchmark/qrcode-common-svg.ts && tsx benchmark/qrcode-common-png.ts",
 		"benchmark:svg": "tsx benchmark/qrcode-svg.ts",
 		"benchmark:png": "tsx benchmark/qrcode-png.ts",
 		"benchmark:logo": "tsx benchmark/qrcode-logo.ts",
