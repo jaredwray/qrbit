@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generatePng, generateQr, generateSvg, QrBit } from "../src/qrbit";
 
-//const testLogoPath = path.relative("fixtures", "test_logo.png");
+const testLogoPath = "test/fixtures/test_logo.png";
 
 describe("QrBit Class", () => {
 	it("should create a QrBit instance with default options", () => {
@@ -149,6 +149,22 @@ describe("Error Handling", () => {
 		const qr = new QrBit({ text: "Hello World" });
 		const result = qr.setLogo("test.png", 0.5);
 		expect(result).toBeInstanceOf(QrBit);
+	});
+
+	it("should generate QR code with logo using testLogoPath", async () => {
+		console.log("Using logo path:", testLogoPath);
+		const qr = new QrBit({
+			text: "https://jaredwray.com",
+			logoPath: testLogoPath,
+		});
+
+		const result = qr.generate();
+
+		expect(result).toHaveProperty("svg");
+		expect(result).toHaveProperty("png");
+		expect(result.svg).toContain("<svg");
+		expect(result.png).toBeInstanceOf(Buffer);
+		expect(result.png?.length).toBeGreaterThan(0);
 	});
 });
 
