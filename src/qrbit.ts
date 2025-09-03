@@ -1,5 +1,5 @@
-// Import Node.js Buffer type
 import type { Buffer } from "node:buffer";
+import QRCode from "qrcode";
 
 import {
 	generateQr as nativeGenerateQr,
@@ -100,6 +100,19 @@ export class QrBit {
 	}
 
 	public async generateSvg(): Promise<string> {
+		if (!this._logoPath) {
+			return QRCode.toString(this._text, {
+				type: "svg",
+				margin: this._margin,
+				width: this._size,
+				color: { dark: this._foregroundColor, light: this._backgroundColor },
+			});
+		}
+
+		return this.generateSvgNapi();
+	}
+
+	public async generateSvgNapi(): Promise<string> {
 		const nativeOptions = {
 			text: this._text,
 			size: this._size,

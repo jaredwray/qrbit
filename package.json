@@ -42,8 +42,7 @@
 		"@types/node": "^24.3.0",
 		"@types/qrcode": "^1.5.5",
 		"@vitest/coverage-v8": "^3.2.4",
-		"qrcode": "^1.5.4",
-		"tinybench": "^4.1.0",
+		"tinybench": "^5.0.1",
 		"tsup": "^8.5.0",
 		"tsx": "^4.20.5",
 		"typescript": "^5.9.2",
@@ -85,6 +84,7 @@
 		]
 	},
 	"dependencies": {
-		"rimraf": "^6.0.1"
+		"rimraf": "^6.0.1",
+		"qrcode": "^1.5.4"
 	}
 }
