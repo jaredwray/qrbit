@@ -1,6 +1,7 @@
 // biome-ignore lint/correctness/noUnusedImports: used for testing
 import fs from "node:fs";
 import { faker } from "@faker-js/faker";
+import { Cacheable } from "cacheable";
 import { describe, expect, it } from "vitest";
 import { QrBit } from "../src/qrbit";
 
@@ -16,7 +17,7 @@ describe("QrBit Class", () => {
 	it("should generate SVG output", async () => {
 		const text = faker.person.fullName();
 		const qr = new QrBit({ text });
-		const svg = await qr.generateSvg();
+		const svg = await qr.toSvg();
 
 		expect(typeof svg).toBe("string");
 		expect(svg).toContain("<svg");
@@ -28,7 +29,7 @@ describe("QrBit Class", () => {
 	it("should generate SVG output", async () => {
 		const text = faker.person.fullName();
 		const qr = new QrBit({ text, logoPath: testLogoPath });
-		const svg = await qr.generateSvg();
+		const svg = await qr.toSvg();
 
 		expect(typeof svg).toBe("string");
 		expect(svg).toContain("<svg");
@@ -40,7 +41,7 @@ describe("QrBit Class", () => {
 	it("should generate PNG output", async () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
-		const png = await qr.generatePng();
+		const png = await qr.toPng();
 
 		expect(png).toBeInstanceOf(Buffer);
 		expect(png.length).toBeGreaterThan(0);
@@ -99,7 +100,7 @@ describe("QrBit Class", () => {
 			foregroundColor: "#0000FF",
 		});
 
-		const svg = await qr.generateSvg();
+		const svg = await qr.toSvg();
 		expect(svg).toContain("#FF0000"); // red background
 		expect(svg).toContain("#0000FF"); // blue foreground
 	});
@@ -198,7 +199,7 @@ describe("QrBit Properties", () => {
 		qr.backgroundColor = "#FF0000";
 		qr.foregroundColor = "#0000FF";
 
-		const svg = await qr.generateSvg();
+		const svg = await qr.toSvg();
 
 		expect(svg).toContain("#FF0000"); // red background
 		expect(svg).toContain("#0000FF"); // blue foreground
@@ -288,5 +289,77 @@ describe("Edge Cases", () => {
 		const result = await qr.generate();
 		expect(result.width).toBe(50);
 		expect(result.height).toBe(50);
+	});
+});
+
+describe("Caching", () => {
+	it("should be able to set caching to false", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, cache: false });
+
+		expect(qr.cache).toBeUndefined();
+	});
+
+	it("should be able to set caching to true", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, cache: true });
+
+		expect(qr.cache).toBeDefined();
+		expect(qr.cache).toBeInstanceOf(Cacheable);
+	});
+
+	it("should be able to set caching to Cacheable", async () => {
+		const text = faker.internet.url();
+		const cache = new Cacheable();
+		const qr = new QrBit({ text, cache });
+
+		expect(qr.cache).toBeDefined();
+		expect(qr.cache).toBeInstanceOf(Cacheable);
+		expect(qr.cache).toBe(cache);
+	});
+
+	it("should be able to set the cache property to Cacheable", async () => {
+		const text = faker.internet.url();
+		const cache = new Cacheable();
+		const qr = new QrBit({ text, cache: false });
+		expect(qr.cache).toBeUndefined();
+
+		qr.cache = cache;
+
+		expect(qr.cache).toBeDefined();
+		expect(qr.cache).toBeInstanceOf(Cacheable);
+		expect(qr.cache).toBe(cache);
+	});
+
+	it("should cache svg QR codes by default", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		const result1 = await qr.toSvg();
+		const result2 = await qr.toSvg();
+
+		expect(result1).toEqual(result2);
+
+		const cacheKey = qr.generateCacheKey();
+		expect(qr.cache).toBeDefined();
+		expect(qr.cache).toBeInstanceOf(Cacheable);
+		const has = await qr.cache?.has(cacheKey);
+		expect(has).toBe(true);
+	});
+
+	it("should not use cache on svg when useCache is false", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		const result1 = await qr.toSvg({ cache: false });
+		const result2 = await qr.toSvg({ cache: false });
+
+		expect(result1).toEqual(result2);
+
+		const cacheKey = qr.generateCacheKey();
+		expect(qr.cache).toBeDefined();
+		expect(qr.cache).toBeInstanceOf(Cacheable);
+		const has = await qr.cache?.has(cacheKey);
+		expect(has).toBe(false);
 	});
 });

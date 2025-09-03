@@ -15,13 +15,13 @@ const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled
 bench.add(`QrBit PNG (v${qrbitVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QrBit({ text, logoPath });
-	await qr.generatePng();
+	await qr.toPng();
 });
 
 bench.add(`QrBit SVG (v${qrbitVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QrBit({ text, logoPath });
-	await qr.generateSvg();
+	await qr.toSvg();
 });
 
 bench.add(`styled-qr-code-node PNG (v${styledQrCodeNodeVersion})`, async () => {

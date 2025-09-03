@@ -16,19 +16,19 @@ const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled
 bench.add(`QrBit PNG (Rust) (v${qrbitVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QrBit({ text });
-	await qr.generatePng();
+	await qr.toPng();
 });
  
 bench.add(`QrBit SVG (Native) (v${qrbitVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QrBit({ text });
-	await qr.generateSvg();
+	await qr.toSvg();
 });
 
 bench.add(`QrBit SVG (Rust) (v${qrbitVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QrBit({ text });
-	await qr.generateSvgNapi();
+	await qr.toSvgNapi();
 });
 
 bench.add(`QRCode PNG (v${qrcodeVersion})`, async () => {

@@ -41,6 +41,7 @@ npm install qrbit
 |  styled-qr-code-node SVG (v1.5.2)  |   -90%    |     465   |      2ms  |  ±1.22%  |     459   |
 |  styled-qr-code-node (v1.5.2)      |   -96%    |     169   |      6ms  |  ±0.83%  |     169   |
 
+The `Rust` is there for performance and when doing heavy image processing without needing node `canvas` installed. If you do not add a logo then the `Native` version is what you will get for SVG. 
 
 ## Logo Generation
 
