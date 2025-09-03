@@ -25,122 +25,119 @@ export interface QrResult {
 }
 
 export class QrBit {
-	private options: Required<QrOptions>;
+	private _text: string;
+	private _size: number;
+	private _margin: number;
+	private _logoPath: string;
+	private _logoSizeRatio: number;
+	private _backgroundColor: string;
+	private _foregroundColor: string;
 
 	constructor(options: QrOptions) {
-		this.options = {
-			text: options.text,
-			size: options.size ?? 200,
-			margin: options.margin ?? 20,
-			logoPath: options.logoPath ?? "",
-			logoSizeRatio: options.logoSizeRatio ?? 0.2,
-			backgroundColor: options.backgroundColor ?? "#FFFFFF",
-			foregroundColor: options.foregroundColor ?? "#000000",
-		};
+		this._text = options.text;
+		this._size = options.size ?? 200;
+		this._margin = options.margin ?? 20;
+		this._logoPath = options.logoPath ?? "";
+		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
+		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
+		this._foregroundColor = options.foregroundColor ?? "#000000";
 	}
 
-	generateSvg(): string {
+	public get text(): string {
+		return this._text;
+	}
+
+	public set text(value: string) {
+		this._text = value;
+	}
+
+	public get size(): number {
+		return this._size;
+	}
+
+	public set size(value: number) {
+		this._size = value;
+	}
+
+	public get margin(): number {
+		return this._margin;
+	}
+
+	public set margin(value: number) {
+		this._margin = value;
+	}
+
+	public get logoPath(): string {
+		return this._logoPath;
+	}
+
+	public set logoPath(value: string) {
+		this._logoPath = value;
+	}
+
+	public get logoSizeRatio(): number {
+		return this._logoSizeRatio;
+	}
+
+	public set logoSizeRatio(value: number) {
+		this._logoSizeRatio = value;
+	}
+
+	public get backgroundColor(): string {
+		return this._backgroundColor;
+	}
+
+	public set backgroundColor(value: string) {
+		this._backgroundColor = value;
+	}
+
+	public get foregroundColor(): string {
+		return this._foregroundColor;
+	}
+
+	public set foregroundColor(value: string) {
+		this._foregroundColor = value;
+	}
+
+	public generateSvg(): string {
 		const nativeOptions = {
-			text: this.options.text,
-			size: this.options.size,
-			margin: this.options.margin,
-			logoPath: this.options.logoPath || undefined,
-			logoSizeRatio: this.options.logoSizeRatio,
-			backgroundColor: this.options.backgroundColor,
-			foregroundColor: this.options.foregroundColor,
+			text: this._text,
+			size: this._size,
+			margin: this._margin,
+			logoPath: this._logoPath || undefined,
+			logoSizeRatio: this._logoSizeRatio,
+			backgroundColor: this._backgroundColor,
+			foregroundColor: this._foregroundColor,
 		};
 
 		return nativeGenerateQrSvg(nativeOptions);
 	}
 
-	generatePng(): Buffer {
+	public generatePng(): Buffer {
 		const nativeOptions = {
-			text: this.options.text,
-			size: this.options.size,
-			margin: this.options.margin,
-			logoPath: this.options.logoPath || undefined,
-			logoSizeRatio: this.options.logoSizeRatio,
-			backgroundColor: this.options.backgroundColor,
-			foregroundColor: this.options.foregroundColor,
+			text: this._text,
+			size: this._size,
+			margin: this._margin,
+			logoPath: this._logoPath || undefined,
+			logoSizeRatio: this._logoSizeRatio,
+			backgroundColor: this._backgroundColor,
+			foregroundColor: this._foregroundColor,
 		};
 
 		return nativeGenerateQrPng(nativeOptions);
 	}
 
-	generate(): QrResult {
+	public generate(): QrResult {
 		const nativeOptions = {
-			text: this.options.text,
-			size: this.options.size,
-			margin: this.options.margin,
-			logoPath: this.options.logoPath || undefined,
-			logoSizeRatio: this.options.logoSizeRatio,
-			backgroundColor: this.options.backgroundColor,
-			foregroundColor: this.options.foregroundColor,
+			text: this._text,
+			size: this._size,
+			margin: this._margin,
+			logoPath: this._logoPath || undefined,
+			logoSizeRatio: this._logoSizeRatio,
+			backgroundColor: this._backgroundColor,
+			foregroundColor: this._foregroundColor,
 		};
 
 		return nativeGenerateQr(nativeOptions);
 	}
-
-	setSize(size: number): QrBit {
-		this.options.size = size;
-		return this;
-	}
-
-	setMargin(margin: number): QrBit {
-		this.options.margin = margin;
-		return this;
-	}
-
-	setLogo(logoPath: string, sizeRatio?: number): QrBit {
-		this.options.logoPath = logoPath;
-		if (sizeRatio !== undefined) {
-			this.options.logoSizeRatio = sizeRatio;
-		}
-		return this;
-	}
-
-	setColors(backgroundColor: string, foregroundColor: string): QrBit {
-		this.options.backgroundColor = backgroundColor;
-		this.options.foregroundColor = foregroundColor;
-		return this;
-	}
-}
-
-export function generateQr(options: QrOptions): QrResult {
-	const qr = new QrBit(options);
-	return qr.generate();
-}
-
-export function generateSvg(
-	text: string,
-	options?: Omit<QrOptions, "text">,
-): string {
-	const nativeOptions = {
-		text,
-		size: options?.size,
-		margin: options?.margin,
-		logoPath: options?.logoPath,
-		logoSizeRatio: options?.logoSizeRatio,
-		backgroundColor: options?.backgroundColor,
-		foregroundColor: options?.foregroundColor,
-	};
-
-	return nativeGenerateQrSvg(nativeOptions);
-}
-
-export function generatePng(
-	text: string,
-	options?: Omit<QrOptions, "text">,
-): Buffer {
-	const nativeOptions = {
-		text,
-		size: options?.size,
-		margin: options?.margin,
-		logoPath: options?.logoPath,
-		logoSizeRatio: options?.logoSizeRatio,
-		backgroundColor: options?.backgroundColor,
-		foregroundColor: options?.foregroundColor,
-	};
-
-	return nativeGenerateQrPng(nativeOptions);
 }
