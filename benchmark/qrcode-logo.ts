@@ -4,35 +4,40 @@ import pkg from "../package.json";
 import { QrBit } from "../src/qrbit.js";
 import { cleanVersion } from "./utils.js";
 import {QRCodeCanvas} from '@loskir/styled-qr-code-node';
+import { faker } from "@faker-js/faker/locale/zu_ZA";
 
 const bench = new Bench({ name: "QR Codes with Embedded Logos", iterations: 100 });
 
-const testString = "https://github.com/jaredwray/qrbit";
+const logoPath = "test/fixtures/test_logo_small.png";
 const qrbitVersion = cleanVersion(pkg.version);
 const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled-qr-code-node"]);
 
 bench.add(`QrBit PNG (v${qrbitVersion})`, () => {
-	const qr = new QrBit({ text: testString, logoPath: "test/fixtures/test_logo_small.png" });
+	const text = faker.internet.url();
+	const qr = new QrBit({ text, logoPath });
 	qr.generatePng();
 });
 
 bench.add(`QrBit SVG (v${qrbitVersion})`, () => {
-	const qr = new QrBit({ text: testString, logoPath: "test/fixtures/test_logo_small.png" });
+	const text = faker.internet.url();
+	const qr = new QrBit({ text, logoPath });
 	qr.generateSvg();
 });
 
 bench.add(`styled-qr-code-node PNG (v${styledQrCodeNodeVersion})`, async () => {
+	const text = faker.internet.url();
 	const qr = new QRCodeCanvas({
-		data: testString,
-		image: "test/fixtures/test_logo_small.png",
+		data: text,
+		image: logoPath,
 	});
 	await qr.toBuffer("png");
 });
 
 bench.add(`styled-qr-code-node SVG (v${styledQrCodeNodeVersion})`, async () => {
+	const text = faker.internet.url();
 	const qr = new QRCodeCanvas({
-		data: testString,
-		image: "test/fixtures/test_logo.png",
+		data: text,
+		image: logoPath,
 	});
 	await qr.toBuffer("svg");
 });
