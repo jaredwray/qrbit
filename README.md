@@ -193,6 +193,29 @@ QRBit is built with Rust and uses NAPI-RS for Node.js bindings, providing excell
 - Node.js >= 14
 - Supported platforms: Windows, macOS, Linux (x64, ARM64)
 
+# Benchmarks
+
+## Non-Logo Generation
+
+|                name                |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
+|------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
+|  QRCode SVG (v1.5.4)               |    🥇     |       5K  |    213µs  |  ±0.23%  |       5K  |
+|  QrBit PNG (v0.1.0)                |   -69%    |       1K  |    683µs  |  ±0.10%  |       1K  |
+|  QrBit SVG (v0.1.0)                |   -86%    |     652   |      2ms  |  ±0.26%  |     652   |
+|  QRCode PNG (v1.5.4)               |   -89%    |     515   |      2ms  |  ±0.65%  |     514   |
+|  styled-qr-code-node SVG (v1.5.2)  |   -92%    |     379   |      3ms  |  ±0.43%  |     378   |
+|  styled-qr-code-node (v1.5.2)      |   -97%    |     157   |      6ms  |  ±0.77%  |     157   |
+
+
+## Logo Generation
+
+|                name                |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
+|------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
+|  QrBit PNG (v0.1.0)                |    🥇     |     946   |      1ms  |  ±0.23%  |     946   |
+|  QrBit SVG (v0.1.0)                |   -31%    |     653   |      2ms  |  ±0.33%  |     653   |
+|  styled-qr-code-node PNG (v1.5.2)  |   -88%    |     115   |      9ms  |  ±0.69%  |     115   |
+|  styled-qr-code-node SVG (v1.5.2)  |   -100%   |       2   |    459ms  |  ±0.13%  |     100   |
+
 ## License
 
 MIT

@@ -229,3 +229,53 @@ pub fn generate_qr(options: QrOptions) -> Result<QrResult> {
         height: total_size,
     })
 }
+
+#[napi]
+pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
+    let size = options.size.unwrap_or(200);
+    let margin = options.margin.unwrap_or(20);
+    let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
+    
+    let mut generator = QrGenerator::new(&options.text, size, margin)?;
+    
+    if let Some(bg_color) = &options.background_color {
+        let bg = parse_color(bg_color)?;
+        let fg = if let Some(fg_color) = &options.foreground_color {
+            parse_color(fg_color)?
+        } else {
+            [0, 0, 0, 255]
+        };
+        generator.set_colors(bg, fg);
+    }
+    
+    generator.generate_svg(
+        options.logo_path.as_deref(), 
+        logo_size_ratio
+    )
+}
+
+#[napi]
+pub fn generate_qr_png(options: QrOptions) -> Result<Buffer> {
+    let size = options.size.unwrap_or(200);
+    let margin = options.margin.unwrap_or(20);
+    let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
+    
+    let mut generator = QrGenerator::new(&options.text, size, margin)?;
+    
+    if let Some(bg_color) = &options.background_color {
+        let bg = parse_color(bg_color)?;
+        let fg = if let Some(fg_color) = &options.foreground_color {
+            parse_color(fg_color)?
+        } else {
+            [0, 0, 0, 255]
+        };
+        generator.set_colors(bg, fg);
+    }
+    
+    let png_data = generator.generate_png(
+        options.logo_path.as_deref(), 
+        logo_size_ratio
+    )?;
+    
+    Ok(png_data.into())
+}

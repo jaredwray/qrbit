@@ -119,6 +119,23 @@ describe("Convenience Functions", () => {
 		expect(svg).toContain('width="110"'); // 100 + 2*5
 		expect(svg).toContain("rgb(255,255,0)"); // yellow background
 	});
+
+	it("should generate PNG with generatePng function and custom options", () => {
+		const png = generatePng("Test Message", {
+			size: 150,
+			margin: 15,
+			backgroundColor: "#FF0000",
+			foregroundColor: "#0000FF",
+		});
+
+		expect(png).toBeInstanceOf(Buffer);
+		expect(png.length).toBeGreaterThan(0);
+		// Check PNG signature
+		expect(png[0]).toBe(0x89);
+		expect(png[1]).toBe(0x50);
+		expect(png[2]).toBe(0x4e);
+		expect(png[3]).toBe(0x47);
+	});
 });
 
 describe("Error Handling", () => {
