@@ -15,11 +15,12 @@ qrcode = "0.14"
 image = { version = "0.25", features = ["png", "jpeg"] }
 imageproc = "0.25"
 svg = "0.17"
-napi = { version = "2.16", default-features = false, features = ["napi4"] }
-napi-derive = "2.16"
+napi        = "3.0.0"
+napi-derive = "3.0.0"
 
 [build-dependencies]
-napi-build = "2.1"
+napi-build = "2"
 
 [profile.release]
-lto = true
+lto   = true
+strip = "symbols"

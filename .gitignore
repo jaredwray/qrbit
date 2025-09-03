@@ -155,3 +155,5 @@ pnpm-lock.yaml
 # build
 src/native.js
 src/native.d.ts
+src/browser.js
+src/*wasi*js

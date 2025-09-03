@@ -8,9 +8,15 @@ on:
     branches: [ main ]
 
 jobs:
-  build-test:
+  build-test-winmac:
     name: tests
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+        arch: [x64]
+        node: [22]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -20,11 +26,11 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
 
       # Setup Rust
       - name: Install Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
@@ -34,6 +40,35 @@ jobs:
 
       - name: Run Tests
         run: pnpm test:ci
-        env:
-          RUST_BACKTRACE: full
-          RUST_LOG: debug
+  build-test-nodejs:
+    name: tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        arch: [x64]
+        node: [20,22]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Node
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # Setup Rust
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Dependencies
+        run: npm install -g pnpm && pnpm install
+      
+      - name: Run Build
+        run: pnpm build
+
+      - name: Run Tests
+        run: pnpm test:ci

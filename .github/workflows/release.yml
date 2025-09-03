@@ -1,0 +1,91 @@
+name: release
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  build-artifacts:
+    name: build-artifacts
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [x64, arm64, x86]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Node
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Setup Rust
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Dependencies
+        run: npm install -g pnpm && pnpm install
+      
+      - name: Run Release Build
+        run: pnpm build:release      
+
+      - name: Run Tests
+        run: pnpm test:ci
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qrbit-artifacts-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/*.node
+
+  build-release:
+    name: build-release
+    needs: build-artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Node
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: npm install -g pnpm && pnpm install
+
+      - name: Build Project
+        run: pnpm build
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Show Artifacts
+        run: |
+          ls -alh ./artifacts
+
+      - name: Copy all artifacts that end in .node to dist
+        run: |
+          mkdir -p dist
+          cp ./artifacts/**/*.node dist/
+
+      - name: Show Dist
+        run: |
+            ls -alh ./dist
+
+      - name: Publish
+        run: |
+         npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+         npm publish --ignore-scripts
+        env:
+         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

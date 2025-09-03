@@ -1,8 +1,7 @@
 // Import Node.js Buffer type
 import type { Buffer } from "node:buffer";
 
-// Import the generated NAPI binding (will be in same directory)
-const { generateQr: nativeGenerateQr } = require("./native.js");
+import { generateQr as nativeGenerateQr } from "./native.js";
 
 export interface QrOptions {
 	text: string;

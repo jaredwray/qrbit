@@ -16,27 +16,27 @@
 		"dist"
 	],
 	"scripts": {
-		"build:napi:release": "napi build src --platform --release --js native.js --dts native.d.ts",
-		"build:release": "pnpm build:clean && pnpm build:napi:release && pnpm build:ts && pnpm build:copy",
-		"build:napi:debug": "napi build src --platform --js native.js --dts native.d.ts",
-		"build": "pnpm build:clean && pnpm build:napi:debug && pnpm build:ts && pnpm build:copy",
+		"build:napi:release": "napi build --platform --release --esm --output-dir src --js native.js --dts native.d.ts",
+		"build:release": "pnpm build:napi:release && pnpm build:ts && pnpm build:copy",
+		"build:napi:debug": "napi build --platform --esm --output-dir src --js native.js --dts native.d.ts",
+		"build": "pnpm build:napi:debug && pnpm build:ts && pnpm build:copy",
 		"build:ts": "tsup",
 		"build:copy": "cp src/qrbit.*.node dist/ && cp src/native.* dist/",
-		"build:clean": "rimraf dist && rimraf \"src/*.node\" && rimraf \"src/native.*\" && rimraf target",
+		"clean": "rimraf dist src/*.node src/native.* target",
 		"lint": "biome check --write --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
-		"test:ci": "biome check --error-on-warnings && vitest run --coverage",
+		"test:ci": "vitest run --coverage",
 		"artifacts": "napi artifacts",
 		"version": "napi version"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.2",
-		"@napi-rs/cli": "^2.18.4",
-		"@types/node": "^20.10.0",
-		"@vitest/coverage-v8": "^1.0.0",
-		"tsup": "^8.0.0",
-		"typescript": "^5.3.0",
-		"vitest": "^1.0.0"
+		"@napi-rs/cli": "^3.1.5",
+		"@types/node": "^24.3.0",
+		"@vitest/coverage-v8": "^3.2.4",
+		"tsup": "^8.5.0",
+		"typescript": "^5.9.2",
+		"vitest": "^3.2.4"
 	},
 	"repository": {
 		"type": "git",
@@ -55,20 +55,23 @@
 	"author": "Jared Wray <me@jaredwray.com>",
 	"license": "MIT",
 	"napi": {
-		"name": "qrbit",
-		"triples": {
-			"defaults": true,
-			"additional": [
-				"x86_64-unknown-linux-musl",
-				"aarch64-unknown-linux-gnu",
-				"i686-pc-windows-msvc",
-				"armv7-unknown-linux-gnueabihf",
-				"aarch64-apple-darwin",
-				"aarch64-pc-windows-msvc",
-				"aarch64-unknown-linux-musl",
-				"x86_64-unknown-freebsd"
-			]
-		}
+		"binaryName": "qrbit",
+		"targets": [
+			"x86_64-pc-windows-msvc",
+			"x86_64-apple-darwin",
+			"x86_64-unknown-linux-gnu",
+			"x86_64-unknown-linux-musl",
+			"aarch64-unknown-linux-gnu",
+			"i686-pc-windows-msvc",
+			"armv7-unknown-linux-gnueabihf",
+			"aarch64-apple-darwin",
+			"aarch64-linux-android",
+			"x86_64-unknown-freebsd",
+			"aarch64-unknown-linux-musl",
+			"aarch64-pc-windows-msvc",
+			"armv7-linux-androideabi",
+			"wasm32-wasip1-threads"
+		]
 	},
 	"dependencies": {
 		"rimraf": "^6.0.1"
