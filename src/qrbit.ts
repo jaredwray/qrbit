@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import fs from "node:fs";
 import { Cacheable } from "cacheable";
 import QRCode from "qrcode";
 
@@ -12,7 +13,7 @@ export interface QrOptions {
 	text: string;
 	size?: number;
 	margin?: number;
-	logoPath?: string;
+	logo?: string | Buffer;
 	logoSizeRatio?: number;
 	backgroundColor?: string;
 	foregroundColor?: string;
@@ -34,7 +35,7 @@ export class QrBit {
 	private _text: string;
 	private _size: number;
 	private _margin: number;
-	private _logoPath: string;
+	private _logo: string | Buffer | undefined;
 	private _logoSizeRatio: number;
 	private _backgroundColor: string;
 	private _foregroundColor: string;
@@ -44,7 +45,7 @@ export class QrBit {
 		this._text = options.text;
 		this._size = options.size ?? 200;
 		this._margin = options.margin ?? 20;
-		this._logoPath = options.logoPath ?? "";
+		this._logo = options.logo ?? undefined;
 		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
 		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
 		this._foregroundColor = options.foregroundColor ?? "#000000";
@@ -85,12 +86,12 @@ export class QrBit {
 		this._margin = value;
 	}
 
-	public get logoPath(): string {
-		return this._logoPath;
+	public get logo(): string | Buffer | undefined {
+		return this._logo;
 	}
 
-	public set logoPath(value: string) {
-		this._logoPath = value;
+	public set logo(value: string | Buffer | undefined) {
+		this._logo = value;
 	}
 
 	public get logoSizeRatio(): number {
@@ -133,7 +134,7 @@ export class QrBit {
 			text: this._text,
 			size: this._size,
 			margin: this._margin,
-			logoPath: this._logoPath || undefined,
+			logo: this._logo,
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
@@ -148,7 +149,7 @@ export class QrBit {
 			}
 		}
 
-		if (!this._logoPath) {
+		if (!this._logo) {
 			result = await QRCode.toString(this._text, {
 				type: "svg",
 				margin: qrOptions.margin,
@@ -178,7 +179,7 @@ export class QrBit {
 			text: this._text,
 			size: this._size,
 			margin: this._margin,
-			logoPath: this._logoPath || undefined,
+			logo: this._logo || undefined,
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
@@ -195,7 +196,7 @@ export class QrBit {
 			text: this._text,
 			size: this._size,
 			margin: this._margin,
-			logoPath: this._logoPath || undefined,
+			logo: this._logo || undefined,
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
@@ -229,11 +230,17 @@ export class QrBit {
 			text: this._text,
 			size: this._size,
 			margin: this._margin,
-			logoPath: this._logoPath || undefined,
+			logo: this._logo || undefined,
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
 		};
+
+		if (this._logo && this.isLogoString()) {
+			if (!fs.existsSync(this._logo)) {
+				throw new Error(`Logo file not found: ${this._logo}`);
+			}
+		}
 
 		return nativeGenerateQr(nativeOptions);
 	}
@@ -243,7 +250,7 @@ export class QrBit {
 			text: this._text,
 			size: this._size,
 			margin: this._margin,
-			logoPath: this._logoPath || undefined,
+			logo: this._logo || undefined,
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
@@ -252,5 +259,9 @@ export class QrBit {
 		const cache = this._cache || new Cacheable();
 
 		return cache.hash(qrOptions);
+	}
+
+	public isLogoString(): boolean {
+		return typeof this._logo === "string";
 	}
 }

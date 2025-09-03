@@ -1,4 +1,3 @@
-// biome-ignore lint/correctness/noUnusedImports: used for testing
 import fs from "node:fs";
 import { faker } from "@faker-js/faker";
 import { Cacheable } from "cacheable";
@@ -28,7 +27,7 @@ describe("QrBit Class", () => {
 
 	it("should generate SVG output", async () => {
 		const text = faker.person.fullName();
-		const qr = new QrBit({ text, logoPath: testLogoPath });
+		const qr = new QrBit({ text, logo: testLogoPath });
 		const svg = await qr.toSvg();
 
 		expect(typeof svg).toBe("string");
@@ -137,10 +136,10 @@ describe("QrBit Properties", () => {
 	it("should get and set logoPath property", () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
-		expect(qr.logoPath).toBe(""); // default value
+		expect(qr.logo).toBeUndefined(); // default value
 
-		qr.logoPath = "path/to/logo.png";
-		expect(qr.logoPath).toBe("path/to/logo.png");
+		qr.logo = "path/to/logo.png";
+		expect(qr.logo).toBe("path/to/logo.png");
 	});
 
 	it("should get and set logoSizeRatio property", () => {
@@ -176,7 +175,7 @@ describe("QrBit Properties", () => {
 			text,
 			size: 150,
 			margin: 10,
-			logoPath: "logo.png",
+			logo: "logo.png",
 			logoSizeRatio: 0.3,
 			backgroundColor: "#FFFF00",
 			foregroundColor: "#FF00FF",
@@ -185,7 +184,7 @@ describe("QrBit Properties", () => {
 		expect(qr.text).toBe(text);
 		expect(qr.size).toBe(150);
 		expect(qr.margin).toBe(10);
-		expect(qr.logoPath).toBe("logo.png");
+		expect(qr.logo).toBe("logo.png");
 		expect(qr.logoSizeRatio).toBe(0.3);
 		expect(qr.backgroundColor).toBe("#FFFF00");
 		expect(qr.foregroundColor).toBe("#FF00FF");
@@ -211,7 +210,7 @@ describe("Error Handling", () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({
 			text,
-			logoPath: "/nonexistent/path/logo.png",
+			logo: "/nonexistent/path/logo.png",
 		});
 
 		// Should throw an error when trying to generate
@@ -235,18 +234,18 @@ describe("Error Handling", () => {
 	it("should test setLogo with sizeRatio parameter", () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
-		qr.logoPath = "test.png";
+		qr.logo = "test.png";
 		qr.logoSizeRatio = 0.5;
 		expect(qr).toBeInstanceOf(QrBit);
 		expect(qr.logoSizeRatio).toBe(0.5);
-		expect(qr.logoPath).toBe("test.png");
+		expect(qr.logo).toBe("test.png");
 	});
 
 	it("should generate QR code with logo using testLogoPath", async () => {
 		console.log("Using logo path:", testLogoPath);
 		const qr = new QrBit({
 			text: faker.internet.url(),
-			logoPath: testLogoPath,
+			logo: testLogoPath,
 		});
 
 		const result = await qr.generate();
@@ -393,5 +392,30 @@ describe("Caching", () => {
 		expect(qr.cache).toBeInstanceOf(Cacheable);
 		const has = await qr.cache?.has(cacheKey);
 		expect(has).toBe(false);
+	});
+});
+
+describe("Buffer Logo Support", () => {
+	it("should generate SVG QR code with logo from buffer", async () => {
+		const logoBuffer = fs.readFileSync(testLogoPath);
+		const text = faker.internet.url();
+
+		// Import the native function directly
+		const { generateQrSvgWithBuffer } = await import("../src/native.js");
+
+		const svg = generateQrSvgWithBuffer({
+			text,
+			size: 200,
+			margin: 20,
+			logoBuffer,
+			logoSizeRatio: 0.2,
+			backgroundColor: "#FFFFFF",
+			foregroundColor: "#000000",
+		});
+
+		expect(typeof svg).toBe("string");
+		expect(svg).toContain("<svg");
+		expect(svg).toContain("</svg>");
+		expect(svg).toContain("data:image/png;base64,"); // Should contain base64 data URL
 	});
 });

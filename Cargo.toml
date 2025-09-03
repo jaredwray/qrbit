@@ -14,7 +14,8 @@ crate-type = ["cdylib"]
 qrcode = "0.14"
 image = { version = "0.25", features = ["png", "jpeg"] }
 imageproc = "0.25"
-svg = "0.17"
+svg = "0.18"
+base64 = "0.22"
 napi        = "3.0.0"
 napi-derive = "3.0.0"
 
