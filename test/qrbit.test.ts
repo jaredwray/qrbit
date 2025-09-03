@@ -11,10 +11,10 @@ describe("QrBit Class", () => {
 		expect(qr).toBeInstanceOf(QrBit);
 	});
 
-	it("should generate SVG output", () => {
+	it("should generate SVG output", async () => {
 		const text = faker.person.fullName();
 		const qr = new QrBit({ text });
-		const svg = qr.generateSvg();
+		const svg = await qr.generateSvg();
 
 		expect(typeof svg).toBe("string");
 		expect(svg).toContain("<svg");
@@ -23,10 +23,10 @@ describe("QrBit Class", () => {
 		expect(svg).toContain('height="240"');
 	});
 
-	it("should generate PNG output", () => {
+	it("should generate PNG output", async () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
-		const png = qr.generatePng();
+		const png = await qr.generatePng();
 
 		expect(png).toBeInstanceOf(Buffer);
 		expect(png.length).toBeGreaterThan(0);
@@ -37,10 +37,10 @@ describe("QrBit Class", () => {
 		expect(png[3]).toBe(0x47);
 	});
 
-	it("should generate both SVG and PNG with generate()", () => {
+	it("should generate both SVG and PNG with generate()", async () => {
 		const text = faker.lorem.paragraph();
 		const qr = new QrBit({ text });
-		const result = qr.generate();
+		const result = await qr.generate();
 
 		expect(result).toHaveProperty("svg");
 		expect(result).toHaveProperty("png");
@@ -53,7 +53,7 @@ describe("QrBit Class", () => {
 		expect(result.height).toBe(240);
 	});
 
-	it("should support method chaining", () => {
+	it("should support method chaining", async () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
 		qr.size = 300;
@@ -61,31 +61,31 @@ describe("QrBit Class", () => {
 		qr.backgroundColor = "#FF0000";
 		qr.foregroundColor = "#00FF00";
 
-		const result = qr.generate();
+		const result = await qr.generate();
 		expect(result.width).toBe(360); // 300 + 2*30
 		expect(result.height).toBe(360);
 	});
 
-	it("should accept custom size and margin", () => {
+	it("should accept custom size and margin", async () => {
 		const qr = new QrBit({
 			text: faker.internet.url(),
 			size: 150,
 			margin: 10,
 		});
 
-		const result = qr.generate();
+		const result = await qr.generate();
 		expect(result.width).toBe(170); // 150 + 2*10
 		expect(result.height).toBe(170);
 	});
 
-	it("should accept custom colors", () => {
+	it("should accept custom colors", async () => {
 		const qr = new QrBit({
 			text: faker.internet.url(),
 			backgroundColor: "#FF0000",
 			foregroundColor: "#0000FF",
 		});
 
-		const svg = qr.generateSvg();
+		const svg = await qr.generateSvg();
 		expect(svg).toContain("rgb(255,0,0)"); // red background
 		expect(svg).toContain("rgb(0,0,255)"); // blue foreground
 	});
@@ -176,7 +176,7 @@ describe("QrBit Properties", () => {
 		expect(qr.foregroundColor).toBe("#FF00FF");
 	});
 
-	it("should use properties when generating QR code", () => {
+	it("should use properties when generating QR code", async () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
 		qr.size = 100;
@@ -184,18 +184,18 @@ describe("QrBit Properties", () => {
 		qr.backgroundColor = "#FF0000";
 		qr.foregroundColor = "#0000FF";
 
-		const result = qr.generate();
+		const result = await qr.generate();
 		expect(result.width).toBe(110); // 100 + 2*5
 		expect(result.height).toBe(110);
 
-		const svg = qr.generateSvg();
+		const svg = await qr.generateSvg();
 		expect(svg).toContain("rgb(255,0,0)"); // red background
 		expect(svg).toContain("rgb(0,0,255)"); // blue foreground
 	});
 });
 
 describe("Error Handling", () => {
-	it("should handle invalid logo path gracefully", () => {
+	it("should handle invalid logo path gracefully", async () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({
 			text,
@@ -203,17 +203,17 @@ describe("Error Handling", () => {
 		});
 
 		// Should throw an error when trying to generate
-		expect(() => qr.generate()).toThrow();
+		await expect(qr.generate()).rejects.toThrow();
 	});
 
-	it("should handle invalid color formats", () => {
+	it("should handle invalid color formats", async () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({
 			text,
 			backgroundColor: "invalid-color",
 		});
 
-		expect(() => qr.generate()).toThrow();
+		await expect(qr.generate()).rejects.toThrow();
 	});
 
 	it("should handle empty text", () => {
@@ -237,7 +237,7 @@ describe("Error Handling", () => {
 			logoPath: testLogoPath,
 		});
 
-		const result = qr.generate();
+		const result = await qr.generate();
 
 		expect(result).toHaveProperty("svg");
 		expect(result).toHaveProperty("png");
@@ -248,33 +248,33 @@ describe("Error Handling", () => {
 });
 
 describe("Edge Cases", () => {
-	it("should handle very long text", () => {
+	it("should handle very long text", async () => {
 		const longText = "A".repeat(1000);
 		const qr = new QrBit({ text: longText });
 
-		const result = qr.generate();
+		const result = await qr.generate();
 		expect(result.svg).toContain("<svg");
 		expect(result.png).toBeInstanceOf(Buffer);
 	});
 
-	it("should handle special characters", () => {
+	it("should handle special characters", async () => {
 		const specialText =
 			"你好 🌍 https://example.com/path?param=value&other=123";
 		const qr = new QrBit({ text: specialText });
 
-		const result = qr.generate();
+		const result = await qr.generate();
 		expect(result.svg).toContain("<svg");
 		expect(result.png).toBeInstanceOf(Buffer);
 	});
 
-	it("should handle minimum size", () => {
+	it("should handle minimum size", async () => {
 		const qr = new QrBit({
 			text: "Hi",
 			size: 50,
 			margin: 0,
 		});
 
-		const result = qr.generate();
+		const result = await qr.generate();
 		expect(result.width).toBe(50);
 		expect(result.height).toBe(50);
 	});

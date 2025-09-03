@@ -99,7 +99,7 @@ export class QrBit {
 		this._foregroundColor = value;
 	}
 
-	public generateSvg(): string {
+	public async generateSvg(): Promise<string> {
 		const nativeOptions = {
 			text: this._text,
 			size: this._size,
@@ -113,7 +113,7 @@ export class QrBit {
 		return nativeGenerateQrSvg(nativeOptions);
 	}
 
-	public generatePng(): Buffer {
+	public async generatePng(): Promise<Buffer> {
 		const nativeOptions = {
 			text: this._text,
 			size: this._size,
@@ -127,7 +127,7 @@ export class QrBit {
 		return nativeGenerateQrPng(nativeOptions);
 	}
 
-	public generate(): QrResult {
+	public async generate(): Promise<QrResult> {
 		const nativeOptions = {
 			text: this._text,
 			size: this._size,
