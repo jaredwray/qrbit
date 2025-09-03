@@ -8,11 +8,11 @@ import { faker } from "@faker-js/faker/locale/zu_ZA";
 
 const bench = new Bench({ name: "QR Codes with Embedded Logos", iterations: 100 });
 
-const logoPath = "test/fixtures/test_logo_small.png";
+const logo = "test/fixtures/test_logo_small.png";
 const qrbitVersion = cleanVersion(pkg.version);
 const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled-qr-code-node"]);
 
-const qr = new QrBit({ text: faker.internet.url(), logoPath });
+const qr = new QrBit({ text: faker.internet.url(), logo });
 
 bench.add(`QrBit PNG (v${qrbitVersion})`, async () => {
 	qr.text = faker.internet.url();
@@ -28,7 +28,7 @@ bench.add(`styled-qr-code-node PNG (v${styledQrCodeNodeVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QRCodeCanvas({
 		data: text,
-		image: logoPath,
+		image: logo,
 	});
 	await qr.toBuffer("png");
 });
@@ -37,7 +37,7 @@ bench.add(`styled-qr-code-node SVG (v${styledQrCodeNodeVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QRCodeCanvas({
 		data: text,
-		image: logoPath,
+		image: logo,
 	});
 	await qr.toBuffer("svg");
 });
