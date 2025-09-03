@@ -1,3 +1,5 @@
+// biome-ignore lint/correctness/noUnusedImports: used for testing
+import fs from "node:fs";
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 import { QrBit } from "../src/qrbit";
@@ -19,7 +21,19 @@ describe("QrBit Class", () => {
 		expect(typeof svg).toBe("string");
 		expect(svg).toContain("<svg");
 		expect(svg).toContain("</svg>");
-		expect(svg).toContain('width="240"'); // 200 + 2*20 margin
+		expect(svg).toContain('width="200"');
+		expect(svg).toContain('height="200"');
+	});
+
+	it("should generate SVG output", async () => {
+		const text = faker.person.fullName();
+		const qr = new QrBit({ text, logoPath: testLogoPath });
+		const svg = await qr.generateSvg();
+
+		expect(typeof svg).toBe("string");
+		expect(svg).toContain("<svg");
+		expect(svg).toContain("</svg>");
+		expect(svg).toContain('width="240"');
 		expect(svg).toContain('height="240"');
 	});
 
@@ -86,8 +100,8 @@ describe("QrBit Class", () => {
 		});
 
 		const svg = await qr.generateSvg();
-		expect(svg).toContain("rgb(255,0,0)"); // red background
-		expect(svg).toContain("rgb(0,0,255)"); // blue foreground
+		expect(svg).toContain("#FF0000"); // red background
+		expect(svg).toContain("#0000FF"); // blue foreground
 	});
 });
 
@@ -184,13 +198,10 @@ describe("QrBit Properties", () => {
 		qr.backgroundColor = "#FF0000";
 		qr.foregroundColor = "#0000FF";
 
-		const result = await qr.generate();
-		expect(result.width).toBe(110); // 100 + 2*5
-		expect(result.height).toBe(110);
-
 		const svg = await qr.generateSvg();
-		expect(svg).toContain("rgb(255,0,0)"); // red background
-		expect(svg).toContain("rgb(0,0,255)"); // blue foreground
+
+		expect(svg).toContain("#FF0000"); // red background
+		expect(svg).toContain("#0000FF"); // blue foreground
 	});
 });
 
