@@ -5,7 +5,7 @@ import { QrBit } from "../src/qrbit.js";
 import { cleanVersion } from "./utils.js";
 import {QRCodeCanvas} from '@loskir/styled-qr-code-node';
 
-const bench = new Bench({ name: "QR Codes with Embedded Logos", iterations: 200 });
+const bench = new Bench({ name: "QR Codes with Embedded Logos", iterations: 100 });
 
 const testString = "https://github.com/jaredwray/qrbit";
 const qrbitVersion = cleanVersion(pkg.version);
