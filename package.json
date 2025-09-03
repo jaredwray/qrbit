@@ -33,6 +33,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.2",
+		"@loskir/styled-qr-code-node": "^1.5.2",
 		"@monstermann/tinybench-pretty-printer": "^0.1.0",
 		"@napi-rs/cli": "^3.1.5",
 		"@types/node": "^24.3.0",
