@@ -42,5 +42,7 @@ bench.add(`styled-qr-code-node toBuffer (v${styledQrCodeNodeVersion})`, async ()
 await bench.run();
 
 const cli = tinybenchPrinter.toMarkdown(bench);
+console.log("");
+console.log(`## ${bench.name}`);
 console.log(cli);
 console.log("");
