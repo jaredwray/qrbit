@@ -12,19 +12,19 @@ const qrbitVersion = cleanVersion(pkg.version);
 const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled-qr-code-node"]);
 
 bench.add(`QrBit PNG (v${qrbitVersion})`, () => {
-	const qr = new QrBit({ text: testString, logoPath: "test/fixtures/test_logo.png" });
+	const qr = new QrBit({ text: testString, logoPath: "test/fixtures/test_logo_small.png" });
 	qr.generatePng();
 });
 
 bench.add(`QrBit SVG (v${qrbitVersion})`, () => {
-	const qr = new QrBit({ text: testString, logoPath: "test/fixtures/test_logo.png" });
+	const qr = new QrBit({ text: testString, logoPath: "test/fixtures/test_logo_small.png" });
 	qr.generateSvg();
 });
 
 bench.add(`styled-qr-code-node PNG (v${styledQrCodeNodeVersion})`, async () => {
 	const qr = new QRCodeCanvas({
 		data: testString,
-		image: "test/fixtures/test_logo.png",
+		image: "test/fixtures/test_logo_small.png",
 	});
 	await qr.toBuffer("png");
 });
