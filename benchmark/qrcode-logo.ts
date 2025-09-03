@@ -12,16 +12,16 @@ const logoPath = "test/fixtures/test_logo_small.png";
 const qrbitVersion = cleanVersion(pkg.version);
 const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled-qr-code-node"]);
 
-bench.add(`QrBit PNG (v${qrbitVersion})`, () => {
+bench.add(`QrBit PNG (v${qrbitVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QrBit({ text, logoPath });
-	qr.generatePng();
+	await qr.generatePng();
 });
 
-bench.add(`QrBit SVG (v${qrbitVersion})`, () => {
+bench.add(`QrBit SVG (v${qrbitVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QrBit({ text, logoPath });
-	qr.generateSvg();
+	await qr.generateSvg();
 });
 
 bench.add(`styled-qr-code-node PNG (v${styledQrCodeNodeVersion})`, async () => {
