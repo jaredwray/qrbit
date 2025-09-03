@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generatePng, generateQr, generateSvg, QrBit } from "../src/qrbit";
+import { QrBit } from "../src/qrbit";
 
 const testLogoPath = "test/fixtures/test_logo.png";
 
@@ -49,10 +49,11 @@ describe("QrBit Class", () => {
 	});
 
 	it("should support method chaining", () => {
-		const qr = new QrBit({ text: "Hello World" })
-			.setSize(300)
-			.setMargin(30)
-			.setColors("#FF0000", "#00FF00");
+		const qr = new QrBit({ text: "Hello World" });
+		qr.size = 300;
+		qr.margin = 30;
+		qr.backgroundColor = "#FF0000";
+		qr.foregroundColor = "#00FF00";
 
 		const result = qr.generate();
 		expect(result.width).toBe(360); // 300 + 2*30
@@ -84,57 +85,97 @@ describe("QrBit Class", () => {
 	});
 });
 
-describe("Convenience Functions", () => {
-	it("should generate QR with generateQr function", () => {
-		const result = generateQr({ text: "Test Message" });
+describe("QrBit Properties", () => {
+	it("should get and set text property", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		expect(qr.text).toBe("Hello World");
 
-		expect(result).toHaveProperty("svg");
-		expect(result).toHaveProperty("png");
-		expect(result).toHaveProperty("width");
-		expect(result).toHaveProperty("height");
+		qr.text = "New Text";
+		expect(qr.text).toBe("New Text");
 	});
 
-	it("should generate SVG with generateSvg function", () => {
-		const svg = generateSvg("Test Message");
+	it("should get and set size property", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		expect(qr.size).toBe(200); // default value
 
-		expect(typeof svg).toBe("string");
-		expect(svg).toContain("<svg");
-		expect(svg).toContain("</svg>");
+		qr.size = 300;
+		expect(qr.size).toBe(300);
 	});
 
-	it("should generate PNG with generatePng function", () => {
-		const png = generatePng("Test Message");
+	it("should get and set margin property", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		expect(qr.margin).toBe(20); // default value
 
-		expect(png).toBeInstanceOf(Buffer);
-		expect(png.length).toBeGreaterThan(0);
+		qr.margin = 30;
+		expect(qr.margin).toBe(30);
 	});
 
-	it("should accept options in convenience functions", () => {
-		const svg = generateSvg("Test Message", {
-			size: 100,
-			margin: 5,
-			backgroundColor: "#FFFF00",
-		});
+	it("should get and set logoPath property", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		expect(qr.logoPath).toBe(""); // default value
 
-		expect(svg).toContain('width="110"'); // 100 + 2*5
-		expect(svg).toContain("rgb(255,255,0)"); // yellow background
+		qr.logoPath = "path/to/logo.png";
+		expect(qr.logoPath).toBe("path/to/logo.png");
 	});
 
-	it("should generate PNG with generatePng function and custom options", () => {
-		const png = generatePng("Test Message", {
+	it("should get and set logoSizeRatio property", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		expect(qr.logoSizeRatio).toBe(0.2); // default value
+
+		qr.logoSizeRatio = 0.5;
+		expect(qr.logoSizeRatio).toBe(0.5);
+	});
+
+	it("should get and set backgroundColor property", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		expect(qr.backgroundColor).toBe("#FFFFFF"); // default value
+
+		qr.backgroundColor = "#FF0000";
+		expect(qr.backgroundColor).toBe("#FF0000");
+	});
+
+	it("should get and set foregroundColor property", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		expect(qr.foregroundColor).toBe("#000000"); // default value
+
+		qr.foregroundColor = "#0000FF";
+		expect(qr.foregroundColor).toBe("#0000FF");
+	});
+
+	it("should initialize with custom values", () => {
+		const qr = new QrBit({
+			text: "Custom Text",
 			size: 150,
-			margin: 15,
-			backgroundColor: "#FF0000",
-			foregroundColor: "#0000FF",
+			margin: 10,
+			logoPath: "logo.png",
+			logoSizeRatio: 0.3,
+			backgroundColor: "#FFFF00",
+			foregroundColor: "#FF00FF",
 		});
 
-		expect(png).toBeInstanceOf(Buffer);
-		expect(png.length).toBeGreaterThan(0);
-		// Check PNG signature
-		expect(png[0]).toBe(0x89);
-		expect(png[1]).toBe(0x50);
-		expect(png[2]).toBe(0x4e);
-		expect(png[3]).toBe(0x47);
+		expect(qr.text).toBe("Custom Text");
+		expect(qr.size).toBe(150);
+		expect(qr.margin).toBe(10);
+		expect(qr.logoPath).toBe("logo.png");
+		expect(qr.logoSizeRatio).toBe(0.3);
+		expect(qr.backgroundColor).toBe("#FFFF00");
+		expect(qr.foregroundColor).toBe("#FF00FF");
+	});
+
+	it("should use properties when generating QR code", () => {
+		const qr = new QrBit({ text: "Hello World" });
+		qr.size = 100;
+		qr.margin = 5;
+		qr.backgroundColor = "#FF0000";
+		qr.foregroundColor = "#0000FF";
+
+		const result = qr.generate();
+		expect(result.width).toBe(110); // 100 + 2*5
+		expect(result.height).toBe(110);
+
+		const svg = qr.generateSvg();
+		expect(svg).toContain("rgb(255,0,0)"); // red background
+		expect(svg).toContain("rgb(0,0,255)"); // blue foreground
 	});
 });
 
@@ -164,8 +205,11 @@ describe("Error Handling", () => {
 
 	it("should test setLogo with sizeRatio parameter", () => {
 		const qr = new QrBit({ text: "Hello World" });
-		const result = qr.setLogo("test.png", 0.5);
-		expect(result).toBeInstanceOf(QrBit);
+		qr.logoPath = "test.png";
+		qr.logoSizeRatio = 0.5;
+		expect(qr).toBeInstanceOf(QrBit);
+		expect(qr.logoSizeRatio).toBe(0.5);
+		expect(qr.logoPath).toBe("test.png");
 	});
 
 	it("should generate QR code with logo using testLogoPath", async () => {
