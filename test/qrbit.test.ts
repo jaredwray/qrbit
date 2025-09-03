@@ -362,4 +362,36 @@ describe("Caching", () => {
 		const has = await qr.cache?.has(cacheKey);
 		expect(has).toBe(false);
 	});
+
+	it("should cache png QR codes by default", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		const result1 = await qr.toPng();
+		const result2 = await qr.toPng();
+
+		expect(result1).toEqual(result2);
+
+		const cacheKey = qr.generateCacheKey();
+		expect(qr.cache).toBeDefined();
+		expect(qr.cache).toBeInstanceOf(Cacheable);
+		const has = await qr.cache?.has(cacheKey);
+		expect(has).toBe(true);
+	});
+
+	it("should not use cache on png when useCache is false", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		const result1 = await qr.toPng({ cache: false });
+		const result2 = await qr.toPng({ cache: false });
+
+		expect(result1).toEqual(result2);
+
+		const cacheKey = qr.generateCacheKey();
+		expect(qr.cache).toBeDefined();
+		expect(qr.cache).toBeInstanceOf(Cacheable);
+		const has = await qr.cache?.has(cacheKey);
+		expect(has).toBe(false);
+	});
 });

@@ -1,4 +1,4 @@
-import type { Buffer } from "node:buffer";
+import { Buffer } from "node:buffer";
 import { Cacheable } from "cacheable";
 import QRCode from "qrcode";
 
@@ -187,8 +187,11 @@ export class QrBit {
 		return nativeGenerateQrSvg(nativeOptions);
 	}
 
-	public async toPng(): Promise<Buffer> {
-		const nativeOptions = {
+	public async toPng(options?: toOptions): Promise<Buffer> {
+		let result: Buffer;
+
+		// set all the options
+		const qrOptions = {
 			text: this._text,
 			size: this._size,
 			margin: this._margin,
@@ -198,7 +201,27 @@ export class QrBit {
 			foregroundColor: this._foregroundColor,
 		};
 
-		return nativeGenerateQrPng(nativeOptions);
+		// check the cache
+		if (this._cache && options?.cache !== false) {
+			const key = this.generateCacheKey();
+			const cached = await this._cache.get<Buffer>(key);
+			if (cached) {
+				// Ensure we return a Buffer, not Uint8Array
+				return Buffer.from(cached);
+			}
+		}
+
+		// Generate PNG using NAPI
+		result = nativeGenerateQrPng(qrOptions);
+
+		if (this._cache && options?.cache !== false) {
+			// set the cache, generate the key from hash
+			const key = this.generateCacheKey();
+			// cache the value
+			await this._cache.set(key, result);
+		}
+
+		return result;
 	}
 
 	public async generate(): Promise<QrResult> {
