@@ -8,11 +8,43 @@ on:
     branches: [ main ]
 
 jobs:
-  build-test:
+  build-test-winmac:
     name: tests
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
+        arch: [x64]
+        node: [22]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Node
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # Setup Rust
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Dependencies
+        run: npm install -g pnpm && pnpm install
+      
+      - name: Run Build
+        run: pnpm build
+
+      - name: Run Tests
+        run: pnpm test:ci
+  build-test-nodejs:
+    name: tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
         arch: [x64]
         node: [20,22]
 
