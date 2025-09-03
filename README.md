@@ -29,19 +29,26 @@ npm install qrbit
 
 # Benchmarks
 
-## Non-Logo Generation
+## SVG Generation (no logo)
 
-|                name                |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
-|------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QRCode SVG (v1.5.4)               |    🥇     |       5K  |    214µs  |  ±0.50%  |       5K  |
-|  QrBit SVG (Nodejs) (v0.1.0)       |  -0.15%   |       5K  |    214µs  |  ±0.50%  |       5K  |
-|  QrBit PNG (Rust) (v0.1.0)         |   -69%    |       1K  |    686µs  |  ±0.52%  |       1K  |
-|  QrBit SVG (Rust) (v0.1.0)         |   -84%    |     770   |      1ms  |  ±1.32%  |     742   |
-|  QRCode PNG (v1.5.4)               |   -89%    |     534   |      2ms  |  ±1.63%  |     522   |
-|  styled-qr-code-node SVG (v1.5.2)  |   -90%    |     465   |      2ms  |  ±1.22%  |     459   |
-|  styled-qr-code-node (v1.5.2)      |   -96%    |     169   |      6ms  |  ±0.83%  |     169   |
+|                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
+|-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
+|  QRCode toString (v1.5.4)               |    🥇     |       5K  |    205µs  |  ±0.45%  |       5K  |
+|  QrBit toSvg (Native) (v0.1.0)          |   -4.4%   |       5K  |    221µs  |  ±0.92%  |       5K  |
+|  QrBit toSvg (Rust) (v0.1.0)            |   -84%    |     787   |      1ms  |  ±1.29%  |     759   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -90%    |     475   |      2ms  |  ±1.32%  |     469   |
 
-The `Rust` is there for performance and when doing heavy image processing without needing node `canvas` installed. If you do not add a logo then the `Native` version is what you will get for SVG. 
+`Rust` is there for performance and when doing heavy image processing without needing node `canvas` installed. If you do not add a logo then the `Native` version is what you will get for SVG. 
+
+## PNG Generation (no logo)
+
+|                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
+|-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
+|  QrBit toPng (v0.1.0)                   |    🥇     |       2K  |    669µs  |  ±0.50%  |       1K  |
+|  QRCode toBuffer (v1.5.4)               |   -64%    |     540   |      2ms  |  ±1.64%  |     528   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -89%    |     171   |      6ms  |  ±1.00%  |     171   |
+
+`Rust` is used for `toPng()` to optimize performance for PNG generation and heavy image processing without needing node `canvas` installed.
 
 ## Logo Generation
 
