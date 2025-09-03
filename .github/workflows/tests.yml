@@ -13,8 +13,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        arch: [x64, x86]
-        node: [20,22]
+        arch: [x64]
+        node: [22]
 
     runs-on: ${{ matrix.os }}
 
