@@ -1,4 +1,5 @@
-import type { Buffer } from "node:buffer";
+import { Buffer } from "node:buffer";
+import { Cacheable } from "cacheable";
 import QRCode from "qrcode";
 
 import {
@@ -15,6 +16,7 @@ export interface QrOptions {
 	logoSizeRatio?: number;
 	backgroundColor?: string;
 	foregroundColor?: string;
+	cache?: Cacheable | boolean;
 }
 
 export interface QrResult {
@@ -24,6 +26,10 @@ export interface QrResult {
 	height: number;
 }
 
+export type toOptions = {
+	cache?: boolean;
+};
+
 export class QrBit {
 	private _text: string;
 	private _size: number;
@@ -32,6 +38,7 @@ export class QrBit {
 	private _logoSizeRatio: number;
 	private _backgroundColor: string;
 	private _foregroundColor: string;
+	private _cache: Cacheable | undefined;
 
 	constructor(options: QrOptions) {
 		this._text = options.text;
@@ -41,6 +48,17 @@ export class QrBit {
 		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
 		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
 		this._foregroundColor = options.foregroundColor ?? "#000000";
+		if (options.cache !== undefined) {
+			// if it is boolean and true then create a new cacheable instance
+			if (options.cache === true) {
+				this._cache = new Cacheable();
+			} else if (options.cache !== false) {
+				// it is a cacheable instance
+				this._cache = options.cache as Cacheable;
+			}
+		} else {
+			this._cache = new Cacheable();
+		}
 	}
 
 	public get text(): string {
@@ -99,20 +117,63 @@ export class QrBit {
 		this._foregroundColor = value;
 	}
 
-	public async generateSvg(): Promise<string> {
-		if (!this._logoPath) {
-			return QRCode.toString(this._text, {
-				type: "svg",
-				margin: this._margin,
-				width: this._size,
-				color: { dark: this._foregroundColor, light: this._backgroundColor },
-			});
-		}
-
-		return this.generateSvgNapi();
+	public get cache(): Cacheable | undefined {
+		return this._cache;
 	}
 
-	public async generateSvgNapi(): Promise<string> {
+	public set cache(value: Cacheable | undefined) {
+		this._cache = value;
+	}
+
+	public async toSvg(options?: toOptions): Promise<string> {
+		let result = "";
+
+		// set all the options
+		const qrOptions = {
+			text: this._text,
+			size: this._size,
+			margin: this._margin,
+			logoPath: this._logoPath || undefined,
+			logoSizeRatio: this._logoSizeRatio,
+			backgroundColor: this._backgroundColor,
+			foregroundColor: this._foregroundColor,
+		};
+
+		// check the cache
+		if (this._cache && options?.cache !== false) {
+			const key = this.generateCacheKey();
+			const cached = await this._cache.get<string>(key);
+			if (cached) {
+				return cached;
+			}
+		}
+
+		if (!this._logoPath) {
+			result = await QRCode.toString(this._text, {
+				type: "svg",
+				margin: qrOptions.margin,
+				width: qrOptions.size,
+				color: {
+					dark: qrOptions.foregroundColor,
+					light: qrOptions.backgroundColor,
+				},
+			});
+		} else {
+			// If logoPath is set, use the Rust implementation
+			result = await this.toSvgNapi();
+		}
+
+		if (this._cache && options?.cache !== false) {
+			// set the cache, generate the key from hash
+			const key = this.generateCacheKey();
+			// cache the value
+			await this._cache.set(key, result);
+		}
+
+		return result;
+	}
+
+	public async toSvgNapi(): Promise<string> {
 		const nativeOptions = {
 			text: this._text,
 			size: this._size,
@@ -126,8 +187,11 @@ export class QrBit {
 		return nativeGenerateQrSvg(nativeOptions);
 	}
 
-	public async generatePng(): Promise<Buffer> {
-		const nativeOptions = {
+	public async toPng(options?: toOptions): Promise<Buffer> {
+		let result: Buffer;
+
+		// set all the options
+		const qrOptions = {
 			text: this._text,
 			size: this._size,
 			margin: this._margin,
@@ -137,7 +201,27 @@ export class QrBit {
 			foregroundColor: this._foregroundColor,
 		};
 
-		return nativeGenerateQrPng(nativeOptions);
+		// check the cache
+		if (this._cache && options?.cache !== false) {
+			const key = this.generateCacheKey();
+			const cached = await this._cache.get<Buffer>(key);
+			if (cached) {
+				// Ensure we return a Buffer, not Uint8Array
+				return Buffer.from(cached);
+			}
+		}
+
+		// Generate PNG using NAPI
+		result = nativeGenerateQrPng(qrOptions);
+
+		if (this._cache && options?.cache !== false) {
+			// set the cache, generate the key from hash
+			const key = this.generateCacheKey();
+			// cache the value
+			await this._cache.set(key, result);
+		}
+
+		return result;
 	}
 
 	public async generate(): Promise<QrResult> {
@@ -152,5 +236,21 @@ export class QrBit {
 		};
 
 		return nativeGenerateQr(nativeOptions);
+	}
+
+	public generateCacheKey(): string {
+		const qrOptions = {
+			text: this._text,
+			size: this._size,
+			margin: this._margin,
+			logoPath: this._logoPath || undefined,
+			logoSizeRatio: this._logoSizeRatio,
+			backgroundColor: this._backgroundColor,
+			foregroundColor: this._foregroundColor,
+		};
+
+		const cache = this._cache || new Cacheable();
+
+		return cache.hash(qrOptions);
 	}
 }

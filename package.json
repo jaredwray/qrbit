@@ -27,9 +27,10 @@
 		"lint": "biome check --write --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "vitest run --coverage",
-		"benchmark:qrcode": "tsx benchmark/qrcode.ts",
+		"benchmark:svg": "tsx benchmark/qrcode-svg.ts",
+		"benchmark:png": "tsx benchmark/qrcode-png.ts",
 		"benchmark:logo": "tsx benchmark/qrcode-logo.ts",
-		"benchmark": "pnpm benchmark:qrcode && pnpm benchmark:logo",
+		"benchmark": "pnpm benchmark:svg && pnpm benchmark:png && pnpm benchmark:logo",
 		"artifacts": "napi artifacts",
 		"version": "napi version"
 	},
@@ -84,7 +85,8 @@
 		]
 	},
 	"dependencies": {
-		"rimraf": "^6.0.1",
-		"qrcode": "^1.5.4"
+		"cacheable": "^1.10.4",
+		"qrcode": "^1.5.4",
+		"rimraf": "^6.0.1"
 	}
 }
