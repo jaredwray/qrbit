@@ -6,7 +6,7 @@ import { QrBit } from "../src/qrbit.js";
 import { cleanVersion } from "./utils.js";
 import {QRCodeCanvas} from '@loskir/styled-qr-code-node';
 
-const bench = new Bench({ name: "QrBit vs QRCode", iterations: 1000 });
+const bench = new Bench({ name: "QR Codes", iterations: 1000 });
 
 const testString = "https://github.com/jaredwray/qrbit";
 const qrbitVersion = cleanVersion(pkg.version);
@@ -23,24 +23,27 @@ bench.add(`QrBit SVG (v${qrbitVersion})`, () => {
 	qr.generateSvg();
 });
 
-bench.add(`QrBit PNG with Logo (v${qrbitVersion})`, () => {
-	const qr = new QrBit({ text: testString, logoPath: "test/fixtures/test_logo.png" });
-	qr.generatePng();
-});
-
 bench.add(`QRCode PNG (v${qrcodeVersion})`, async () => {
 	await QRCode.toBuffer(testString, { type: "png" });
 });
 
-bench.add(`styled-qr-code-node with Logo (v${styledQrCodeNodeVersion})`, async () => {
+bench.add(`QRCode SVG (v${qrcodeVersion})`, async () => {
+	await QRCode.toString(testString, { type: "svg" });
+});
+
+bench.add(`styled-qr-code-node (v${styledQrCodeNodeVersion})`, async () => {
 	const qr = new QRCodeCanvas({
 		data: testString,
-		image: "test/fixtures/test_logo.png",
 	});
 	await qr.toBuffer("png");
 });
 
-// Note: qr-code-styling requires browser environment (DOM/Canvas API) and doesn't work in Node.js benchmarks
+bench.add(`styled-qr-code-node SVG (v${styledQrCodeNodeVersion})`, async () => {
+	const qr = new QRCodeCanvas({
+		data: testString,
+	});
+	await qr.toBuffer("svg");
+});
 
 await bench.run();
 

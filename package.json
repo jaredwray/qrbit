@@ -27,7 +27,9 @@
 		"lint": "biome check --write --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "vitest run --coverage",
-		"benchmark": "tsx benchmark/qrbit-vs-qrcode.ts",
+		"benchmark:qrcode": "tsx benchmark/qrcode.ts",
+		"benchmark:logo": "tsx benchmark/qrcode-logo.ts",
+		"benchmark": "pnpm benchmark:qrcode && pnpm benchmark:logo",
 		"artifacts": "napi artifacts",
 		"version": "napi version"
 	},
