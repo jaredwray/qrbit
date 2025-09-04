@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import fs from "node:fs";
+import path from "node:path";
 import { Cacheable } from "cacheable";
 import { Hookified, type HookifiedOptions } from "hookified";
 import QRCode from "qrcode";
@@ -371,6 +372,42 @@ export class QrBit extends Hookified {
 		}
 
 		return result;
+	}
+
+	/**
+	 * Generate PNG QR code and save it to a file.
+	 * Creates directories if they don't exist.
+	 * @param filePath - The file path where to save the PNG
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @returns {Promise<void>} Resolves when file is written
+	 */
+	public async toPngFile(filePath: string, options?: toOptions): Promise<void> {
+		const pngBuffer = await this.toPng(options);
+
+		// Create directory if it doesn't exist
+		const dir = path.dirname(filePath);
+		await fs.promises.mkdir(dir, { recursive: true });
+
+		await fs.promises.writeFile(filePath, pngBuffer);
+	}
+
+	/**
+	 * Generate SVG QR code and save it to a file.
+	 * Creates directories if they don't exist.
+	 * @param filePath - The file path where to save the SVG
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @returns {Promise<void>} Resolves when file is written
+	 */
+	public async toSvgFile(filePath: string, options?: toOptions): Promise<void> {
+		const svgString = await this.toSvg(options);
+
+		// Create directory if it doesn't exist
+		const dir = path.dirname(filePath);
+		await fs.promises.mkdir(dir, { recursive: true });
+
+		await fs.promises.writeFile(filePath, svgString, "utf8");
 	}
 
 	/**
