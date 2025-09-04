@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { Bench } from "tinybench";
 import { tinybenchPrinter } from "@monstermann/tinybench-pretty-printer";
 import pkg from "../package.json";
@@ -14,14 +15,28 @@ const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled
 
 const qr = new QrBit({ text: faker.internet.url(), logo });
 
-bench.add(`QrBit PNG (v${qrbitVersion})`, async () => {
+const logoBuffer = fs.readFileSync(logo);
+
+const qrBuffer = new QrBit({ text: faker.internet.url(), logo: logoBuffer });
+
+bench.add(`QrBit PNG (Path) (v${qrbitVersion})`, async () => {
 	qr.text = faker.internet.url();
 	await qr.toPng();
 });
 
-bench.add(`QrBit SVG (v${qrbitVersion})`, async () => {
+bench.add(`QrBit SVG (Path) (v${qrbitVersion})`, async () => {
 	qr.text = faker.internet.url();
 	await qr.toSvg();
+});
+
+bench.add(`QrBit PNG (Buffer) (v${qrbitVersion})`, async () => {
+	qrBuffer.text = faker.internet.url();
+	await qrBuffer.toPng();
+});
+
+bench.add(`QrBit SVG (Buffer) (v${qrbitVersion})`, async () => {
+	qrBuffer.text = faker.internet.url();
+	await qrBuffer.toSvg();
 });
 
 bench.add(`styled-qr-code-node PNG (v${styledQrCodeNodeVersion})`, async () => {

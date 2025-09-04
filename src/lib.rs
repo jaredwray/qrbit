@@ -175,12 +175,25 @@ impl QrGenerator {
             let center_x = (total_size - logo_size) / 2.0;
             let center_y = (total_size - logo_size) / 2.0;
             
+            // Read logo file and convert to base64 data URL
+            let data_url = match std::fs::read(logo_path) {
+                Ok(logo_buffer) => {
+                    use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+                    let base64_data = BASE64.encode(&logo_buffer);
+                    format!("data:image/png;base64,{}", base64_data)
+                },
+                Err(_) => {
+                    // Fallback to file path if reading fails
+                    logo_path.to_string()
+                }
+            };
+            
             let logo_image = SvgImage::new()
                 .set("x", center_x)
                 .set("y", center_y)
                 .set("width", logo_size)
                 .set("height", logo_size)
-                .set("href", logo_path);
+                .set("href", data_url);
             
             document = document.add(logo_image);
         }
@@ -275,6 +288,31 @@ impl QrGenerator {
         img.write_to(&mut cursor, image::ImageFormat::Png)
             .map_err(|e| Error::from_reason(format!("Failed to encode PNG: {}", e)))?;
         
+        Ok(buffer)
+    }
+
+    pub fn generate_png_with_buffer(&self, logo_buffer: Option<&[u8]>, logo_size_ratio: f64) -> napi::Result<Vec<u8>> {
+        // Step 1: Generate the base QR code image (without logo)
+        // This creates an RGBA image with the QR pattern rendered as filled rectangles
+        let mut img = self.generate_image();
+        
+        // Step 2: Add logo overlay if a buffer is provided
+        if let Some(logo_buffer) = logo_buffer {
+            // Decode the logo buffer into an image, resize it, and overlay it on the QR code
+            // This handles the logo positioning (centered) and scaling based on logo_size_ratio
+            img = self.add_logo_from_buffer(img, logo_buffer, logo_size_ratio)?;
+        }
+        
+        // Step 3: Encode the final image as PNG bytes
+        // Create an in-memory buffer to hold the PNG data
+        let mut buffer = Vec::new();
+        let mut cursor = Cursor::new(&mut buffer);
+        
+        // Write the RGBA image data to the buffer in PNG format
+        img.write_to(&mut cursor, image::ImageFormat::Png)
+            .map_err(|e| Error::from_reason(format!("Failed to encode PNG: {}", e)))?;
+        
+        // Step 4: Return the PNG bytes as a Vec<u8>
         Ok(buffer)
     }
 }
@@ -405,4 +443,32 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
         logo_buffer,
         logo_size_ratio
     )
+}
+
+#[napi]
+pub fn generate_qr_png_with_buffer(options: QrOptionsWithBuffer) -> Result<Buffer> {
+    let size = options.size.unwrap_or(200);
+    let margin = options.margin.unwrap_or(20);
+    let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
+    
+    let mut generator = QrGenerator::new(&options.text, size, margin)?;
+    
+    if let Some(bg_color) = &options.background_color {
+        let bg = parse_color(bg_color)?;
+        let fg = if let Some(fg_color) = &options.foreground_color {
+            parse_color(fg_color)?
+        } else {
+            [0, 0, 0, 255]
+        };
+        generator.set_colors(bg, fg);
+    }
+    
+    let logo_buffer = options.logo_buffer.as_ref().map(|b| b.as_ref());
+    
+    let png_data = generator.generate_png_with_buffer(
+        logo_buffer,
+        logo_size_ratio
+    )?;
+    
+    Ok(png_data.into())
 }

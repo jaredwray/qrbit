@@ -1,15 +1,23 @@
 import { Buffer } from "node:buffer";
 import fs from "node:fs";
 import { Cacheable } from "cacheable";
+import { Hookified, type HookifiedOptions } from "hookified";
 import QRCode from "qrcode";
-
 import {
 	generateQr as nativeGenerateQr,
 	generateQrPng as nativeGenerateQrPng,
+	generateQrPngWithBuffer as nativeGenerateQrPngWithBuffer,
 	generateQrSvg as nativeGenerateQrSvg,
+	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 } from "./native.js";
 
-export interface QrOptions {
+export enum QrBitEvents {
+	warn = "warn",
+	info = "info",
+	error = "error",
+}
+
+export type QrOptions = {
 	text: string;
 	size?: number;
 	margin?: number;
@@ -18,7 +26,7 @@ export interface QrOptions {
 	backgroundColor?: string;
 	foregroundColor?: string;
 	cache?: Cacheable | boolean;
-}
+} & HookifiedOptions;
 
 export interface QrResult {
 	svg?: string;
@@ -31,7 +39,7 @@ export type toOptions = {
 	cache?: boolean;
 };
 
-export class QrBit {
+export class QrBit extends Hookified {
 	private _text: string;
 	private _size: number;
 	private _margin: number;
@@ -42,10 +50,11 @@ export class QrBit {
 	private _cache: Cacheable | undefined;
 
 	constructor(options: QrOptions) {
+		super();
 		this._text = options.text;
 		this._size = options.size ?? 200;
 		this._margin = options.margin ?? 20;
-		this._logo = options.logo ?? undefined;
+		this._logo = options.logo;
 		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
 		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
 		this._foregroundColor = options.foregroundColor ?? "#000000";
@@ -175,32 +184,36 @@ export class QrBit {
 	}
 
 	public async toSvgNapi(): Promise<string> {
-		const nativeOptions = {
-			text: this._text,
-			size: this._size,
-			margin: this._margin,
-			logo: this._logo || undefined,
-			logoSizeRatio: this._logoSizeRatio,
-			backgroundColor: this._backgroundColor,
-			foregroundColor: this._foregroundColor,
-		};
-
-		return nativeGenerateQrSvg(nativeOptions);
+		// Choose optimal path based on logo type
+		if (this._logo && Buffer.isBuffer(this._logo)) {
+			// Logo is already a buffer - use buffer function
+			const nativeOptionsBuffer = {
+				text: this._text,
+				size: this._size,
+				margin: this._margin,
+				logoBuffer: this._logo,
+				logoSizeRatio: this._logoSizeRatio,
+				backgroundColor: this._backgroundColor,
+				foregroundColor: this._foregroundColor,
+			};
+			return nativeGenerateQrSvgWithBuffer(nativeOptionsBuffer);
+		} else {
+			// Logo is a string path or undefined - use original function
+			const nativeOptions = {
+				text: this._text,
+				size: this._size,
+				margin: this._margin,
+				logoPath: this._logo as string,
+				logoSizeRatio: this._logoSizeRatio,
+				backgroundColor: this._backgroundColor,
+				foregroundColor: this._foregroundColor,
+			};
+			return nativeGenerateQrSvg(nativeOptions);
+		}
 	}
 
 	public async toPng(options?: toOptions): Promise<Buffer> {
 		let result: Buffer;
-
-		// set all the options
-		const qrOptions = {
-			text: this._text,
-			size: this._size,
-			margin: this._margin,
-			logo: this._logo || undefined,
-			logoSizeRatio: this._logoSizeRatio,
-			backgroundColor: this._backgroundColor,
-			foregroundColor: this._foregroundColor,
-		};
 
 		// check the cache
 		if (this._cache && options?.cache !== false) {
@@ -212,8 +225,8 @@ export class QrBit {
 			}
 		}
 
-		// Generate PNG using NAPI
-		result = nativeGenerateQrPng(qrOptions);
+		// always use png napi as it is fastest
+		result = await this.toPngNapi();
 
 		if (this._cache && options?.cache !== false) {
 			// set the cache, generate the key from hash
@@ -223,6 +236,35 @@ export class QrBit {
 		}
 
 		return result;
+	}
+
+	public async toPngNapi(): Promise<Buffer> {
+		// Choose optimal path based on logo type
+		if (this._logo && Buffer.isBuffer(this._logo)) {
+			// Logo is already a buffer - use buffer function
+			const nativeOptionsBuffer = {
+				text: this._text,
+				size: this._size,
+				margin: this._margin,
+				logoBuffer: this._logo,
+				logoSizeRatio: this._logoSizeRatio,
+				backgroundColor: this._backgroundColor,
+				foregroundColor: this._foregroundColor,
+			};
+			return nativeGenerateQrPngWithBuffer(nativeOptionsBuffer);
+		} else {
+			// Logo is a string path or undefined - use original function
+			const nativeOptions = {
+				text: this._text,
+				size: this._size,
+				margin: this._margin,
+				logoPath: this._logo as string,
+				logoSizeRatio: this._logoSizeRatio,
+				backgroundColor: this._backgroundColor,
+				foregroundColor: this._foregroundColor,
+			};
+			return nativeGenerateQrPng(nativeOptions);
+		}
 	}
 
 	public async generate(): Promise<QrResult> {
