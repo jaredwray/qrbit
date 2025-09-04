@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import {
 	generateQr as nativeGenerateQr,
 	generateQrPng as nativeGenerateQrPng,
+	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 } from "./native.js";
 
@@ -182,17 +183,32 @@ export class QrBit extends Hookified {
 	}
 
 	public async toSvgNapi(): Promise<string> {
-		// If logo is not a string, handle accordingly
-		const nativeOptionsBuffer = {
-			text: this._text,
-			size: this._size,
-			margin: this._margin,
-			logoBuffer: await this.getLogoBuffer(),
-			logoSizeRatio: this._logoSizeRatio,
-			backgroundColor: this._backgroundColor,
-			foregroundColor: this._foregroundColor,
-		};
-		return nativeGenerateQrSvgWithBuffer(nativeOptionsBuffer);
+		// Choose optimal path based on logo type
+		if (this._logo && Buffer.isBuffer(this._logo)) {
+			// Logo is already a buffer - use buffer function
+			const nativeOptionsBuffer = {
+				text: this._text,
+				size: this._size,
+				margin: this._margin,
+				logoBuffer: this._logo,
+				logoSizeRatio: this._logoSizeRatio,
+				backgroundColor: this._backgroundColor,
+				foregroundColor: this._foregroundColor,
+			};
+			return nativeGenerateQrSvgWithBuffer(nativeOptionsBuffer);
+		} else {
+			// Logo is a string path or undefined - use original function
+			const nativeOptions = {
+				text: this._text,
+				size: this._size,
+				margin: this._margin,
+				logoPath: this._logo as string,
+				logoSizeRatio: this._logoSizeRatio,
+				backgroundColor: this._backgroundColor,
+				foregroundColor: this._foregroundColor,
+			};
+			return nativeGenerateQrSvg(nativeOptions);
+		}
 	}
 
 	public async toPng(options?: toOptions): Promise<Buffer> {
@@ -270,45 +286,5 @@ export class QrBit extends Hookified {
 
 	public isLogoString(): boolean {
 		return typeof this._logo === "string";
-	}
-
-	public async getLogoBuffer(): Promise<Buffer | undefined> {
-		if (this._logo && Buffer.isBuffer(this._logo)) {
-			return this._logo;
-		}
-
-		// process string logo
-		if (this._logo) {
-			// check if it is in the cache
-			const key = this._logo;
-			if (this._cache) {
-				const cacheValue = await this._cache.get<Buffer>(key);
-
-				// found it so return it
-				if (cacheValue) {
-					return Buffer.from(cacheValue);
-				}
-			}
-
-			// get the logo from the file system
-			let result: Buffer | undefined;
-			try {
-				result = await fs.promises.readFile(this._logo);
-				/* c8 ignore start */
-			} catch (error) {
-				this.emit(QrBitEvents.error, error);
-			}
-			/* c8 ignore stop */
-
-			if (result) {
-				// cache it and return results
-				if (this._cache) {
-					await this._cache.set(key, result);
-				}
-				return result;
-			}
-		}
-
-		return undefined;
 	}
 }

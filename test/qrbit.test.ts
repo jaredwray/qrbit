@@ -26,9 +26,9 @@ describe("QrBit Class", () => {
 		expect(svg).toContain('height="200"');
 	});
 
-	it("should generate SVG output", async () => {
+	it("should generate SVG output with logo path", async () => {
 		const text = faker.person.fullName();
-		const qr = new QrBit({ text, logo: testLogoPath });
+		const qr = new QrBit({ text, logo: testLogoPathSmall });
 		const svg = await qr.toSvg();
 
 		expect(typeof svg).toBe("string");
@@ -397,53 +397,6 @@ describe("Caching", () => {
 });
 
 describe("Buffer Logo", () => {
-	it("should return logo buffer if logo is a buffer", async () => {
-		const logoBuffer = Buffer.from("logo");
-		const qr = new QrBit({ text: "Hi", logo: logoBuffer });
-
-		const result = await qr.getLogoBuffer();
-		expect(result).toEqual(logoBuffer);
-	});
-
-	it("should return a buffer if logo is a string", async () => {
-		const logoPath = testLogoPathSmall;
-		const qr = new QrBit({ text: "Hi", logo: logoPath });
-
-		const result = await qr.getLogoBuffer();
-		expect(result).toBeInstanceOf(Buffer);
-	});
-
-	it("should use the internal logo buffer cache", async () => {
-		const qr = new QrBit({ text: "Hi", logo: testLogoPathSmall });
-
-		const result1 = await qr.getLogoBuffer();
-		const result2 = await qr.getLogoBuffer();
-		const result3 = await qr.getLogoBuffer();
-
-		expect(result1).toEqual(result2);
-		expect(result2).toEqual(result3);
-	});
-
-	it("should return undefined if logo is undefined", async () => {
-		const qr = new QrBit({ text: "Hi", logo: undefined });
-
-		const result = await qr.getLogoBuffer();
-		expect(result).toBeUndefined();
-	});
-
-	it("should reset the logo buffer cache when logo is reset", async () => {
-		const logoBuffer = Buffer.from("logo");
-		const qr = new QrBit({ text: "Hi", logo: logoBuffer });
-
-		const result1 = await qr.getLogoBuffer();
-		expect(result1).toEqual(logoBuffer);
-
-		qr.logo = Buffer.from("logo2");
-
-		const result2 = await qr.getLogoBuffer();
-		expect(result2).to.not.equal(result1);
-	});
-
 	it("should generate SVG QR code with logo from buffer", async () => {
 		const logoBuffer = fs.readFileSync(testLogoPath);
 		const text = faker.internet.url();

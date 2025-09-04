@@ -175,12 +175,25 @@ impl QrGenerator {
             let center_x = (total_size - logo_size) / 2.0;
             let center_y = (total_size - logo_size) / 2.0;
             
+            // Read logo file and convert to base64 data URL
+            let data_url = match std::fs::read(logo_path) {
+                Ok(logo_buffer) => {
+                    use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+                    let base64_data = BASE64.encode(&logo_buffer);
+                    format!("data:image/png;base64,{}", base64_data)
+                },
+                Err(_) => {
+                    // Fallback to file path if reading fails
+                    logo_path.to_string()
+                }
+            };
+            
             let logo_image = SvgImage::new()
                 .set("x", center_x)
                 .set("y", center_y)
                 .set("width", logo_size)
                 .set("height", logo_size)
-                .set("href", logo_path);
+                .set("href", data_url);
             
             document = document.add(logo_image);
         }
