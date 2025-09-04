@@ -411,4 +411,36 @@ describe("Buffer Logo", () => {
 		expect(svg).toContain("</svg>");
 		expect(svg).toContain("data:image/png;base64,"); // Should contain base64 data URL
 	});
+
+	it("should generate PNG QR code with logo from buffer", async () => {
+		const logoBuffer = fs.readFileSync(testLogoPath);
+		const text = faker.internet.url();
+
+		const qr = new QrBit({ text, logo: logoBuffer });
+
+		const png = await qr.toPngNapi();
+
+		expect(png).toBeInstanceOf(Buffer);
+		expect(png.length).toBeGreaterThan(0);
+		// Check PNG signature
+		expect(png[0]).toBe(0x89);
+		expect(png[1]).toBe(0x50);
+		expect(png[2]).toBe(0x4e);
+		expect(png[3]).toBe(0x47);
+	});
+
+	it("should generate PNG QR code with logo from path using native function", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: testLogoPath });
+
+		const png = await qr.toPngNapi();
+
+		expect(png).toBeInstanceOf(Buffer);
+		expect(png.length).toBeGreaterThan(0);
+		// Check PNG signature
+		expect(png[0]).toBe(0x89);
+		expect(png[1]).toBe(0x50);
+		expect(png[2]).toBe(0x4e);
+		expect(png[3]).toBe(0x47);
+	});
 });

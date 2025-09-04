@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import {
 	generateQr as nativeGenerateQr,
 	generateQrPng as nativeGenerateQrPng,
+	generateQrPngWithBuffer as nativeGenerateQrPngWithBuffer,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 } from "./native.js";
@@ -214,17 +215,6 @@ export class QrBit extends Hookified {
 	public async toPng(options?: toOptions): Promise<Buffer> {
 		let result: Buffer;
 
-		// set all the options
-		const qrOptions = {
-			text: this._text,
-			size: this._size,
-			margin: this._margin,
-			logo: this._logo || undefined,
-			logoSizeRatio: this._logoSizeRatio,
-			backgroundColor: this._backgroundColor,
-			foregroundColor: this._foregroundColor,
-		};
-
 		// check the cache
 		if (this._cache && options?.cache !== false) {
 			const key = this.generateCacheKey();
@@ -235,8 +225,8 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		// Generate PNG using NAPI
-		result = nativeGenerateQrPng(qrOptions);
+		// always use png napi as it is fastest
+		result = await this.toPngNapi();
 
 		if (this._cache && options?.cache !== false) {
 			// set the cache, generate the key from hash
@@ -246,6 +236,35 @@ export class QrBit extends Hookified {
 		}
 
 		return result;
+	}
+
+	public async toPngNapi(): Promise<Buffer> {
+		// Choose optimal path based on logo type
+		if (this._logo && Buffer.isBuffer(this._logo)) {
+			// Logo is already a buffer - use buffer function
+			const nativeOptionsBuffer = {
+				text: this._text,
+				size: this._size,
+				margin: this._margin,
+				logoBuffer: this._logo,
+				logoSizeRatio: this._logoSizeRatio,
+				backgroundColor: this._backgroundColor,
+				foregroundColor: this._foregroundColor,
+			};
+			return nativeGenerateQrPngWithBuffer(nativeOptionsBuffer);
+		} else {
+			// Logo is a string path or undefined - use original function
+			const nativeOptions = {
+				text: this._text,
+				size: this._size,
+				margin: this._margin,
+				logoPath: this._logo as string,
+				logoSizeRatio: this._logoSizeRatio,
+				backgroundColor: this._backgroundColor,
+				foregroundColor: this._foregroundColor,
+			};
+			return nativeGenerateQrPng(nativeOptions);
+		}
 	}
 
 	public async generate(): Promise<QrResult> {
