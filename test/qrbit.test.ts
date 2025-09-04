@@ -448,6 +448,7 @@ describe("Buffer Logo", () => {
 describe("File Operations", () => {
 	const tempDir = "./test/temp";
 	const testPngPath = `${tempDir}/test-qr.png`;
+	const testSvgPath = `${tempDir}/test-qr.svg`;
 
 	beforeEach(async () => {
 		// Create temp directory
@@ -460,6 +461,17 @@ describe("File Operations", () => {
 		// Clean up test files
 		if (fs.existsSync(testPngPath)) {
 			fs.unlinkSync(testPngPath);
+		}
+		if (fs.existsSync(testSvgPath)) {
+			fs.unlinkSync(testSvgPath);
+		}
+		// Clean up any nested directories that might have been created
+		try {
+			if (fs.existsSync(`${tempDir}/nested`)) {
+				fs.rmSync(`${tempDir}/nested`, { recursive: true });
+			}
+		} catch {
+			// Directory doesn't exist, ignore
 		}
 		// Remove temp directory if empty
 		try {
@@ -540,5 +552,85 @@ describe("File Operations", () => {
 		// Clean up the nested file and directories
 		fs.unlinkSync(deepPath);
 		fs.rmSync(`${tempDir}/nested`, { recursive: true });
+	});
+
+	it("should save SVG QR code to file", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		await qr.toSvgFile(testSvgPath);
+
+		// Verify file exists
+		expect(fs.existsSync(testSvgPath)).toBe(true);
+
+		// Verify file content is valid SVG
+		const fileContent = fs.readFileSync(testSvgPath, "utf8");
+		expect(typeof fileContent).toBe("string");
+		expect(fileContent.length).toBeGreaterThan(0);
+
+		// Check SVG structure
+		expect(fileContent).toContain("<svg");
+		expect(fileContent).toContain("</svg>");
+		expect(fileContent).toContain('width="200"');
+		expect(fileContent).toContain('height="200"');
+	});
+
+	it("should save SVG QR code with logo to file", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: testLogoPath });
+
+		await qr.toSvgFile(testSvgPath);
+
+		// Verify file exists
+		expect(fs.existsSync(testSvgPath)).toBe(true);
+
+		// Verify file content is valid SVG
+		const fileContent = fs.readFileSync(testSvgPath, "utf8");
+		expect(typeof fileContent).toBe("string");
+		expect(fileContent.length).toBeGreaterThan(0);
+
+		// Check SVG structure and logo embedding
+		expect(fileContent).toContain("<svg");
+		expect(fileContent).toContain("</svg>");
+		expect(fileContent).toContain('width="240"');
+		expect(fileContent).toContain('height="240"');
+		expect(fileContent).toContain("data:image/png;base64,"); // Should contain base64 data URL
+	});
+
+	it("should save SVG QR code to file with caching disabled", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		await qr.toSvgFile(testSvgPath, { cache: false });
+
+		// Verify file exists
+		expect(fs.existsSync(testSvgPath)).toBe(true);
+
+		// Verify file content is valid SVG
+		const fileContent = fs.readFileSync(testSvgPath, "utf8");
+		expect(typeof fileContent).toBe("string");
+		expect(fileContent.length).toBeGreaterThan(0);
+		expect(fileContent).toContain("<svg");
+		expect(fileContent).toContain("</svg>");
+	});
+
+	it("should create directories for SVG files if they don't exist", async () => {
+		const deepSvgPath = `${tempDir}/nested/deep/test-qr.svg`;
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		// This should create the nested directories
+		await qr.toSvgFile(deepSvgPath);
+
+		// Verify file exists
+		expect(fs.existsSync(deepSvgPath)).toBe(true);
+
+		// Verify file content
+		const fileContent = fs.readFileSync(deepSvgPath, "utf8");
+		expect(fileContent).toContain("<svg");
+		expect(fileContent).toContain("</svg>");
+
+		// Clean up the nested file (cleanup will handle directories)
+		fs.unlinkSync(deepSvgPath);
 	});
 });

@@ -393,6 +393,24 @@ export class QrBit extends Hookified {
 	}
 
 	/**
+	 * Generate SVG QR code and save it to a file.
+	 * Creates directories if they don't exist.
+	 * @param filePath - The file path where to save the SVG
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @returns {Promise<void>} Resolves when file is written
+	 */
+	public async toSvgFile(filePath: string, options?: toOptions): Promise<void> {
+		const svgString = await this.toSvg(options);
+
+		// Create directory if it doesn't exist
+		const dir = path.dirname(filePath);
+		await fs.promises.mkdir(dir, { recursive: true });
+
+		await fs.promises.writeFile(filePath, svgString, "utf8");
+	}
+
+	/**
 	 * Generate PNG QR code using the native Rust implementation.
 	 * Automatically chooses between file path and buffer functions.
 	 * @returns {Promise<Buffer>} The PNG buffer
