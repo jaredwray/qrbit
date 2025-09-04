@@ -18,6 +18,9 @@ export enum QrBitEvents {
 	error = "error",
 }
 
+const logoFileDoesNotExistMessage = (logo: string) =>
+	`Logo file not found: ${logo}. Proceeding without logo.`;
+
 export type QrOptions = {
 	/**
 	 * The text content to encode in the QR code. It can be text or a url.
@@ -124,6 +127,9 @@ export class QrBit extends Hookified {
 		} else {
 			this._cache = new Cacheable();
 		}
+
+		// set throwOnEmitError to true if there are no listeners
+		this.throwOnEmitError = true;
 	}
 
 	/**
@@ -344,6 +350,16 @@ export class QrBit extends Hookified {
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
 			};
+
+			if (this._logo && this.isLogoString()) {
+				if (!(await this.logoFileExists(this._logo as string))) {
+					this.emit(
+						QrBitEvents.error,
+						logoFileDoesNotExistMessage(this._logo as string),
+					);
+				}
+			}
+
 			return this._napi.generateQrSvg(nativeOptions);
 		}
 	}
@@ -447,6 +463,16 @@ export class QrBit extends Hookified {
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
 			};
+
+			if (this._logo && this.isLogoString()) {
+				if (!(await this.logoFileExists(this._logo as string))) {
+					this.emit(
+						QrBitEvents.error,
+						logoFileDoesNotExistMessage(this._logo as string),
+					);
+				}
+			}
+
 			return this._napi.generateQrPng(nativeOptions);
 		}
 	}
@@ -467,8 +493,11 @@ export class QrBit extends Hookified {
 		};
 
 		if (this._logo && this.isLogoString()) {
-			if (!fs.existsSync(this._logo)) {
-				throw new Error(`Logo file not found: ${this._logo}`);
+			if (!(await this.logoFileExists(this._logo as string))) {
+				this.emit(
+					QrBitEvents.error,
+					logoFileDoesNotExistMessage(this._logo as string),
+				);
 			}
 		}
 
@@ -501,5 +530,19 @@ export class QrBit extends Hookified {
 	 */
 	public isLogoString(): boolean {
 		return typeof this._logo === "string";
+	}
+
+	/**
+	 * Check if a logo file exists at the specified path.
+	 * @param filePath - The file path to check
+	 * @returns {Promise<boolean>} True if file exists, false otherwise
+	 */
+	public async logoFileExists(filePath: string): Promise<boolean> {
+		try {
+			await fs.promises.access(filePath, fs.constants.F_OK);
+			return true;
+		} catch (_error) {
+			return false;
+		}
 	}
 }

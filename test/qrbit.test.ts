@@ -634,3 +634,195 @@ describe("File Operations", () => {
 		fs.unlinkSync(deepSvgPath);
 	});
 });
+
+describe("Logo File Validation", () => {
+	const tempDir = "./test/temp";
+	const existingFile = `${tempDir}/existing.txt`;
+	const nonExistentFile = `${tempDir}/does-not-exist.txt`;
+
+	beforeEach(async () => {
+		// Create temp directory and test file
+		if (!fs.existsSync(tempDir)) {
+			fs.mkdirSync(tempDir, { recursive: true });
+		}
+		fs.writeFileSync(existingFile, "test content");
+	});
+
+	afterEach(async () => {
+		// Clean up test files
+		if (fs.existsSync(existingFile)) {
+			fs.unlinkSync(existingFile);
+		}
+		// Remove temp directory if empty
+		try {
+			fs.rmdirSync(tempDir);
+		} catch {
+			// Directory not empty or doesn't exist, ignore
+		}
+	});
+
+	it("should return true for existing file", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		const exists = await qr.logoFileExists(existingFile);
+		expect(exists).toBe(true);
+	});
+
+	it("should return false for non-existent file", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		const exists = await qr.logoFileExists(nonExistentFile);
+		expect(exists).toBe(false);
+	});
+
+	it("should return false for empty path", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		const exists = await qr.logoFileExists("");
+		expect(exists).toBe(false);
+	});
+
+	it("should validate logo files", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		// Should return true for test logo file
+		const logoExists = await qr.logoFileExists(testLogoPath);
+		expect(logoExists).toBe(true);
+
+		// Should return false for non-existent logo
+		const nonExistentLogoExists = await qr.logoFileExists(
+			"/non/existent/logo.png",
+		);
+		expect(nonExistentLogoExists).toBe(false);
+	});
+});
+
+describe("Logo File Validation in Methods", () => {
+	it("should emit error when logo file does not exist in toSvgNapi", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: "/non/existent/logo.png" });
+
+		let errorEmitted = false;
+		let errorMessage = "";
+
+		// Listen for error event
+		qr.on("error", (message: string) => {
+			errorEmitted = true;
+			errorMessage = message;
+		});
+
+		// Should still generate SVG but emit error
+		const svg = await qr.toSvgNapi();
+
+		expect(errorEmitted).toBe(true);
+		expect(errorMessage).toBe(
+			"Logo file not found: /non/existent/logo.png. Proceeding without logo.",
+		);
+		expect(typeof svg).toBe("string");
+		expect(svg).toContain("<svg");
+	});
+
+	it("should emit error when logo file does not exist in toPngNapi", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: "/non/existent/logo.png" });
+
+		let errorEmitted = false;
+		let errorMessage = "";
+
+		// Listen for error event
+		qr.on("error", (message: string) => {
+			errorEmitted = true;
+			errorMessage = message;
+		});
+
+		// Should emit error and then throw when trying to generate
+		await expect(qr.toPngNapi()).rejects.toThrow("Failed to open logo");
+
+		expect(errorEmitted).toBe(true);
+		expect(errorMessage).toBe(
+			"Logo file not found: /non/existent/logo.png. Proceeding without logo.",
+		);
+	});
+
+	it("should emit error when logo file does not exist in generate", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: "/non/existent/logo.png" });
+
+		let errorEmitted = false;
+		let errorMessage = "";
+
+		// Listen for error event
+		qr.on("error", (message: string) => {
+			errorEmitted = true;
+			errorMessage = message;
+		});
+
+		// Should still generate QR code but emit error
+		const result = await qr.generate();
+
+		expect(errorEmitted).toBe(true);
+		expect(errorMessage).toBe(
+			"Logo file not found: /non/existent/logo.png. Proceeding without logo.",
+		);
+		expect(result).toHaveProperty("svg");
+		expect(result).toHaveProperty("png");
+		expect(result.width).toBeGreaterThan(0);
+		expect(result.height).toBeGreaterThan(0);
+	});
+
+	it("should not emit error when logo file exists", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: testLogoPath });
+
+		let errorEmitted = false;
+
+		// Listen for error event
+		qr.on("error", () => {
+			errorEmitted = true;
+		});
+
+		// Should generate without error
+		await qr.toSvgNapi();
+
+		expect(errorEmitted).toBe(false);
+	});
+
+	it("should not emit error when logo is a buffer", async () => {
+		const logoBuffer = fs.readFileSync(testLogoPath);
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: logoBuffer });
+
+		let errorEmitted = false;
+
+		// Listen for error event
+		qr.on("error", () => {
+			errorEmitted = true;
+		});
+
+		// Should generate without error
+		await qr.toPngNapi();
+
+		expect(errorEmitted).toBe(false);
+	});
+
+	it("should not emit error when no logo is set", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		let errorEmitted = false;
+
+		// Listen for error event
+		qr.on("error", () => {
+			errorEmitted = true;
+		});
+
+		// Should generate without error
+		await qr.generate();
+
+		expect(errorEmitted).toBe(false);
+	});
+});
