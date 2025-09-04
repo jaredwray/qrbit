@@ -18,13 +18,52 @@ export enum QrBitEvents {
 }
 
 export type QrOptions = {
+	/**
+	 * The text content to encode in the QR code. It can be text or a url.
+	 * @type {string}
+	 */
 	text: string;
+	/**
+	 * The size of the QR code in pixels.
+	 * @type {number}
+	 * @default 200
+	 */
 	size?: number;
+	/**
+	 * The margin around the QR code in pixels.
+	 * @type {number}
+	 * @default 20
+	 */
 	margin?: number;
+	/**
+	 * The logo to embed in the QR code.
+	 * @type {string | Buffer}
+	 */
 	logo?: string | Buffer;
+	/**
+	 * The logo size ratio relative to QR code size.
+	 * @type {number}
+	 * @default 0.2
+	 */
 	logoSizeRatio?: number;
+	/**
+	 * The background color of the QR code.
+	 * @type {string}
+	 * @default "#FFFFFF"
+	 */
 	backgroundColor?: string;
+	/**
+	 * The foreground color of the QR code.
+	 * @type {string}
+	 * @default "#000000"
+	 */
 	foregroundColor?: string;
+	/**
+	 * Caching is enabled by default. You can disable it by setting this option to false. You can also pass
+	 * a custom Cacheable instance.
+	 * @type {Cacheable | boolean}
+	 * @default true
+	 */
 	cache?: Cacheable | boolean;
 } & HookifiedOptions;
 
@@ -39,6 +78,10 @@ export type toOptions = {
 	cache?: boolean;
 };
 
+/**
+ * QR code generator with logo support and caching capabilities.
+ * Supports both file path and buffer-based logos with automatic optimization.
+ */
 export class QrBit extends Hookified {
 	private _text: string;
 	private _size: number;
@@ -49,6 +92,10 @@ export class QrBit extends Hookified {
 	private _foregroundColor: string;
 	private _cache: Cacheable | undefined;
 
+	/**
+	 * Create a new QrBit instance.
+	 * @param options - Configuration options for the QR code
+	 */
 	constructor(options: QrOptions) {
 		super();
 		this._text = options.text;
@@ -71,70 +118,146 @@ export class QrBit extends Hookified {
 		}
 	}
 
+	/**
+	 * Get the text content for the QR code.
+	 * @returns {string} The text content
+	 */
 	public get text(): string {
 		return this._text;
 	}
 
+	/**
+	 * Set the text content for the QR code.
+	 * @param value - The text content to encode
+	 */
 	public set text(value: string) {
 		this._text = value;
 	}
 
+	/**
+	 * Get the size of the QR code in pixels.
+	 * @returns {number} The size in pixels
+	 * @default 200
+	 */
 	public get size(): number {
 		return this._size;
 	}
 
+	/**
+	 * Set the size of the QR code in pixels.
+	 * @param value - The size in pixels
+	 */
 	public set size(value: number) {
 		this._size = value;
 	}
 
+	/**
+	 * Get the margin around the QR code in pixels.
+	 * @returns {number} The margin in pixels
+	 * @default 20
+	 */
 	public get margin(): number {
 		return this._margin;
 	}
 
+	/**
+	 * Set the margin around the QR code in pixels.
+	 * @param value - The margin in pixels
+	 */
 	public set margin(value: number) {
 		this._margin = value;
 	}
 
+	/**
+	 * Get the logo path or buffer.
+	 * @returns {string | Buffer | undefined} The logo path, buffer, or undefined if no logo
+	 * @default undefined
+	 */
 	public get logo(): string | Buffer | undefined {
 		return this._logo;
 	}
 
+	/**
+	 * Set the logo as a file path or buffer.
+	 * @param value - The logo file path, buffer, or undefined to remove logo
+	 */
 	public set logo(value: string | Buffer | undefined) {
 		this._logo = value;
 	}
 
+	/**
+	 * Get the logo size ratio relative to QR code size.
+	 * @returns {number} The logo size ratio
+	 * @default 0.2
+	 */
 	public get logoSizeRatio(): number {
 		return this._logoSizeRatio;
 	}
 
+	/**
+	 * Set the logo size ratio relative to QR code size.
+	 * @param value - The logo size ratio (0.0 to 1.0)
+	 */
 	public set logoSizeRatio(value: number) {
 		this._logoSizeRatio = value;
 	}
 
+	/**
+	 * Get the background color of the QR code.
+	 * @returns {string} The background color in hex format
+	 * @default "#FFFFFF"
+	 */
 	public get backgroundColor(): string {
 		return this._backgroundColor;
 	}
 
+	/**
+	 * Set the background color of the QR code.
+	 * @param value - The background color in hex format (e.g., "#FFFFFF")
+	 */
 	public set backgroundColor(value: string) {
 		this._backgroundColor = value;
 	}
 
+	/**
+	 * Get the foreground color of the QR code.
+	 * @returns {string} The foreground color in hex format
+	 * @default "#000000"
+	 */
 	public get foregroundColor(): string {
 		return this._foregroundColor;
 	}
 
+	/**
+	 * Set the foreground color of the QR code.
+	 * @param value - The foreground color in hex format (e.g., "#000000")
+	 */
 	public set foregroundColor(value: string) {
 		this._foregroundColor = value;
 	}
 
+	/**
+	 * Get the cache instance.
+	 * @returns {Cacheable | undefined} The cache instance or undefined if caching is disabled
+	 */
 	public get cache(): Cacheable | undefined {
 		return this._cache;
 	}
 
+	/**
+	 * Set the cache instance.
+	 * @param value - The cache instance or undefined to disable caching
+	 */
 	public set cache(value: Cacheable | undefined) {
 		this._cache = value;
 	}
 
+	/**
+	 * Generate SVG QR code with optional caching.
+	 * Uses QRCode library for simple cases, Rust implementation for logos.
+	 * @param {toOptions} options - Generation options whether to use caching (default: true)
+	 * @returns {Promise<string>} The SVG string
+	 */
 	public async toSvg(options?: toOptions): Promise<string> {
 		let result = "";
 
@@ -183,6 +306,11 @@ export class QrBit extends Hookified {
 		return result;
 	}
 
+	/**
+	 * Generate SVG QR code using the native Rust implementation.
+	 * Automatically chooses between file path and buffer functions.
+	 * @returns {Promise<string>} The SVG string
+	 */
 	public async toSvgNapi(): Promise<string> {
 		// Choose optimal path based on logo type
 		if (this._logo && Buffer.isBuffer(this._logo)) {
@@ -212,6 +340,13 @@ export class QrBit extends Hookified {
 		}
 	}
 
+	/**
+	 * Generate PNG QR code with optional caching.
+	 * Uses native Rust implementation for optimal performance.
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @returns {Promise<Buffer>} The PNG buffer
+	 */
 	public async toPng(options?: toOptions): Promise<Buffer> {
 		let result: Buffer;
 
@@ -238,6 +373,11 @@ export class QrBit extends Hookified {
 		return result;
 	}
 
+	/**
+	 * Generate PNG QR code using the native Rust implementation.
+	 * Automatically chooses between file path and buffer functions.
+	 * @returns {Promise<Buffer>} The PNG buffer
+	 */
 	public async toPngNapi(): Promise<Buffer> {
 		// Choose optimal path based on logo type
 		if (this._logo && Buffer.isBuffer(this._logo)) {
@@ -267,6 +407,10 @@ export class QrBit extends Hookified {
 		}
 	}
 
+	/**
+	 * Generate both SVG and PNG QR codes.
+	 * @returns {Promise<QrResult>} Object containing both SVG and PNG data
+	 */
 	public async generate(): Promise<QrResult> {
 		const nativeOptions = {
 			text: this._text,
@@ -287,6 +431,10 @@ export class QrBit extends Hookified {
 		return nativeGenerateQr(nativeOptions);
 	}
 
+	/**
+	 * Generate a cache key based on the current QR code options.
+	 * @returns {string} The cache key
+	 */
 	public generateCacheKey(): string {
 		const qrOptions = {
 			text: this._text,
@@ -303,6 +451,10 @@ export class QrBit extends Hookified {
 		return cache.hash(qrOptions);
 	}
 
+	/**
+	 * Check if the logo is a string (file path).
+	 * @returns {boolean} True if logo is a string, false otherwise
+	 */
 	public isLogoString(): boolean {
 		return typeof this._logo === "string";
 	}
