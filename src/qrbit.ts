@@ -92,6 +92,13 @@ export class QrBit extends Hookified {
 	private _backgroundColor: string;
 	private _foregroundColor: string;
 	private _cache: Cacheable | undefined;
+	private _napi = {
+		generateQr: nativeGenerateQr,
+		generateQrPng: nativeGenerateQrPng,
+		generateQrPngWithBuffer: nativeGenerateQrPngWithBuffer,
+		generateQrSvg: nativeGenerateQrSvg,
+		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
+	};
 
 	/**
 	 * Create a new QrBit instance.
@@ -325,7 +332,7 @@ export class QrBit extends Hookified {
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
 			};
-			return nativeGenerateQrSvgWithBuffer(nativeOptionsBuffer);
+			return this._napi.generateQrSvgWithBuffer(nativeOptionsBuffer);
 		} else {
 			// Logo is a string path or undefined - use original function
 			const nativeOptions = {
@@ -337,7 +344,7 @@ export class QrBit extends Hookified {
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
 			};
-			return nativeGenerateQrSvg(nativeOptions);
+			return this._napi.generateQrSvg(nativeOptions);
 		}
 	}
 
@@ -428,7 +435,7 @@ export class QrBit extends Hookified {
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
 			};
-			return nativeGenerateQrPngWithBuffer(nativeOptionsBuffer);
+			return this._napi.generateQrPngWithBuffer(nativeOptionsBuffer);
 		} else {
 			// Logo is a string path or undefined - use original function
 			const nativeOptions = {
@@ -440,7 +447,7 @@ export class QrBit extends Hookified {
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
 			};
-			return nativeGenerateQrPng(nativeOptions);
+			return this._napi.generateQrPng(nativeOptions);
 		}
 	}
 
@@ -465,7 +472,7 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		return nativeGenerateQr(nativeOptions);
+		return this._napi.generateQr(nativeOptions);
 	}
 
 	/**
