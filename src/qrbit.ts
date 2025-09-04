@@ -1,15 +1,21 @@
 import { Buffer } from "node:buffer";
 import fs from "node:fs";
 import { Cacheable } from "cacheable";
+import { Hookified, type HookifiedOptions } from "hookified";
 import QRCode from "qrcode";
-
 import {
 	generateQr as nativeGenerateQr,
 	generateQrPng as nativeGenerateQrPng,
-	generateQrSvg as nativeGenerateQrSvg,
+	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 } from "./native.js";
 
-export interface QrOptions {
+export enum QrBitEvents {
+	warn = "warn",
+	info = "info",
+	error = "error",
+}
+
+export type QrOptions = {
 	text: string;
 	size?: number;
 	margin?: number;
@@ -18,7 +24,7 @@ export interface QrOptions {
 	backgroundColor?: string;
 	foregroundColor?: string;
 	cache?: Cacheable | boolean;
-}
+} & HookifiedOptions;
 
 export interface QrResult {
 	svg?: string;
@@ -31,7 +37,7 @@ export type toOptions = {
 	cache?: boolean;
 };
 
-export class QrBit {
+export class QrBit extends Hookified {
 	private _text: string;
 	private _size: number;
 	private _margin: number;
@@ -42,10 +48,11 @@ export class QrBit {
 	private _cache: Cacheable | undefined;
 
 	constructor(options: QrOptions) {
+		super();
 		this._text = options.text;
 		this._size = options.size ?? 200;
 		this._margin = options.margin ?? 20;
-		this._logo = options.logo ?? undefined;
+		this._logo = options.logo;
 		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
 		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
 		this._foregroundColor = options.foregroundColor ?? "#000000";
@@ -175,17 +182,17 @@ export class QrBit {
 	}
 
 	public async toSvgNapi(): Promise<string> {
-		const nativeOptions = {
+		// If logo is not a string, handle accordingly
+		const nativeOptionsBuffer = {
 			text: this._text,
 			size: this._size,
 			margin: this._margin,
-			logo: this._logo || undefined,
+			logoBuffer: await this.getLogoBuffer(),
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
 		};
-
-		return nativeGenerateQrSvg(nativeOptions);
+		return nativeGenerateQrSvgWithBuffer(nativeOptionsBuffer);
 	}
 
 	public async toPng(options?: toOptions): Promise<Buffer> {
@@ -263,5 +270,45 @@ export class QrBit {
 
 	public isLogoString(): boolean {
 		return typeof this._logo === "string";
+	}
+
+	public async getLogoBuffer(): Promise<Buffer | undefined> {
+		if (this._logo && Buffer.isBuffer(this._logo)) {
+			return this._logo;
+		}
+
+		// process string logo
+		if (this._logo) {
+			// check if it is in the cache
+			const key = this._logo;
+			if (this._cache) {
+				const cacheValue = await this._cache.get<Buffer>(key);
+
+				// found it so return it
+				if (cacheValue) {
+					return Buffer.from(cacheValue);
+				}
+			}
+
+			// get the logo from the file system
+			let result: Buffer | undefined;
+			try {
+				result = await fs.promises.readFile(this._logo);
+				/* c8 ignore start */
+			} catch (error) {
+				this.emit(QrBitEvents.error, error);
+			}
+			/* c8 ignore stop */
+
+			if (result) {
+				// cache it and return results
+				if (this._cache) {
+					await this._cache.set(key, result);
+				}
+				return result;
+			}
+		}
+
+		return undefined;
 	}
 }
