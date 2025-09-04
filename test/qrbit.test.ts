@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { faker } from "@faker-js/faker";
 import { Cacheable } from "cacheable";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { QrBit } from "../src/qrbit";
 
 const testLogoPath = "test/fixtures/test_logo.png";
@@ -442,5 +442,103 @@ describe("Buffer Logo", () => {
 		expect(png[1]).toBe(0x50);
 		expect(png[2]).toBe(0x4e);
 		expect(png[3]).toBe(0x47);
+	});
+});
+
+describe("File Operations", () => {
+	const tempDir = "./test/temp";
+	const testPngPath = `${tempDir}/test-qr.png`;
+
+	beforeEach(async () => {
+		// Create temp directory
+		if (!fs.existsSync(tempDir)) {
+			fs.mkdirSync(tempDir, { recursive: true });
+		}
+	});
+
+	afterEach(async () => {
+		// Clean up test files
+		if (fs.existsSync(testPngPath)) {
+			fs.unlinkSync(testPngPath);
+		}
+		// Remove temp directory if empty
+		try {
+			fs.rmdirSync(tempDir);
+		} catch {
+			// Directory not empty or doesn't exist, ignore
+		}
+	});
+
+	it("should save PNG QR code to file", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		await qr.toPngFile(testPngPath);
+
+		// Verify file exists
+		expect(fs.existsSync(testPngPath)).toBe(true);
+
+		// Verify file content is valid PNG
+		const fileBuffer = fs.readFileSync(testPngPath);
+		expect(fileBuffer).toBeInstanceOf(Buffer);
+		expect(fileBuffer.length).toBeGreaterThan(0);
+
+		// Check PNG signature
+		expect(fileBuffer[0]).toBe(0x89);
+		expect(fileBuffer[1]).toBe(0x50);
+		expect(fileBuffer[2]).toBe(0x4e);
+		expect(fileBuffer[3]).toBe(0x47);
+	});
+
+	it("should save PNG QR code with logo to file", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: testLogoPath });
+
+		await qr.toPngFile(testPngPath);
+
+		// Verify file exists
+		expect(fs.existsSync(testPngPath)).toBe(true);
+
+		// Verify file content is valid PNG
+		const fileBuffer = fs.readFileSync(testPngPath);
+		expect(fileBuffer).toBeInstanceOf(Buffer);
+		expect(fileBuffer.length).toBeGreaterThan(0);
+
+		// Check PNG signature
+		expect(fileBuffer[0]).toBe(0x89);
+		expect(fileBuffer[1]).toBe(0x50);
+		expect(fileBuffer[2]).toBe(0x4e);
+		expect(fileBuffer[3]).toBe(0x47);
+	});
+
+	it("should save PNG QR code to file with caching disabled", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		await qr.toPngFile(testPngPath, { cache: false });
+
+		// Verify file exists
+		expect(fs.existsSync(testPngPath)).toBe(true);
+
+		// Verify file content is valid PNG
+		const fileBuffer = fs.readFileSync(testPngPath);
+		expect(fileBuffer).toBeInstanceOf(Buffer);
+		expect(fileBuffer.length).toBeGreaterThan(0);
+	});
+
+	it("should create directories if they don't exist", async () => {
+		const deepPath = `${tempDir}/nested/deep/test-qr.png`;
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		// This should create the nested directories
+		await qr.toPngFile(deepPath);
+
+		// Verify file exists
+		expect(fs.existsSync(deepPath)).toBe(true);
+
+		// Clean up the nested file and directories
+		fs.unlinkSync(deepPath);
+		fs.rmSync(`${tempDir}/nested`, { recursive: true });
 	});
 });
