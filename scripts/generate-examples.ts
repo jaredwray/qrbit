@@ -2,7 +2,11 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { QrBit } from "../src/qrbit.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const OUTPUT_DIR = "./examples";
 const LOGO_PATH = "./test/fixtures/test_logo.png";
@@ -11,32 +15,20 @@ const LOGO_PATH = "./test/fixtures/test_logo.png";
 const EXAMPLE_TEXTS = [
 	"Hello World!",
 	"https://github.com/jaredwray/qrbit",
-	"mailto:hello@example.com",
-	"tel:+1234567890",
-	"WIFI:T:WPA;S:MyNetwork;P:MyPassword;;",
-	"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 ];
 
 // Size variations
-const SIZES = [150, 200, 300, 500];
-
-// Margin variations
-const MARGINS = [10, 20, 40];
+const SIZES = [200, 400];
 
 // Color combinations
 const COLOR_COMBINATIONS = [
 	{ bg: "#FFFFFF", fg: "#000000", name: "classic" },
 	{ bg: "#000000", fg: "#FFFFFF", name: "inverted" },
 	{ bg: "#FF0000", fg: "#FFFFFF", name: "red-bg" },
-	{ bg: "#0000FF", fg: "#FFFFFF", name: "blue-bg" },
-	{ bg: "#00FF00", fg: "#000000", name: "green-bg" },
-	{ bg: "#FFFF00", fg: "#000000", name: "yellow-bg" },
-	{ bg: "#FF00FF", fg: "#FFFFFF", name: "magenta-bg" },
-	{ bg: "#00FFFF", fg: "#000000", name: "cyan-bg" },
 ];
 
 // Logo size ratios
-const LOGO_RATIOS = [0.1, 0.2, 0.3, 0.4];
+const LOGO_RATIOS = [0.2, 0.4];
 
 async function ensureDirectory(dirPath: string): Promise<void> {
 	if (!fs.existsSync(dirPath)) {
@@ -44,83 +36,43 @@ async function ensureDirectory(dirPath: string): Promise<void> {
 	}
 }
 
-async function generateBasicExamples(): Promise<void> {
-	console.log("🎯 Generating basic examples...");
+async function generateCoreExamples(): Promise<void> {
+	console.log("🎯 Generating core examples...");
 	
-	const basicDir = path.join(OUTPUT_DIR, "basic");
-	await ensureDirectory(basicDir);
+	await ensureDirectory(OUTPUT_DIR);
 
-	for (const text of EXAMPLE_TEXTS) {
-		const safeName = text
-			.replace(/[^a-zA-Z0-9]/g, "_")
-			.substring(0, 30);
-		
-		const qr = new QrBit({ text });
-		
-		// Generate both SVG and PNG
-		await qr.toSvgFile(path.join(basicDir, `${safeName}.svg`));
-		await qr.toPngFile(path.join(basicDir, `${safeName}.png`));
-	}
-}
+	// 1. Basic QR code
+	const basicQr = new QrBit({ text: "Hello World!" });
+	await basicQr.toPngFile(path.join(OUTPUT_DIR, "01_basic.png"));
 
-async function generateSizeExamples(): Promise<void> {
-	console.log("📏 Generating size examples...");
-	
-	const sizeDir = path.join(OUTPUT_DIR, "sizes");
-	await ensureDirectory(sizeDir);
+	// 2. URL QR code 
+	const urlQr = new QrBit({ text: "https://github.com/jaredwray/qrbit" });
+	await urlQr.toSvgFile(path.join(OUTPUT_DIR, "02_url.svg"));
 
-	const text = "Size Examples";
+	// 3. Large size
+	const largeQr = new QrBit({ text: "Large QR", size: 400 });
+	await largeQr.toPngFile(path.join(OUTPUT_DIR, "03_large_size.png"));
 
-	for (const size of SIZES) {
-		const qr = new QrBit({ text, size });
-		
-		await qr.toSvgFile(path.join(sizeDir, `size_${size}px.svg`));
-		await qr.toPngFile(path.join(sizeDir, `size_${size}px.png`));
-	}
-}
+	// 4. Inverted colors
+	const invertedQr = new QrBit({
+		text: "Inverted Colors",
+		backgroundColor: "#000000",
+		foregroundColor: "#FFFFFF",
+	});
+	await invertedQr.toSvgFile(path.join(OUTPUT_DIR, "04_inverted.svg"));
 
-async function generateMarginExamples(): Promise<void> {
-	console.log("📐 Generating margin examples...");
-	
-	const marginDir = path.join(OUTPUT_DIR, "margins");
-	await ensureDirectory(marginDir);
-
-	const text = "Margin Examples";
-
-	for (const margin of MARGINS) {
-		const qr = new QrBit({ text, margin });
-		
-		await qr.toSvgFile(path.join(marginDir, `margin_${margin}px.svg`));
-		await qr.toPngFile(path.join(marginDir, `margin_${margin}px.png`));
-	}
-}
-
-async function generateColorExamples(): Promise<void> {
-	console.log("🎨 Generating color examples...");
-	
-	const colorDir = path.join(OUTPUT_DIR, "colors");
-	await ensureDirectory(colorDir);
-
-	const text = "Color Examples";
-
-	for (const color of COLOR_COMBINATIONS) {
-		const qr = new QrBit({
-			text,
-			backgroundColor: color.bg,
-			foregroundColor: color.fg,
-		});
-		
-		await qr.toSvgFile(path.join(colorDir, `color_${color.name}.svg`));
-		await qr.toPngFile(path.join(colorDir, `color_${color.name}.png`));
-	}
+	// 5. Red theme
+	const redQr = new QrBit({
+		text: "Red Theme",
+		backgroundColor: "#FF0000",
+		foregroundColor: "#FFFFFF",
+	});
+	await redQr.toPngFile(path.join(OUTPUT_DIR, "05_red_theme.png"));
 }
 
 async function generateLogoExamples(): Promise<void> {
 	console.log("🖼️  Generating logo examples...");
 	
-	const logoDir = path.join(OUTPUT_DIR, "logos");
-	await ensureDirectory(logoDir);
-
 	const text = "Logo Examples";
 
 	// Check if logo file exists
@@ -132,103 +84,51 @@ async function generateLogoExamples(): Promise<void> {
 		return;
 	}
 
-	// Different logo sizes
-	for (const ratio of LOGO_RATIOS) {
-		const qrWithLogo = new QrBit({
-			text,
-			logo: LOGO_PATH,
-			logoSizeRatio: ratio,
-		});
-		
-		await qrWithLogo.toSvgFile(path.join(logoDir, `logo_ratio_${ratio}.svg`));
-		await qrWithLogo.toPngFile(path.join(logoDir, `logo_ratio_${ratio}.png`));
-	}
+	// 6. Logo with small ratio
+	const logoSmallQr = new QrBit({
+		text,
+		logo: LOGO_PATH,
+		logoSizeRatio: 0.2,
+	});
+	await logoSmallQr.toPngFile(path.join(OUTPUT_DIR, "06_logo_small.png"));
 
-	// Logo with different colors
-	for (const color of COLOR_COMBINATIONS.slice(0, 4)) { // Just first 4 colors
-		const qrWithLogo = new QrBit({
-			text,
-			logo: LOGO_PATH,
-			backgroundColor: color.bg,
-			foregroundColor: color.fg,
-		});
-		
-		await qrWithLogo.toSvgFile(path.join(logoDir, `logo_${color.name}.svg`));
-		await qrWithLogo.toPngFile(path.join(logoDir, `logo_${color.name}.png`));
-	}
+	// 7. Logo with large ratio
+	const logoLargeQr = new QrBit({
+		text,
+		logo: LOGO_PATH,
+		logoSizeRatio: 0.4,
+		backgroundColor: "#FF0000",
+		foregroundColor: "#FFFFFF",
+	});
+	await logoLargeQr.toSvgFile(path.join(OUTPUT_DIR, "07_logo_large_red.svg"));
 }
 
-async function generateCombinationExamples(): Promise<void> {
-	console.log("🔄 Generating combination examples...");
+async function generateSpecialExamples(): Promise<void> {
+	console.log("🔄 Generating special examples...");
 	
-	const comboDir = path.join(OUTPUT_DIR, "combinations");
-	await ensureDirectory(comboDir);
-
 	const text = "https://github.com/jaredwray/qrbit";
 
-	// Create a few interesting combinations
-	const combinations = [
-		{
-			name: "large_red_with_logo",
-			options: {
-				text,
-				size: 400,
-				margin: 30,
-				backgroundColor: "#FF0000",
-				foregroundColor: "#FFFFFF",
-				logo: LOGO_PATH,
-				logoSizeRatio: 0.25,
-			},
-		},
-		{
-			name: "small_blue_minimal",
-			options: {
-				text,
-				size: 100,
-				margin: 5,
-				backgroundColor: "#0000FF",
-				foregroundColor: "#FFFFFF",
-			},
-		},
-		{
-			name: "medium_green_with_large_logo",
-			options: {
-				text,
-				size: 250,
-				margin: 15,
-				backgroundColor: "#00FF00",
-				foregroundColor: "#000000",
-				logo: LOGO_PATH,
-				logoSizeRatio: 0.4,
-			},
-		},
-	];
+	// 8. WiFi QR code
+	const wifiQr = new QrBit({ 
+		text: "WIFI:T:WPA;S:MyNetwork;P:MyPassword;;" 
+	});
+	await wifiQr.toPngFile(path.join(OUTPUT_DIR, "08_wifi.png"));
 
-	for (const combo of combinations) {
-		// Skip logo combinations if logo doesn't exist
-		if (combo.options.logo) {
-			const qr = new QrBit({ text });
-			const logoExists = await qr.logoFileExists(LOGO_PATH);
-			if (!logoExists) {
-				delete combo.options.logo;
-				delete combo.options.logoSizeRatio;
-			}
-		}
-
-		const qr = new QrBit(combo.options);
-		
-		await qr.toSvgFile(path.join(comboDir, `${combo.name}.svg`));
-		await qr.toPngFile(path.join(comboDir, `${combo.name}.png`));
-	}
+	// 9. Large with custom margin
+	const largeMarginQr = new QrBit({
+		text,
+		size: 300,
+		margin: 40,
+		backgroundColor: "#0000FF",
+		foregroundColor: "#FFFFFF",
+	});
+	await largeMarginQr.toSvgFile(path.join(OUTPUT_DIR, "09_large_margin_blue.svg"));
 }
 
 async function generateBufferLogoExample(): Promise<void> {
 	console.log("💾 Generating buffer logo example...");
 	
-	const bufferDir = path.join(OUTPUT_DIR, "buffer-logo");
-	await ensureDirectory(bufferDir);
-
-	const text = "Buffer Logo Example";
+	const text = "Buffer Logo";
 
 	// Check if logo file exists first
 	const qr = new QrBit({ text });
@@ -239,56 +139,46 @@ async function generateBufferLogoExample(): Promise<void> {
 		return;
 	}
 
-	// Read logo as buffer
+	// 10. Buffer logo example
 	const logoBuffer = fs.readFileSync(LOGO_PATH);
-	
-	const qrWithBufferLogo = new QrBit({
+	const bufferLogoQr = new QrBit({
 		text,
 		logo: logoBuffer,
-		logoSizeRatio: 0.2,
+		logoSizeRatio: 0.3,
 		backgroundColor: "#F0F0F0",
 		foregroundColor: "#333333",
 	});
-	
-	await qrWithBufferLogo.toSvgFile(path.join(bufferDir, "buffer_logo_example.svg"));
-	await qrWithBufferLogo.toPngFile(path.join(bufferDir, "buffer_logo_example.png"));
+	await bufferLogoQr.toPngFile(path.join(OUTPUT_DIR, "10_buffer_logo.png"));
 }
 
 async function generateReadme(): Promise<void> {
 	const readmeContent = `# QrBit Examples
 
-This directory contains various examples of QR codes generated using QrBit.
+This directory contains 10 curated examples showcasing QrBit's key features.
 
-## Directory Structure
+## Examples Generated
 
-- **basic/**: Simple QR codes with different text content
-- **sizes/**: QR codes with different pixel sizes (${SIZES.join(', ')} px)
-- **margins/**: QR codes with different margin sizes (${MARGINS.join(', ')} px)
-- **colors/**: QR codes with different color combinations
-- **logos/**: QR codes with embedded logos at different sizes and colors
-- **combinations/**: Complex examples combining multiple options
-- **buffer-logo/**: Example using logo from Buffer instead of file path
+1. **01_basic.png** - Simple "Hello World!" QR code
+2. **02_url.svg** - GitHub repository URL in SVG format  
+3. **03_large_size.png** - Large 400px QR code
+4. **04_inverted.svg** - White on black (inverted colors)
+5. **05_red_theme.png** - Red background theme
+6. **06_logo_small.png** - QR code with small logo (20%)
+7. **07_logo_large_red.svg** - QR code with large logo (40%) and red theme
+8. **08_wifi.png** - WiFi connection QR code
+9. **09_large_margin_blue.svg** - Large QR with custom margin and blue theme  
+10. **10_buffer_logo.png** - QR code using logo from Buffer (not file path)
 
-## Generated Variations
+## Key Features Demonstrated
 
-### Text Content
-${EXAMPLE_TEXTS.map(text => `- ${text}`).join('\n')}
-
-### Size Variations
-${SIZES.map(size => `- ${size}x${size} pixels`).join('\n')}
-
-### Margin Variations
-${MARGINS.map(margin => `- ${margin} pixels margin`).join('\n')}
-
-### Color Combinations
-${COLOR_COMBINATIONS.map(color => `- **${color.name}**: Background ${color.bg}, Foreground ${color.fg}`).join('\n')}
-
-### Logo Size Ratios
-${LOGO_RATIOS.map(ratio => `- ${ratio} (${Math.round(ratio * 100)}% of QR code size)`).join('\n')}
+- 📝 **Multiple formats**: Both PNG and SVG output
+- 📏 **Size control**: From default 200px to large 400px
+- 🎨 **Color themes**: Classic, inverted, and custom colors
+- 🖼️  **Logo embedding**: File path and Buffer-based logos
+- 📐 **Margin control**: Various spacing options
+- 🔗 **Content types**: Text, URLs, WiFi credentials
 
 ## Usage
-
-These examples demonstrate the flexibility and capabilities of QrBit:
 
 \`\`\`typescript
 import { QrBit } from "qrbit";
@@ -297,11 +187,11 @@ import { QrBit } from "qrbit";
 const qr = new QrBit({ text: "Hello World!" });
 await qr.toPngFile("output.png");
 
-// With logo and custom colors
+// With logo and custom colors  
 const qrWithLogo = new QrBit({
     text: "https://github.com/jaredwray/qrbit",
     logo: "./logo.png",
-    backgroundColor: "#FF0000",
+    backgroundColor: "#FF0000", 
     foregroundColor: "#FFFFFF",
     logoSizeRatio: 0.2
 });
@@ -322,12 +212,9 @@ async function main(): Promise<void> {
 	await ensureDirectory(OUTPUT_DIR);
 
 	try {
-		await generateBasicExamples();
-		await generateSizeExamples();
-		await generateMarginExamples();
-		await generateColorExamples();
+		await generateCoreExamples();
 		await generateLogoExamples();
-		await generateCombinationExamples();
+		await generateSpecialExamples();
 		await generateBufferLogoExample();
 		await generateReadme();
 
@@ -340,6 +227,6 @@ async function main(): Promise<void> {
 }
 
 // Run the script
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
 	main();
 }
