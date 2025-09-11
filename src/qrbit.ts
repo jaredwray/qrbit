@@ -5,6 +5,7 @@ import { Cacheable } from "cacheable";
 import { Hookified, type HookifiedOptions } from "hookified";
 import QRCode, { type QRCodeToStringOptions } from "qrcode";
 import {
+	convertSvgToPng as nativeConvertSvgToPng,
 	generateQr as nativeGenerateQr,
 	generateQrPng as nativeGenerateQrPng,
 	generateQrPngWithBuffer as nativeGenerateQrPngWithBuffer,
@@ -95,6 +96,7 @@ export class QrBit extends Hookified {
 	private _foregroundColor: string;
 	private _cache: Cacheable | undefined;
 	private _napi = {
+		convertSvgToPng: nativeConvertSvgToPng,
 		generateQr: nativeGenerateQr,
 		generateQrPng: nativeGenerateQrPng,
 		generateQrPngWithBuffer: nativeGenerateQrPngWithBuffer,
@@ -370,7 +372,7 @@ export class QrBit extends Hookified {
 
 	/**
 	 * Generate PNG QR code with optional caching.
-	 * Uses native Rust implementation for optimal performance.
+	 * Generates the QR as Svg either in rust if it has a logo or native. Then does a conversion on it.
 	 * @param options - Generation options
 	 * @param options.cache - Whether to use caching (default: true)
 	 * @returns {Promise<Buffer>} The PNG buffer
@@ -389,8 +391,8 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		// always use png napi as it is fastest
-		result = await this.toPngNapi();
+		const svg = await this.toSvg();
+		result = QrBit.convertSvgToPng(svg);
 
 		if (this._cache && options?.cache !== false) {
 			// set the cache, generate the key from hash
@@ -507,6 +509,40 @@ export class QrBit extends Hookified {
 		}
 
 		return this._napi.generateQr(nativeOptions);
+	}
+
+	/**
+	 * Convert the current QR code's SVG to PNG buffer using SVG to PNG conversion.
+	 * This method generates an SVG first, then converts it to PNG.
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @param options.width - Optional width for the PNG output
+	 * @param options.height - Optional height for the PNG output
+	 * @returns {Promise<Buffer>} The PNG buffer
+	 */
+	public async toPngFromSvg(
+		options?: toOptions & { width?: number; height?: number },
+	): Promise<Buffer> {
+		// Generate SVG first
+		const svg = await this.toSvg(options);
+
+		// Convert SVG to PNG using the native function
+		return nativeConvertSvgToPng(svg, options?.width, options?.height);
+	}
+
+	/**
+	 * Convert SVG content to PNG buffer using the native Rust implementation.
+	 * @param svgContent - The SVG content as a string
+	 * @param width - Optional width for the PNG output
+	 * @param height - Optional height for the PNG output
+	 * @returns {Buffer} The PNG buffer
+	 */
+	public static convertSvgToPng(
+		svgContent: string,
+		width?: number,
+		height?: number,
+	): Buffer {
+		return nativeConvertSvgToPng(svgContent, width, height);
 	}
 
 	/**
