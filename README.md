@@ -239,25 +239,6 @@ await qr.toPngFile("./output/qr-code.png");
 await qr.toPngFile("./output/qr-code.png", { cache: false });
 ```
 
-### QrBit.convertSvgToPng(svgContent: string, width?: number, height?: number): Buffer
-
-Convert any SVG content to PNG buffer using the native Rust implementation.
-
-**Parameters:**
-- `svgContent: string` - The SVG content as a string
-- `width?: number` - Optional width for the PNG output
-- `height?: number` - Optional height for the PNG output
-
-**Returns:** Buffer - The PNG buffer
-
-```javascript
-const svgContent = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">...</svg>';
-const pngBuffer = QrBit.convertSvgToPng(svgContent);
-
-// With custom dimensions
-const pngCustom = QrBit.convertSvgToPng(svgContent, 400, 400);
-```
-
 # Benchmarks
 
 ## QR Codes SVG (No Logo)
