@@ -62,8 +62,8 @@ jobs:
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
 
-      - name: Build Project
-        run: pnpm build
+      - name: Build Typescript Project
+        run: pnpm build:ts
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -76,8 +76,7 @@ jobs:
 
       - name: Copy all artifacts that end in .node to dist
         run: |
-          mkdir -p dist
-          cp ./artifacts/**/*.node dist/
+          cp -f ./artifacts/**/*.node dist/
 
       - name: Show Dist
         run: |
