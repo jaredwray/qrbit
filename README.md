@@ -18,7 +18,7 @@ A fast QR code generator with logo embedding support, built with Rust and native
 - **Logo embedding**: Add custom logos to your QR codes with no need for node canvas!
 - **Customizable**: Custom colors, sizes, and margins
 - **Multiple formats**: Generate SVG and PNG outputs
-- **Scalable**: With caching you can also use a secondary store!
+- **Scalable**: With caching you can also use a secondary store for persistence
 - **Well-tested**: Comprehensive test coverage with Vitest
 - **Maintained**: Actively maintained with regular updates
 
