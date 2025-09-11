@@ -270,6 +270,7 @@ await qr.toPngFile("./output/qr-code.png", { cache: false });
 |  styled-qr-code-node PNG (v1.5.2)  |   -88%    |     116   |      9ms  |  ±0.69%  |     116   |
 |  styled-qr-code-node SVG (v1.5.2)  |   -89%    |     103   |     10ms  |  ±0.73%  |     103   |
 
+`Buffer` is much slower as we have to push the stream across to the rust module. For fastest performance provide the path of the image.
 
 ## QR Codes SVG with Caching
 |                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
