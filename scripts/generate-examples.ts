@@ -113,6 +113,7 @@ async function generateSpecialExamples(): Promise<void> {
 		text: "WIFI:T:WPA;S:MyNetwork;P:MyPassword;;" 
 	});
 	await wifiQr.toPngFile(path.join(OUTPUT_DIR, "08_wifi.png"));
+	await wifiQr.toSvgFile(path.join(OUTPUT_DIR, "08_wifi.svg"));
 
 	// 9. Large with custom margin
 	const largeMarginQr = new QrBit({

@@ -272,6 +272,11 @@ export class QrBit extends Hookified {
 	 */
 	public async toSvg(options?: toOptions): Promise<string> {
 		let result = "";
+		let renderKey = `native-svg`;
+
+		if(this._logo) {
+			renderKey = `napi-svg`
+		}
 
 		// set all the options
 		const qrOptions = {
@@ -286,7 +291,7 @@ export class QrBit extends Hookified {
 
 		// check the cache
 		if (this._cache && options?.cache !== false) {
-			const key = this.generateCacheKey();
+			const key = this.generateCacheKey(renderKey);
 			const cached = await this._cache.get<string>(key);
 			if (cached) {
 				return cached;
@@ -296,6 +301,7 @@ export class QrBit extends Hookified {
 		if (!this._logo) {
 			const qrCodeOptions: QRCodeToStringOptions = {
 				type: "svg",
+				width: qrOptions.size,
 				color: {
 					dark: qrOptions.foregroundColor,
 					light: qrOptions.backgroundColor,
@@ -310,7 +316,7 @@ export class QrBit extends Hookified {
 
 		if (this._cache && options?.cache !== false) {
 			// set the cache, generate the key from hash
-			const key = this.generateCacheKey();
+			const key = this.generateCacheKey(renderKey);
 			// cache the value
 			await this._cache.set(key, result);
 		}
@@ -371,10 +377,11 @@ export class QrBit extends Hookified {
 	 */
 	public async toPng(options?: toOptions): Promise<Buffer> {
 		let result: Buffer;
+		const renderKey = `napi-png`;
 
 		// check the cache
 		if (this._cache && options?.cache !== false) {
-			const key = this.generateCacheKey();
+			const key = this.generateCacheKey(renderKey);
 			const cached = await this._cache.get<Buffer>(key);
 			if (cached) {
 				// Ensure we return a Buffer, not Uint8Array
@@ -387,7 +394,7 @@ export class QrBit extends Hookified {
 
 		if (this._cache && options?.cache !== false) {
 			// set the cache, generate the key from hash
-			const key = this.generateCacheKey();
+			const key = this.generateCacheKey(renderKey);
 			// cache the value
 			await this._cache.set(key, result);
 		}
@@ -504,9 +511,10 @@ export class QrBit extends Hookified {
 
 	/**
 	 * Generate a cache key based on the current QR code options.
+	 * @param {string} renderKey the format that you are rendering in such as `napi-png`, `native-svg`, `napi-svg`
 	 * @returns {string} The cache key
 	 */
-	public generateCacheKey(): string {
+	public generateCacheKey(renderKey: string): string {
 		const qrOptions = {
 			text: this._text,
 			size: this._size,
@@ -515,6 +523,7 @@ export class QrBit extends Hookified {
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
+			renderKey
 		};
 
 		const cache = this._cache || new Cacheable();
