@@ -379,7 +379,7 @@ export class QrBit extends Hookified {
 	 */
 	public async toPng(options?: toOptions): Promise<Buffer> {
 		let result: Buffer;
-		let renderKey = `napi-png`;
+		const renderKey = `napi-png`;
 
 		// check the cache
 		if (this._cache && options?.cache !== false) {
@@ -393,7 +393,6 @@ export class QrBit extends Hookified {
 
 		const svg = await this.toSvg();
 		result = QrBit.convertSvgToPng(svg);
-
 
 		if (this._cache && options?.cache !== false) {
 			// set the cache, generate the key from hash
