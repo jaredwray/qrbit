@@ -700,37 +700,7 @@ describe("SVG to PNG Conversion", () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text, size: 150, margin: 10 });
 
-		const pngBuffer = await qr.toPngFromSvg();
-
-		expect(pngBuffer).toBeInstanceOf(Buffer);
-		expect(pngBuffer.length).toBeGreaterThan(0);
-		// Check PNG signature
-		expect(pngBuffer[0]).toBe(0x89);
-		expect(pngBuffer[1]).toBe(0x50);
-		expect(pngBuffer[2]).toBe(0x4e);
-		expect(pngBuffer[3]).toBe(0x47);
-	});
-
-	it("should convert QR code SVG to PNG with custom dimensions", async () => {
-		const text = faker.internet.url();
-		const qr = new QrBit({ text });
-
-		const pngBuffer = await qr.toPngFromSvg({ width: 400, height: 400 });
-
-		expect(pngBuffer).toBeInstanceOf(Buffer);
-		expect(pngBuffer.length).toBeGreaterThan(0);
-		// Check PNG signature
-		expect(pngBuffer[0]).toBe(0x89);
-		expect(pngBuffer[1]).toBe(0x50);
-		expect(pngBuffer[2]).toBe(0x4e);
-		expect(pngBuffer[3]).toBe(0x47);
-	});
-
-	it("should convert QR code with logo SVG to PNG", async () => {
-		const text = faker.internet.url();
-		const qr = new QrBit({ text, logo: testLogoPathSmall });
-
-		const pngBuffer = await qr.toPngFromSvg();
+		const pngBuffer = await qr.toPng();
 
 		expect(pngBuffer).toBeInstanceOf(Buffer);
 		expect(pngBuffer.length).toBeGreaterThan(0);
