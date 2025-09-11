@@ -441,25 +441,6 @@ export class QrBit extends Hookified {
 	}
 
 	/**
-	 * Convert the current QR code's SVG to PNG buffer using SVG to PNG conversion.
-	 * This method generates an SVG first, then converts it to PNG.
-	 * @param options - Generation options
-	 * @param options.cache - Whether to use caching (default: true)
-	 * @param options.width - Optional width for the PNG output
-	 * @param options.height - Optional height for the PNG output
-	 * @returns {Promise<Buffer>} The PNG buffer
-	 */
-	public async toPngFromSvg(
-		options?: toOptions & { width?: number; height?: number },
-	): Promise<Buffer> {
-		// Generate SVG first
-		const svg = await this.toSvg(options);
-
-		// Convert SVG to PNG using the native function
-		return nativeConvertSvgToPng(svg, options?.width, options?.height);
-	}
-
-	/**
 	 * Convert SVG content to PNG buffer using the native Rust implementation.
 	 * @param svgContent - The SVG content as a string
 	 * @param width - Optional width for the PNG output
