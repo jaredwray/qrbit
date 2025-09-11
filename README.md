@@ -1,5 +1,11 @@
 # QRBit
 
+[![codecov](https://codecov.io/gh/jaredwray/qrbit/graph/badge.svg?token=VEUXLsudSh)](https://codecov.io/gh/jaredwray/qrbit)
+[![tests](https://github.com/jaredwray/qrbit/actions/workflows/tests.yml/badge.svg)](https://github.com/jaredwray/qrbit/actions/workflows/tests.yml)
+[![npm](https://img.shields.io/npm/v/qrbit)](https://www.npmjs.com/package/qrbit)
+[![npm](https://img.shields.io/npm/dm/qrbit)](https://www.npmjs.com/package/qrbit)
+[![license](https://img.shields.io/github/license/jaredwray/qrbit)](https://github.com/jaredwray/qrbit/blob/main/LICENSE)
+
 A fast QR code generator with logo embedding support, built with Rust and native node packages for best performance while avoiding additional modules (example: canvas).
 
 ## Features
@@ -27,6 +33,8 @@ npm install qrbit
 
 - Node.js >= 18
 - Supported platforms: Windows, macOS, Linux (x86, x64, ARM64)
+
+# API
 
 # Benchmarks
 
