@@ -1,6 +1,4 @@
-<div align="center">
-  <img src="./site/logo.svg" alt="QrBit Logo" />
-</div>
+<div align="center"><img src="./site/logo.svg" alt="QrBit Logo" /></div>
 
 # Qrbit
 
