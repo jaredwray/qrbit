@@ -372,7 +372,7 @@ export class QrBit extends Hookified {
 
 	/**
 	 * Generate PNG QR code with optional caching.
-	 * Uses native Rust implementation for optimal performance.
+	 * Generates the QR as Svg either in rust if it has a logo or native. Then does a conversion on it.
 	 * @param options - Generation options
 	 * @param options.cache - Whether to use caching (default: true)
 	 * @returns {Promise<Buffer>} The PNG buffer

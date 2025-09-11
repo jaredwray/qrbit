@@ -100,7 +100,7 @@ async function generateBufferLogoExample(): Promise<void> {
 	const bufferLogoQr = new QrBit({
 		text,
 		logo: logoBuffer,
-		logoSizeRatio: 0.3,
+		logoSizeRatio: 0.2,
 		backgroundColor: "#F0F0F0",
 		foregroundColor: "#333333",
 	});
