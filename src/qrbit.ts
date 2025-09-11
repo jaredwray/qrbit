@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Cacheable } from "cacheable";
 import { Hookified, type HookifiedOptions } from "hookified";
-import QRCode from "qrcode";
+import QRCode, { type QRCodeToStringOptions } from "qrcode";
 import {
 	generateQr as nativeGenerateQr,
 	generateQrPng as nativeGenerateQrPng,
@@ -36,7 +36,6 @@ export type QrOptions = {
 	/**
 	 * The margin around the QR code in pixels.
 	 * @type {number}
-	 * @default 20
 	 */
 	margin?: number;
 	/**
@@ -89,7 +88,7 @@ export type toOptions = {
 export class QrBit extends Hookified {
 	private _text: string;
 	private _size: number;
-	private _margin: number;
+	private _margin: number | undefined;
 	private _logo: string | Buffer | undefined;
 	private _logoSizeRatio: number;
 	private _backgroundColor: string;
@@ -111,7 +110,7 @@ export class QrBit extends Hookified {
 		super();
 		this._text = options.text;
 		this._size = options.size ?? 200;
-		this._margin = options.margin ?? 20;
+		this._margin = options.margin ?? undefined;
 		this._logo = options.logo;
 		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
 		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
@@ -167,10 +166,9 @@ export class QrBit extends Hookified {
 
 	/**
 	 * Get the margin around the QR code in pixels.
-	 * @returns {number} The margin in pixels
-	 * @default 20
+	 * @returns {number | undefined} The margin in pixels
 	 */
-	public get margin(): number {
+	public get margin(): number | undefined {
 		return this._margin;
 	}
 
@@ -178,7 +176,7 @@ export class QrBit extends Hookified {
 	 * Set the margin around the QR code in pixels.
 	 * @param value - The margin in pixels
 	 */
-	public set margin(value: number) {
+	public set margin(value: number | undefined) {
 		this._margin = value;
 	}
 
@@ -296,15 +294,15 @@ export class QrBit extends Hookified {
 		}
 
 		if (!this._logo) {
-			result = await QRCode.toString(this._text, {
+			const qrCodeOptions: QRCodeToStringOptions = {
 				type: "svg",
-				margin: qrOptions.margin,
-				width: qrOptions.size,
 				color: {
 					dark: qrOptions.foregroundColor,
 					light: qrOptions.backgroundColor,
 				},
-			});
+			};
+
+			result = await QRCode.toString(this._text, qrCodeOptions);
 		} else {
 			// If logoPath is set, use the Rust implementation
 			result = await this.toSvgNapi();

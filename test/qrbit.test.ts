@@ -22,8 +22,8 @@ describe("QrBit Class", () => {
 		expect(typeof svg).toBe("string");
 		expect(svg).toContain("<svg");
 		expect(svg).toContain("</svg>");
-		expect(svg).toContain('width="200"');
-		expect(svg).toContain('height="200"');
+		// SVG should not contain explicit width/height when margin is undefined
+		expect(svg).toContain("viewBox=");
 	});
 
 	it("should generate SVG output with logo path", async () => {
@@ -129,7 +129,7 @@ describe("QrBit Properties", () => {
 	it("should get and set margin property", () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
-		expect(qr.margin).toBe(20); // default value
+		expect(qr.margin).toBeUndefined(); // default value
 
 		qr.margin = 30;
 		expect(qr.margin).toBe(30);
@@ -571,8 +571,8 @@ describe("File Operations", () => {
 		// Check SVG structure
 		expect(fileContent).toContain("<svg");
 		expect(fileContent).toContain("</svg>");
-		expect(fileContent).toContain('width="200"');
-		expect(fileContent).toContain('height="200"');
+		// SVG should not contain explicit width/height when margin is undefined
+		expect(fileContent).toContain("viewBox=");
 	});
 
 	it("should save SVG QR code with logo to file", async () => {

@@ -43,15 +43,15 @@ async function generateCoreExamples(): Promise<void> {
 
 	// 1. Basic QR code
 	const basicQr = new QrBit({ text: "Hello World!" });
-	await basicQr.toPngFile(path.join(OUTPUT_DIR, "01_basic.png"));
+	await basicQr.toPngFile(path.join(OUTPUT_DIR, "01_napi_basic.png"));
 
 	// 2. URL QR code 
-	const urlQr = new QrBit({ text: "https://github.com/jaredwray/qrbit" });
-	await urlQr.toSvgFile(path.join(OUTPUT_DIR, "02_url.svg"));
+	const urlQr = new QrBit({ text: "https://github.com/jaredwray/qrbit", size: 200 });
+	await urlQr.toSvgFile(path.join(OUTPUT_DIR, "02_native_url.svg"));
 
 	// 3. Large size
 	const largeQr = new QrBit({ text: "Large QR", size: 400 });
-	await largeQr.toPngFile(path.join(OUTPUT_DIR, "03_large_size.png"));
+	await largeQr.toPngFile(path.join(OUTPUT_DIR, "03_napi_large_size.png"));
 
 	// 4. Inverted colors
 	const invertedQr = new QrBit({
