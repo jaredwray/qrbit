@@ -441,33 +441,6 @@ export class QrBit extends Hookified {
 	}
 
 	/**
-	 * Generate both SVG and PNG QR codes.
-	 * @returns {Promise<QrResult>} Object containing both SVG and PNG data
-	 */
-	public async generate(): Promise<QrResult> {
-		const nativeOptions = {
-			text: this._text,
-			size: this._size,
-			margin: this._margin,
-			logo: this._logo || undefined,
-			logoSizeRatio: this._logoSizeRatio,
-			backgroundColor: this._backgroundColor,
-			foregroundColor: this._foregroundColor,
-		};
-
-		if (this._logo && this.isLogoString()) {
-			if (!(await this.logoFileExists(this._logo as string))) {
-				this.emit(
-					QrBitEvents.error,
-					logoFileDoesNotExistMessage(this._logo as string),
-				);
-			}
-		}
-
-		return this._napi.generateQr(nativeOptions);
-	}
-
-	/**
 	 * Convert the current QR code's SVG to PNG buffer using SVG to PNG conversion.
 	 * This method generates an SVG first, then converts it to PNG.
 	 * @param options - Generation options

@@ -53,22 +53,6 @@ describe("QrBit Class", () => {
 		expect(png[3]).toBe(0x47);
 	});
 
-	it("should generate both SVG and PNG with generate()", async () => {
-		const text = faker.lorem.paragraph();
-		const qr = new QrBit({ text });
-		const result = await qr.generate();
-
-		expect(result).toHaveProperty("svg");
-		expect(result).toHaveProperty("png");
-		expect(result).toHaveProperty("width");
-		expect(result).toHaveProperty("height");
-
-		expect(typeof result.svg).toBe("string");
-		expect(result.png).toBeInstanceOf(Buffer);
-		expect(result.width).toBe(240);
-		expect(result.height).toBe(240);
-	});
-
 	it("should support method chaining", async () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
@@ -77,21 +61,8 @@ describe("QrBit Class", () => {
 		qr.backgroundColor = "#FF0000";
 		qr.foregroundColor = "#00FF00";
 
-		const result = await qr.generate();
-		expect(result.width).toBe(360); // 300 + 2*30
-		expect(result.height).toBe(360);
-	});
-
-	it("should accept custom size and margin", async () => {
-		const qr = new QrBit({
-			text: faker.internet.url(),
-			size: 150,
-			margin: 10,
-		});
-
-		const result = await qr.generate();
-		expect(result.width).toBe(170); // 150 + 2*10
-		expect(result.height).toBe(170);
+		const result = await qr.toSvg();
+		expect(result).toContain("<svg");
 	});
 
 	it("should accept custom colors", async () => {
@@ -216,7 +187,7 @@ describe("Error Handling", () => {
 		});
 
 		// Should throw an error when trying to generate
-		await expect(qr.generate()).rejects.toThrow();
+		await expect(qr.toSvg()).rejects.toThrow();
 	});
 
 	it("should handle invalid color formats", async () => {
@@ -226,7 +197,7 @@ describe("Error Handling", () => {
 			backgroundColor: "invalid-color",
 		});
 
-		await expect(qr.generate()).rejects.toThrow();
+		await expect(qr.toSvg()).rejects.toThrow();
 	});
 
 	it("should handle empty text", () => {
@@ -249,13 +220,9 @@ describe("Error Handling", () => {
 			logo: testLogoPath,
 		});
 
-		const result = await qr.generate();
+		const result = await qr.toSvg();
 
-		expect(result).toHaveProperty("svg");
-		expect(result).toHaveProperty("png");
-		expect(result.svg).toContain("<svg");
-		expect(result.png).toBeInstanceOf(Buffer);
-		expect(result.png?.length).toBeGreaterThan(0);
+		expect(result).toContain("<svg");
 	});
 });
 
@@ -264,9 +231,8 @@ describe("Edge Cases", () => {
 		const longText = "A".repeat(1000);
 		const qr = new QrBit({ text: longText });
 
-		const result = await qr.generate();
-		expect(result.svg).toContain("<svg");
-		expect(result.png).toBeInstanceOf(Buffer);
+		const result = await qr.toSvg();
+		expect(result).toContain("<svg");
 	});
 
 	it("should handle special characters", async () => {
@@ -274,21 +240,8 @@ describe("Edge Cases", () => {
 			"你好 🌍 https://example.com/path?param=value&other=123";
 		const qr = new QrBit({ text: specialText });
 
-		const result = await qr.generate();
-		expect(result.svg).toContain("<svg");
-		expect(result.png).toBeInstanceOf(Buffer);
-	});
-
-	it("should handle minimum size", async () => {
-		const qr = new QrBit({
-			text: "Hi",
-			size: 50,
-			margin: 0,
-		});
-
-		const result = await qr.generate();
-		expect(result.width).toBe(50);
-		expect(result.height).toBe(50);
+		const svg = await qr.toSvg();
+		expect(svg).toContain("<svg");
 	});
 });
 
@@ -694,32 +647,6 @@ describe("Logo File Validation in Methods", () => {
 		expect(svg).toContain("<svg");
 	});
 
-	it("should emit error when logo file does not exist in generate", async () => {
-		const text = faker.internet.url();
-		const qr = new QrBit({ text, logo: "/non/existent/logo.png" });
-
-		let errorEmitted = false;
-		let errorMessage = "";
-
-		// Listen for error event
-		qr.on("error", (message: string) => {
-			errorEmitted = true;
-			errorMessage = message;
-		});
-
-		// Should still generate QR code but emit error
-		const result = await qr.generate();
-
-		expect(errorEmitted).toBe(true);
-		expect(errorMessage).toBe(
-			"Logo file not found: /non/existent/logo.png. Proceeding without logo.",
-		);
-		expect(result).toHaveProperty("svg");
-		expect(result).toHaveProperty("png");
-		expect(result.width).toBeGreaterThan(0);
-		expect(result.height).toBeGreaterThan(0);
-	});
-
 	it("should not emit error when logo file exists", async () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text, logo: testLogoPath });
@@ -733,23 +660,6 @@ describe("Logo File Validation in Methods", () => {
 
 		// Should generate without error
 		await qr.toSvgNapi();
-
-		expect(errorEmitted).toBe(false);
-	});
-
-	it("should not emit error when no logo is set", async () => {
-		const text = faker.internet.url();
-		const qr = new QrBit({ text });
-
-		let errorEmitted = false;
-
-		// Listen for error event
-		qr.on("error", () => {
-			errorEmitted = true;
-		});
-
-		// Should generate without error
-		await qr.generate();
 
 		expect(errorEmitted).toBe(false);
 	});
