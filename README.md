@@ -1,4 +1,8 @@
-# QRBit
+<div align="center">
+  <img src="./site/logo.svg" alt="QrBit Logo" />
+</div>
+
+# Qrbit
 
 [![codecov](https://codecov.io/gh/jaredwray/qrbit/graph/badge.svg?token=VEUXLsudSh)](https://codecov.io/gh/jaredwray/qrbit)
 [![tests](https://github.com/jaredwray/qrbit/actions/workflows/tests.yml/badge.svg)](https://github.com/jaredwray/qrbit/actions/workflows/tests.yml)
