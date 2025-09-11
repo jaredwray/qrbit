@@ -441,50 +441,6 @@ export class QrBit extends Hookified {
 	}
 
 	/**
-	 * Generate PNG QR code using the native Rust implementation.
-	 * Automatically chooses between file path and buffer functions.
-	 * @returns {Promise<Buffer>} The PNG buffer
-	 */
-	public async toPngNapi(): Promise<Buffer> {
-		// Choose optimal path based on logo type
-		if (this._logo && Buffer.isBuffer(this._logo)) {
-			// Logo is already a buffer - use buffer function
-			const nativeOptionsBuffer = {
-				text: this._text,
-				size: this._size,
-				margin: this._margin,
-				logoBuffer: this._logo,
-				logoSizeRatio: this._logoSizeRatio,
-				backgroundColor: this._backgroundColor,
-				foregroundColor: this._foregroundColor,
-			};
-			return this._napi.generateQrPngWithBuffer(nativeOptionsBuffer);
-		} else {
-			// Logo is a string path or undefined - use original function
-			const nativeOptions = {
-				text: this._text,
-				size: this._size,
-				margin: this._margin,
-				logoPath: this._logo as string,
-				logoSizeRatio: this._logoSizeRatio,
-				backgroundColor: this._backgroundColor,
-				foregroundColor: this._foregroundColor,
-			};
-
-			if (this._logo && this.isLogoString()) {
-				if (!(await this.logoFileExists(this._logo as string))) {
-					this.emit(
-						QrBitEvents.error,
-						logoFileDoesNotExistMessage(this._logo as string),
-					);
-				}
-			}
-
-			return this._napi.generateQrPng(nativeOptions);
-		}
-	}
-
-	/**
 	 * Generate both SVG and PNG QR codes.
 	 * @returns {Promise<QrResult>} Object containing both SVG and PNG data
 	 */
