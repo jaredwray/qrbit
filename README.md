@@ -26,15 +26,235 @@ A fast QR code generator with logo embedding support, built with Rust and native
 npm install qrbit
 ```
 
-# Usage
-
-
 # Requirements
 
 - Node.js >= 18
 - Supported platforms: Windows, macOS, Linux (x86, x64, ARM64)
 
+# Usage
+
+```javascript
+const qr = new QrBit({ text: "https://github.com/jaredwray/qrbit", size: 200 });
+const svg = await qr.toSvg();
+console.log(svg); // here is the svg!
+```
+
+Here is how you add a logo:
+
+```javascript
+const qr = new QrBit({ 
+  text: "https://github.com/jaredwray/qrbit", 
+  logo: '/path/to/logo.png',
+  size: 200 });
+const svg = await qr.toSvg();
+console.log(svg); // here is the svg with an embedded logo!
+```
+
 # API
+
+## constructor(options: QrOptions)
+
+Creates a new QrBit instance with the specified options.
+
+**Parameters:**
+- `options` (QrOptions): Configuration object for the QR code
+
+```typescript
+interface QrOptions {
+  text: string;                    // The text content to encode
+  size?: number;                   // Size in pixels (default: 200)
+  margin?: number;                 // Margin in pixels (default: undefined)
+  logo?: string | Buffer;          // Logo file path or buffer
+  logoSizeRatio?: number;          // Logo size ratio (default: 0.2)
+  backgroundColor?: string;        // Background color (default: "#FFFFFF")
+  foregroundColor?: string;        // Foreground color (default: "#000000")
+  cache?: Cacheable | boolean;     // Caching configuration (default: true)
+}
+```
+
+**Example:**
+```javascript
+import { QrBit } from 'qrbit';
+
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit",
+  size: 300,
+  margin: 20,
+  logo: "./logo.png",
+  logoSizeRatio: 0.25,
+  backgroundColor: "#FFFFFF",
+  foregroundColor: "#000000"
+});
+```
+
+## Properties
+
+### text
+Get or set the text content for the QR code.
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+console.log(qr.text); // "Hello World"
+qr.text = "New content";
+```
+
+### size
+Get or set the size of the QR code in pixels.
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+console.log(qr.size); // 200 (default)
+qr.size = 400;
+```
+
+### margin
+Get or set the margin around the QR code in pixels.
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+console.log(qr.margin); // undefined (default)
+qr.margin = 20;
+```
+
+### logo
+Get or set the logo as a file path or buffer.
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+qr.logo = "./path/to/logo.png";
+// or
+qr.logo = fs.readFileSync("./logo.png");
+```
+
+### logoSizeRatio
+Get or set the logo size ratio relative to QR code size (0.0 to 1.0).
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+qr.logoSizeRatio = 0.3; // 30% of QR code size
+```
+
+### backgroundColor
+Get or set the background color in hex format.
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+qr.backgroundColor = "#FF0000"; // Red background
+```
+
+### foregroundColor
+Get or set the foreground color in hex format.
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+qr.foregroundColor = "#FFFFFF"; // White foreground
+```
+
+### cache
+Get or set the cache instance for performance optimization.
+
+```javascript
+import { Cacheable } from 'cacheable';
+
+const qr = new QrBit({ text: "Hello World" });
+qr.cache = new Cacheable(); // Custom cache instance
+qr.cache = false; // Disable caching
+```
+
+## Methods
+
+### .toSvg(options?: toOptions): Promise<string>
+
+Generate SVG QR code with optional caching. Uses native QRCode library for simple cases, Rust implementation for logos.
+
+**Parameters:**
+- `options.cache?: boolean` - Whether to use caching (default: true)
+
+**Returns:** Promise<string> - The SVG string
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+const svg = await qr.toSvg();
+console.log(svg); // <svg xmlns="http://www.w3.org/2000/svg"...
+
+// Without caching
+const svgNoCache = await qr.toSvg({ cache: false });
+```
+
+### .toSvgFile(filePath: string, options?: toOptions): Promise<void>
+
+Generate SVG QR code and save it to a file. Creates directories if they don't exist.
+
+**Parameters:**
+- `filePath: string` - The file path where to save the SVG
+- `options.cache?: boolean` - Whether to use caching (default: true)
+
+**Returns:** Promise<void>
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+await qr.toSvgFile("./output/qr-code.svg");
+
+// With options
+await qr.toSvgFile("./output/qr-code.svg", { cache: false });
+```
+
+### .toPng(options?: toOptions): Promise<Buffer>
+
+Generate PNG QR code with optional caching. Uses high-performance SVG to PNG conversion.
+
+**Parameters:**
+- `options.cache?: boolean` - Whether to use caching (default: true)
+
+**Returns:** Promise<Buffer> - The PNG buffer
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+const pngBuffer = await qr.toPng();
+
+// Save to file
+fs.writeFileSync("qr-code.png", pngBuffer);
+
+// Without caching
+const pngNoCache = await qr.toPng({ cache: false });
+```
+
+### .toPngFile(filePath: string, options?: toOptions): Promise<void>
+
+Generate PNG QR code and save it to a file. Creates directories if they don't exist.
+
+**Parameters:**
+- `filePath: string` - The file path where to save the PNG
+- `options.cache?: boolean` - Whether to use caching (default: true)
+
+**Returns:** Promise<void>
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+await qr.toPngFile("./output/qr-code.png");
+
+// With options
+await qr.toPngFile("./output/qr-code.png", { cache: false });
+```
+
+### QrBit.convertSvgToPng(svgContent: string, width?: number, height?: number): Buffer
+
+Convert any SVG content to PNG buffer using the native Rust implementation.
+
+**Parameters:**
+- `svgContent: string` - The SVG content as a string
+- `width?: number` - Optional width for the PNG output
+- `height?: number` - Optional height for the PNG output
+
+**Returns:** Buffer - The PNG buffer
+
+```javascript
+const svgContent = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">...</svg>';
+const pngBuffer = QrBit.convertSvgToPng(svgContent);
+
+// With custom dimensions
+const pngCustom = QrBit.convertSvgToPng(svgContent, 400, 400);
+```
 
 # Benchmarks
 
