@@ -90,7 +90,7 @@ async function generateLogoExamples(): Promise<void> {
 		logo: LOGO_PATH,
 		logoSizeRatio: 0.2,
 	});
-	await logoSmallQr.toPngFile(path.join(OUTPUT_DIR, "06_logo_small.png"));
+	await logoSmallQr.toPngFile(path.join(OUTPUT_DIR, "06_napi_logo_small.png"));
 
 	// 7. Logo with large ratio
 	const logoLargeQr = new QrBit({
@@ -100,7 +100,7 @@ async function generateLogoExamples(): Promise<void> {
 		backgroundColor: "#FF0000",
 		foregroundColor: "#FFFFFF",
 	});
-	await logoLargeQr.toSvgFile(path.join(OUTPUT_DIR, "07_logo_large_red.svg"));
+	await logoLargeQr.toSvgFile(path.join(OUTPUT_DIR, "07_napi_logo_large_red.svg"));
 }
 
 async function generateSpecialExamples(): Promise<void> {
@@ -112,8 +112,7 @@ async function generateSpecialExamples(): Promise<void> {
 	const wifiQr = new QrBit({ 
 		text: "WIFI:T:WPA;S:MyNetwork;P:MyPassword;;" 
 	});
-	await wifiQr.toPngFile(path.join(OUTPUT_DIR, "08_wifi.png"));
-	await wifiQr.toSvgFile(path.join(OUTPUT_DIR, "08_wifi.svg"));
+	await wifiQr.toPngFile(path.join(OUTPUT_DIR, "08_napi_wifi.png"));
 
 	// 9. Large with custom margin
 	const largeMarginQr = new QrBit({
