@@ -472,3 +472,37 @@ pub fn generate_qr_png_with_buffer(options: QrOptionsWithBuffer) -> Result<Buffe
     
     Ok(png_data.into())
 }
+
+#[napi]
+pub fn convert_svg_to_png(svg_content: String, width: Option<u32>, height: Option<u32>) -> Result<Buffer> {
+    use resvg::usvg;
+    use resvg::tiny_skia;
+    
+    // Parse the SVG content into uSVG tree
+    let options = usvg::Options::default();
+    let tree = usvg::Tree::from_str(&svg_content, &options)
+        .map_err(|e| Error::from_reason(format!("Failed to parse SVG: {}", e)))?;
+
+    // Get the tree size or use provided dimensions
+    let tree_size = tree.size();
+    let pixmap_width = width.unwrap_or(tree_size.width() as u32);
+    let pixmap_height = height.unwrap_or(tree_size.height() as u32);
+
+    // Create a pixmap buffer
+    let mut pixmap = tiny_skia::Pixmap::new(pixmap_width, pixmap_height)
+        .ok_or_else(|| Error::from_reason("Failed to create pixmap"))?;
+
+    // Calculate the transform to scale the SVG to fit the pixmap
+    let scale_x = pixmap_width as f32 / tree_size.width();
+    let scale_y = pixmap_height as f32 / tree_size.height();
+    let transform = tiny_skia::Transform::from_scale(scale_x, scale_y);
+
+    // Render the SVG to the pixmap
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+
+    // Convert pixmap to PNG bytes
+    let png_data = pixmap.encode_png()
+        .map_err(|e| Error::from_reason(format!("Failed to encode PNG: {}", e)))?;
+
+    Ok(png_data.into())
+}
