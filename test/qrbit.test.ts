@@ -826,3 +826,88 @@ describe("Logo File Validation in Methods", () => {
 		expect(errorEmitted).toBe(false);
 	});
 });
+
+describe("SVG to PNG Conversion", () => {
+	it("should convert SVG content to PNG buffer using static method", () => {
+		const svgContent =
+			'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="red"/></svg>';
+
+		const pngBuffer = QrBit.convertSvgToPng(svgContent);
+
+		expect(pngBuffer).toBeInstanceOf(Buffer);
+		expect(pngBuffer.length).toBeGreaterThan(0);
+		// Check PNG signature
+		expect(pngBuffer[0]).toBe(0x89);
+		expect(pngBuffer[1]).toBe(0x50);
+		expect(pngBuffer[2]).toBe(0x4e);
+		expect(pngBuffer[3]).toBe(0x47);
+	});
+
+	it("should convert SVG to PNG with custom dimensions", () => {
+		const svgContent =
+			'<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><circle cx="25" cy="25" r="20" fill="blue"/></svg>';
+
+		const pngBuffer = QrBit.convertSvgToPng(svgContent, 200, 200);
+
+		expect(pngBuffer).toBeInstanceOf(Buffer);
+		expect(pngBuffer.length).toBeGreaterThan(0);
+		// Check PNG signature
+		expect(pngBuffer[0]).toBe(0x89);
+		expect(pngBuffer[1]).toBe(0x50);
+		expect(pngBuffer[2]).toBe(0x4e);
+		expect(pngBuffer[3]).toBe(0x47);
+	});
+
+	it("should convert QR code SVG to PNG using instance method", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, size: 150, margin: 10 });
+
+		const pngBuffer = await qr.toPngFromSvg();
+
+		expect(pngBuffer).toBeInstanceOf(Buffer);
+		expect(pngBuffer.length).toBeGreaterThan(0);
+		// Check PNG signature
+		expect(pngBuffer[0]).toBe(0x89);
+		expect(pngBuffer[1]).toBe(0x50);
+		expect(pngBuffer[2]).toBe(0x4e);
+		expect(pngBuffer[3]).toBe(0x47);
+	});
+
+	it("should convert QR code SVG to PNG with custom dimensions", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+
+		const pngBuffer = await qr.toPngFromSvg({ width: 400, height: 400 });
+
+		expect(pngBuffer).toBeInstanceOf(Buffer);
+		expect(pngBuffer.length).toBeGreaterThan(0);
+		// Check PNG signature
+		expect(pngBuffer[0]).toBe(0x89);
+		expect(pngBuffer[1]).toBe(0x50);
+		expect(pngBuffer[2]).toBe(0x4e);
+		expect(pngBuffer[3]).toBe(0x47);
+	});
+
+	it("should convert QR code with logo SVG to PNG", async () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text, logo: testLogoPathSmall });
+
+		const pngBuffer = await qr.toPngFromSvg();
+
+		expect(pngBuffer).toBeInstanceOf(Buffer);
+		expect(pngBuffer.length).toBeGreaterThan(0);
+		// Check PNG signature
+		expect(pngBuffer[0]).toBe(0x89);
+		expect(pngBuffer[1]).toBe(0x50);
+		expect(pngBuffer[2]).toBe(0x4e);
+		expect(pngBuffer[3]).toBe(0x47);
+	});
+
+	it("should handle invalid SVG content gracefully", () => {
+		const invalidSvg = "not valid svg content";
+
+		expect(() => {
+			QrBit.convertSvgToPng(invalidSvg);
+		}).toThrow();
+	});
+});
