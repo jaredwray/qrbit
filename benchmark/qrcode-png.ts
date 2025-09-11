@@ -7,7 +7,7 @@ import { QrBit } from "../src/qrbit.js";
 import { cleanVersion } from "./utils.js";
 import {QRCodeCanvas} from '@loskir/styled-qr-code-node';
 
-const bench = new Bench({ name: "QR Codes PNG", iterations: 100 });
+const bench = new Bench({ name: "QR Codes PNG (No Logo)", iterations: 100 });
 
 const qrbitVersion = cleanVersion(pkg.version);
 const qrcodeVersion = cleanVersion(pkg.dependencies.qrcode);
