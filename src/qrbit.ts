@@ -274,8 +274,8 @@ export class QrBit extends Hookified {
 		let result = "";
 		let renderKey = `native-svg`;
 
-		if(this._logo) {
-			renderKey = `napi-svg`
+		if (this._logo) {
+			renderKey = `napi-svg`;
 		}
 
 		// set all the options
@@ -523,7 +523,7 @@ export class QrBit extends Hookified {
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
-			renderKey
+			renderKey,
 		};
 
 		const cache = this._cache || new Cacheable();
