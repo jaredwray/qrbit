@@ -40,18 +40,20 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Setup for cross-compilation
-        if: matrix.arch != 'x64'
+      - name: Setup for cross-compilation (Linux x86)
+        if: runner.os == 'Linux' && matrix.arch == 'x86'
         run: |
-          if [ "${{ runner.os }}" = "Linux" ] && [ "${{ matrix.arch }}" = "x86" ]; then
-            rustup target add i686-unknown-linux-gnu
-            sudo apt-get update
-            sudo apt-get install -y gcc-multilib
-          elif [ "${{ runner.os }}" = "Windows" ] && [ "${{ matrix.arch }}" = "x86" ]; then
-            rustup target add i686-pc-windows-msvc
-          elif [ "${{ runner.os }}" = "macOS" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
-            rustup target add aarch64-apple-darwin
-          fi
+          rustup target add i686-unknown-linux-gnu
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+
+      - name: Setup for cross-compilation (Windows x86)
+        if: runner.os == 'Windows' && matrix.arch == 'x86'
+        run: rustup target add i686-pc-windows-msvc
+
+      - name: Setup for cross-compilation (macOS ARM64)
+        if: runner.os == 'macOS' && matrix.arch == 'arm64'
+        run: rustup target add aarch64-apple-darwin
 
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
@@ -60,16 +62,22 @@ jobs:
         if: matrix.arch == 'x64'
         run: pnpm build:release
       
-      - name: Run Release Build (cross-compiled)
-        if: matrix.arch != 'x64'
+      - name: Run Release Build (Linux x86)
+        if: runner.os == 'Linux' && matrix.arch == 'x86'
         run: |
-          if [ "${{ runner.os }}" = "Linux" ] && [ "${{ matrix.arch }}" = "x86" ]; then
-            pnpm napi build --platform --release --target i686-unknown-linux-gnu --esm --output-dir src --js native.js --dts native.d.ts
-          elif [ "${{ runner.os }}" = "Windows" ] && [ "${{ matrix.arch }}" = "x86" ]; then
-            pnpm napi build --platform --release --target i686-pc-windows-msvc --esm --output-dir src --js native.js --dts native.d.ts
-          elif [ "${{ runner.os }}" = "macOS" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
-            pnpm napi build --platform --release --target aarch64-apple-darwin --esm --output-dir src --js native.js --dts native.d.ts
-          fi
+          pnpm napi build --platform --release --target i686-unknown-linux-gnu --esm --output-dir src --js native.js --dts native.d.ts
+          pnpm build:ts && pnpm build:copy
+
+      - name: Run Release Build (Windows x86)
+        if: runner.os == 'Windows' && matrix.arch == 'x86'
+        run: |
+          pnpm napi build --platform --release --target i686-pc-windows-msvc --esm --output-dir src --js native.js --dts native.d.ts
+          pnpm build:ts && pnpm build:copy
+
+      - name: Run Release Build (macOS ARM64)
+        if: runner.os == 'macOS' && matrix.arch == 'arm64'
+        run: |
+          pnpm napi build --platform --release --target aarch64-apple-darwin --esm --output-dir src --js native.js --dts native.d.ts
           pnpm build:ts && pnpm build:copy
 
       - name: Run Tests
