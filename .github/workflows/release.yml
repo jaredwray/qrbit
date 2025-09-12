@@ -6,12 +6,12 @@ on:
     types: [published]
 
 jobs:
-  build-artifacts:
-    name: build-artifacts
+  build-artifacts-linux:
+    name: build-artifacts-linux
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        arch: [x64, arm64, x86]
+        - os: ubuntu-latest
+          arch: x64
 
     runs-on: ${{ matrix.os }}
 
@@ -33,7 +33,7 @@ jobs:
         run: npm install -g pnpm && pnpm install
       
       - name: Run Release Build
-        run: pnpm build:release      
+        run: pnpm build:linux   
 
       - name: Run Tests
         run: pnpm test:ci
@@ -41,7 +41,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: qrbit-artifacts-${{ matrix.os }}-${{ matrix.arch }}
+          name: qrbit-artifacts-linux
           path: dist/*.node
 
   build-release:
@@ -84,9 +84,9 @@ jobs:
         run: |
             ls -alh ./dist
 
-      - name: Publish
-        run: |
-         npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
-         npm publish --ignore-scripts
-        env:
-         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+#      - name: Publish
+#        run: |
+#         npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+#         npm publish --ignore-scripts
+#        env:
+#         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

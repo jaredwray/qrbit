@@ -21,6 +21,7 @@
 		"build:release": "pnpm build:napi:release && pnpm build:ts && pnpm build:copy",
 		"build:napi:debug": "napi build --platform --esm --output-dir src --js native.js --dts native.d.ts",
 		"build": "pnpm build:napi:debug && pnpm build:ts && pnpm build:copy",
+		"build:linux": "napi build --platform --release --target x86_64-unknown-linux-gnu",
 		"build:ts": "tsup",
 		"build:copy": "cp src/qrbit.*.node dist/ && cp src/native.* dist/",
 		"clean": "rimraf dist src/*.node src/native.* target",
