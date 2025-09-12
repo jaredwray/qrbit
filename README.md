@@ -244,49 +244,49 @@ await qr.toPngFile("./output/qr-code.png", { cache: false });
 ## QR Codes SVG (No Logo)
 |                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
 |-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QRCode toString (v1.5.4)               |    🥇     |       5K  |    211µs  |  ±0.46%  |       5K  |
-|  QrBit toSvg (Native) (v0.1.0)          |   -4.5%   |       5K  |    226µs  |  ±0.91%  |       4K  |
-|  QrBit toSvg (Rust) (v0.1.0)            |   -84%    |     774   |      1ms  |  ±1.32%  |     745   |
-|  styled-qr-code-node toBuffer (v1.5.2)  |   -90%    |     470   |      2ms  |  ±1.32%  |     464   |
+|  QRCode toString (v1.5.4)               |    🥇     |       6K  |    162µs  |  ±0.37%  |       6K  |
+|  QrBit toSvg (Native) (v1.0.0)          |   -3.2%   |       6K  |    172µs  |  ±0.92%  |       6K  |
+|  QrBit toSvg (Rust) (v1.0.0)            |   -85%    |     945   |      1ms  |  ±1.17%  |     912   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -89%    |     709   |      1ms  |  ±1.07%  |     701   |
 
 `Rust` is there for performance and when doing heavy image processing without needing node `canvas` installed. If you do not add a logo then the `Native` version is what you will get for SVG. 
 
 ## QR Codes PNG (No Logo)
 |                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
 |-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit toPng (v0.1.0)                   |    🥇     |       1K  |    681µs  |  ±0.63%  |       1K  |
-|  QRCode toBuffer (v1.5.4)               |   -64%    |     539   |      2ms  |  ±1.48%  |     528   |
-|  styled-qr-code-node toBuffer (v1.5.2)  |   -89%    |     169   |      6ms  |  ±1.16%  |     169   |
+|  QrBit toPng (v1.0.0)                   |    🥇     |       2K  |    647µs  |  ±0.68%  |       2K  |
+|  QRCode toBuffer (v1.5.4)               |   -49%    |     804   |      1ms  |  ±0.77%  |     794   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -85%    |     238   |      4ms  |  ±0.74%  |     238   |
 
 `Rust` is used for `toPng()` to optimize performance for PNG generation and heavy image processing without needing node `canvas` installed.
 
 ## QR Codes with Embedded Logos
 |                name                |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
 |------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit PNG (Path) (v0.1.0)         |    🥇     |     926   |      1ms  |  ±0.47%  |     923   |
-|  QrBit SVG (Path) (v0.1.0)         |   -32%    |     628   |      2ms  |  ±1.21%  |     613   |
-|  QrBit PNG (Buffer) (v0.1.0)       |   -82%    |     169   |      6ms  |  ±0.72%  |     170   |
-|  QrBit SVG (Buffer) (v0.1.0)       |   -83%    |     155   |      6ms  |  ±0.86%  |     155   |
-|  styled-qr-code-node PNG (v1.5.2)  |   -88%    |     116   |      9ms  |  ±0.69%  |     116   |
-|  styled-qr-code-node SVG (v1.5.2)  |   -89%    |     103   |     10ms  |  ±0.73%  |     103   |
+|  QrBit SVG (Path) (v1.0.0)         |    🥇     |     819   |      1ms  |  ±1.04%  |     794   |
+|  QrBit SVG (Buffer) (v1.0.0)       |   -58%    |     341   |      3ms  |  ±1.08%  |     339   |
+|  QrBit PNG (Path) (v1.0.0)         |   -61%    |     319   |      3ms  |  ±1.95%  |     314   |
+|  styled-qr-code-node PNG (v1.5.2)  |   -81%    |     159   |      6ms  |  ±0.75%  |     159   |
+|  QrBit PNG (Buffer) (v1.0.0)       |   -81%    |     154   |      7ms  |  ±1.05%  |     154   |
+|  styled-qr-code-node SVG (v1.5.2)  |   -84%    |     134   |      7ms  |  ±0.59%  |     135   |
 
 `Buffer` is much slower as we have to push the stream across to the rust module. For fastest performance provide the path of the image.
 
 ## QR Codes SVG with Caching
 |                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
 |-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit toSvg (Native) (v0.1.0)          |    🥇     |      52K  |    148µs  |  ±1.96%  |       7K  |
-|  QRCode toString (v1.5.4)               |   -90%    |       5K  |    206µs  |  ±0.45%  |       5K  |
-|  QrBit toSvg (Rust) (v0.1.0)            |   -99%    |     772   |      1ms  |  ±1.26%  |     746   |
-|  styled-qr-code-node toBuffer (v1.5.2)  |   -99%    |     471   |      2ms  |  ±1.44%  |     464   |
+|  QrBit toSvg (Native) (v1.0.0)          |    🥇     |      95K  |     94µs  |  ±2.08%  |      11K  |
+|  QRCode toString (v1.5.4)               |   -93%    |       6K  |    161µs  |  ±0.37%  |       6K  |
+|  QrBit toSvg (Rust) (v1.0.0)            |   -99%    |     938   |      1ms  |  ±1.12%  |     907   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -99%    |     710   |      1ms  |  ±1.10%  |     700   |
 
 
 ## QR Codes PNG with Caching
 |                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
 |-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit toPng (v0.1.0)                   |    🥇     |      13K  |    605µs  |  ±1.81%  |       2K  |
-|  QRCode toBuffer (v1.5.4)               |   -96%    |     535   |      2ms  |  ±1.61%  |     523   |
-|  styled-qr-code-node toBuffer (v1.5.2)  |   -99%    |     165   |      6ms  |  ±0.95%  |     165   |
+|  QrBit toPng (v1.0.0)                   |    🥇     |      13K  |    584µs  |  ±1.84%  |       2K  |
+|  QRCode toBuffer (v1.5.4)               |   -94%    |     760   |      1ms  |  ±1.54%  |     741   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -98%    |     233   |      4ms  |  ±2.10%  |     231   |
 
 # Examples
 
