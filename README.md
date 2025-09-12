@@ -10,7 +10,7 @@
 
 A fast QR code generator with logo embedding support, built with Rust and native node packages for best performance while avoiding additional modules (example: canvas).
 
-## Features
+# Features
 
 - **Fast**: Built with Rust (for logos) for maximum performance and caching 🚀
 - **Fast SVG**: High performance SVG support via `QrCode` when no logo is needed
@@ -22,7 +22,19 @@ A fast QR code generator with logo embedding support, built with Rust and native
 - **Well-tested**: Comprehensive test coverage with Vitest
 - **Maintained**: Actively maintained with regular updates
 
-## Installation
+# Table of Contents
+- [Installation](#installation)
+- [Reqirements](#requirements)
+- [API](#api)
+  - [Constructor](#constructoroptions-qroptions)
+  - [Properties](#properties)
+  - [Methods](#methods)
+- [Benchmarks](#benchmarks)
+- [Examples](#examples)
+- [Contributing](#contributing)
+- [License and Copyright](#license-and-copyright)
+
+# Installation
 
 ```bash
 npm install qrbit
@@ -31,7 +43,7 @@ npm install qrbit
 # Requirements
 
 - Node.js >= 18
-- Supported platforms: Windows, macOS, Linux (x86, x64, ARM64)
+- Supported platforms: Windows (x86, x64), macOS (Arm, Intel), Linux (x64)
 
 # Usage
 
