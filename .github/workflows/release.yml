@@ -14,15 +14,18 @@ jobs:
           - os: ubuntu-latest
             arch: x64
             target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            arch: x64
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            arch: arm64
+            target: aarch64-unknown-linux-musl
           - os: windows-latest
             arch: x64
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             arch: x64
             target: x86_64-apple-darwin
-          - os: macos-latest
-            arch: arm64
-            target: aarch64-apple-darwin
 
     runs-on: ${{ matrix.os }}
 
@@ -57,7 +60,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: qrbit-artifacts-${{ matrix.os }}-${{ matrix.arch }}
+          name: qa-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.target }}
           path: dist/*.node
 
   build-release:
