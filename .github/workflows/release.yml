@@ -60,25 +60,27 @@ jobs:
       
       - name: Run Release Build (x64)
         if: matrix.arch == 'x64'
-        run: pnpm build:release
+        run: | 
+          pnpm napi build --platform --release --output-dir src
+          pnpm build:copy
       
       - name: Run Release Build (Linux x86)
         if: runner.os == 'Linux' && matrix.arch == 'x86'
         run: |
-          pnpm napi build --platform --release --target i686-unknown-linux-gnu --esm --output-dir src --js native.js --dts native.d.ts
-          pnpm build:ts && pnpm build:copy
+          pnpm napi build --platform --release --target i686-unknown-linux-gnu --output-dir src
+          pnpm build:copy
 
       - name: Run Release Build (Windows x86)
         if: runner.os == 'Windows' && matrix.arch == 'x86'
         run: |
-          pnpm napi build --platform --release --target i686-pc-windows-msvc --esm --output-dir src --js native.js --dts native.d.ts
-          pnpm build:ts && pnpm build:copy
+          pnpm napi build --platform --release --target i686-pc-windows-msvc --output-dir src
+          pnpm build:copy
 
       - name: Run Release Build (macOS ARM64)
         if: runner.os == 'macOS' && matrix.arch == 'arm64'
         run: |
-          pnpm napi build --platform --release --target aarch64-apple-darwin --esm --output-dir src --js native.js --dts native.d.ts
-          pnpm build:ts && pnpm build:copy
+          pnpm napi build --platform --release --target aarch64-apple-darwin --output-dir src
+          pnpm build:copy
 
       - name: Run Tests
         run: pnpm test:ci
