@@ -40,47 +40,11 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Setup for cross-compilation (Linux x86)
-        if: runner.os == 'Linux' && matrix.arch == 'x86'
-        run: |
-          rustup target add i686-unknown-linux-gnu
-          sudo apt-get update
-          sudo apt-get install -y gcc-multilib
-
-      - name: Setup for cross-compilation (Windows x86)
-        if: runner.os == 'Windows' && matrix.arch == 'x86'
-        run: rustup target add i686-pc-windows-msvc
-
-      - name: Setup for cross-compilation (macOS ARM64)
-        if: runner.os == 'macOS' && matrix.arch == 'arm64'
-        run: rustup target add aarch64-apple-darwin
-
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
       
-      - name: Run Release Build (x64)
-        if: matrix.arch == 'x64'
-        run: | 
-          pnpm napi build --platform --release --output-dir src
-          pnpm build:copy
-      
-      - name: Run Release Build (Linux x86)
-        if: runner.os == 'Linux' && matrix.arch == 'x86'
-        run: |
-          pnpm napi build --platform --release --target i686-unknown-linux-gnu --output-dir src
-          pnpm build:copy
-
-      - name: Run Release Build (Windows x86)
-        if: runner.os == 'Windows' && matrix.arch == 'x86'
-        run: |
-          pnpm napi build --platform --release --target i686-pc-windows-msvc --output-dir src
-          pnpm build:copy
-
-      - name: Run Release Build (macOS ARM64)
-        if: runner.os == 'macOS' && matrix.arch == 'arm64'
-        run: |
-          pnpm napi build --platform --release --target aarch64-apple-darwin --output-dir src
-          pnpm build:copy
+      - name: Build
+        run: pnpm build:release
 
       - name: Run Tests
         run: pnpm test:ci
