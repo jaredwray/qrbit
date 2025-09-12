@@ -13,16 +13,16 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: x64
-          - os: ubuntu-latest
-            arch: x86
+            target: x86_64-unknown-linux-gnu
           - os: windows-latest
             arch: x64
-          - os: windows-latest
-            arch: x86
+            target: x86_64-pc-windows-msvc
           - os: macos-latest
             arch: x64
+            target: x86_64-apple-darwin
           - os: macos-latest
             arch: arm64
+            target: aarch64-apple-darwin
 
     runs-on: ${{ matrix.os }}
 
@@ -43,6 +43,11 @@ jobs:
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
       
+      - name: Rust
+        run: |
+          rustup target add ${{matrix.target}}
+          pnpm napi build --platform --release --output-dir src --target ${{ matrix.target }}
+
       - name: Build
         run: pnpm build:release
 
@@ -74,7 +79,7 @@ jobs:
         run: npm install -g pnpm && pnpm install
 
       - name: Build Typescript Project
-        run: pnpm build
+        run: pnpm build:release
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
