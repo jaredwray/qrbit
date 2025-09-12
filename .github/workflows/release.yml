@@ -9,9 +9,8 @@ jobs:
   build-artifacts-linux:
     name: build-artifacts-linux
     strategy:
-      matrix:
-        - os: ubuntu-latest
-          arch: x64
+      matrix: ['ubuntu-latest']
+      os: ['x64']
 
     runs-on: ${{ matrix.os }}
 
