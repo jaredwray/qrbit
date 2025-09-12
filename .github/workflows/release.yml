@@ -74,6 +74,9 @@ jobs:
         run: |
           ls -alh ./artifacts
 
+      - name: Remove Artifacts in Dist
+        run: rm -f dist/*.node
+
       - name: Copy all artifacts that end in .node to dist
         run: |
           cp -f ./artifacts/**/*.node dist/
