@@ -154,9 +154,14 @@ pnpm-lock.yaml
 
 # build
 src/native.js
+src/native.cjs
 src/native.d.ts
+src/native.d.cts
 src/browser.js
 src/*wasi*js
 
 # Apple
 .DS_Store
+
+# IDEs
+.idea
