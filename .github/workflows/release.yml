@@ -53,7 +53,8 @@ jobs:
             clang \
             llvm \
             build-base \
-            bash
+            bash \
+            curl
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
