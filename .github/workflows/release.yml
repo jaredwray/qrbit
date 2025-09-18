@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   release:
     types: [published]
+  push:
+    branches: [ fix/binaries ]
 
 jobs:
   build-artifacts:
@@ -13,7 +15,12 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: x64
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            arch: x64
             target: x86_64-unknown-linux-musl
+            container: node:22-alpine
+            build_env: alpine
           - os: windows-latest
             arch: x64
             target: x86_64-pc-windows-msvc
@@ -22,24 +29,37 @@ jobs:
             target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Setup Node
+      # Setup Node - Skip for Alpine (already in container)
       - name: Use Node.js
+        if: matrix.build_env != 'alpine'
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # Setup Rust
+      - name: Install Alpine Dependencies
+        if: matrix.build_env == 'alpine'
+        run: |
+          apk add --no-cache \
+            python3 \
+            make \
+            g++ \
+            musl-dev \
+            clang \
+            llvm \
+            build-base
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
-      
+
       - name: Rust
         run: |
           rustup target add ${{matrix.target}}
