@@ -47,6 +47,7 @@ jobs:
         run: |
           apk add --no-cache \
             bash \
+            curl \
             nodejs \
             npm \
             python3 \
