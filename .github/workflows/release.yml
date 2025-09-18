@@ -5,7 +5,7 @@ on:
   release:
     types: [published]
   push:
-    branches: [ fix/binaries ]
+    branches: [ fix/linux-bin ]
 
 jobs:
   build-artifacts:
@@ -52,7 +52,8 @@ jobs:
             musl-dev \
             clang \
             llvm \
-            build-base
+            build-base \
+            bash
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
