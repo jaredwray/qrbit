@@ -4,8 +4,6 @@ on:
   workflow_dispatch:
   release:
     types: [published]
-  push:
-    branches: [ fix/binaries ]
 
 jobs:
   build-artifacts:
@@ -52,7 +50,9 @@ jobs:
             musl-dev \
             clang \
             llvm \
-            build-base
+            build-base \
+            bash \
+            curl
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
