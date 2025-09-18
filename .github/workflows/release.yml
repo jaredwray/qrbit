@@ -19,7 +19,7 @@ jobs:
           - os: ubuntu-latest
             arch: x64
             target: x86_64-unknown-linux-musl
-            container: alpine:latest
+            container: node:22-alpine
             build_env: alpine
           - os: windows-latest
             arch: x64
@@ -46,18 +46,13 @@ jobs:
         if: matrix.build_env == 'alpine'
         run: |
           apk add --no-cache \
-            bash \
-            curl \
-            nodejs \
-            npm \
             python3 \
             make \
             g++ \
             musl-dev \
             clang \
             llvm \
-            build-base \
-            git
+            build-base
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
