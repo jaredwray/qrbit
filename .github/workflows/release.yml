@@ -46,6 +46,7 @@ jobs:
         if: matrix.build_env == 'alpine'
         run: |
           apk add --no-cache \
+            bash \
             nodejs \
             npm \
             python3 \
