@@ -91,7 +91,7 @@
 		]
 	},
 	"dependencies": {
-		"cacheable": "^2.0.2",
+		"cacheable": "^2.1.0",
 		"hookified": "^1.12.1",
 		"qrcode": "^1.5.4"
 	}
