@@ -4,7 +4,6 @@ use imageproc::rect::Rect;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use qrcode::QrCode;
-use std::io::Cursor;
 
 #[napi(object)]
 pub struct QrOptions {
@@ -275,46 +274,6 @@ impl QrGenerator {
         Ok(document.to_string())
     }
 
-    pub fn generate_png(&self, logo_path: Option<&str>, logo_size_ratio: f64) -> napi::Result<Vec<u8>> {
-        let mut img = self.generate_image();
-        
-        if let Some(logo_path) = logo_path {
-            img = self.add_logo(img, logo_path, logo_size_ratio)?;
-        }
-        
-        let mut buffer = Vec::new();
-        let mut cursor = Cursor::new(&mut buffer);
-        
-        img.write_to(&mut cursor, image::ImageFormat::Png)
-            .map_err(|e| Error::from_reason(format!("Failed to encode PNG: {}", e)))?;
-        
-        Ok(buffer)
-    }
-
-    pub fn generate_png_with_buffer(&self, logo_buffer: Option<&[u8]>, logo_size_ratio: f64) -> napi::Result<Vec<u8>> {
-        // Step 1: Generate the base QR code image (without logo)
-        // This creates an RGBA image with the QR pattern rendered as filled rectangles
-        let mut img = self.generate_image();
-        
-        // Step 2: Add logo overlay if a buffer is provided
-        if let Some(logo_buffer) = logo_buffer {
-            // Decode the logo buffer into an image, resize it, and overlay it on the QR code
-            // This handles the logo positioning (centered) and scaling based on logo_size_ratio
-            img = self.add_logo_from_buffer(img, logo_buffer, logo_size_ratio)?;
-        }
-        
-        // Step 3: Encode the final image as PNG bytes
-        // Create an in-memory buffer to hold the PNG data
-        let mut buffer = Vec::new();
-        let mut cursor = Cursor::new(&mut buffer);
-        
-        // Write the RGBA image data to the buffer in PNG format
-        img.write_to(&mut cursor, image::ImageFormat::Png)
-            .map_err(|e| Error::from_reason(format!("Failed to encode PNG: {}", e)))?;
-        
-        // Step 4: Return the PNG bytes as a Vec<u8>
-        Ok(buffer)
-    }
 }
 
 fn parse_color(color_str: &str) -> napi::Result<[u8; 4]> {
@@ -331,43 +290,6 @@ fn parse_color(color_str: &str) -> napi::Result<[u8; 4]> {
     }
 }
 
-#[napi]
-pub fn generate_qr(options: QrOptions) -> Result<QrResult> {
-    let size = options.size.unwrap_or(200);
-    let margin = options.margin.unwrap_or(20);
-    let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
-    
-    let mut generator = QrGenerator::new(&options.text, size, margin)?;
-    
-    if let Some(bg_color) = &options.background_color {
-        let bg = parse_color(bg_color)?;
-        let fg = if let Some(fg_color) = &options.foreground_color {
-            parse_color(fg_color)?
-        } else {
-            [0, 0, 0, 255]
-        };
-        generator.set_colors(bg, fg);
-    }
-    
-    let svg = generator.generate_svg(
-        options.logo_path.as_deref(), 
-        logo_size_ratio
-    )?;
-    
-    let png_data = generator.generate_png(
-        options.logo_path.as_deref(), 
-        logo_size_ratio
-    )?;
-    
-    let total_size = size + 2 * margin;
-    
-    Ok(QrResult {
-        svg: Some(svg),
-        png: Some(png_data.into()),
-        width: total_size,
-        height: total_size,
-    })
-}
 
 #[napi]
 pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
@@ -393,31 +315,6 @@ pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
     )
 }
 
-#[napi]
-pub fn generate_qr_png(options: QrOptions) -> Result<Buffer> {
-    let size = options.size.unwrap_or(200);
-    let margin = options.margin.unwrap_or(20);
-    let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
-    
-    let mut generator = QrGenerator::new(&options.text, size, margin)?;
-    
-    if let Some(bg_color) = &options.background_color {
-        let bg = parse_color(bg_color)?;
-        let fg = if let Some(fg_color) = &options.foreground_color {
-            parse_color(fg_color)?
-        } else {
-            [0, 0, 0, 255]
-        };
-        generator.set_colors(bg, fg);
-    }
-    
-    let png_data = generator.generate_png(
-        options.logo_path.as_deref(), 
-        logo_size_ratio
-    )?;
-    
-    Ok(png_data.into())
-}
 
 #[napi]
 pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<String> {
@@ -445,33 +342,6 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
     )
 }
 
-#[napi]
-pub fn generate_qr_png_with_buffer(options: QrOptionsWithBuffer) -> Result<Buffer> {
-    let size = options.size.unwrap_or(200);
-    let margin = options.margin.unwrap_or(20);
-    let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
-    
-    let mut generator = QrGenerator::new(&options.text, size, margin)?;
-    
-    if let Some(bg_color) = &options.background_color {
-        let bg = parse_color(bg_color)?;
-        let fg = if let Some(fg_color) = &options.foreground_color {
-            parse_color(fg_color)?
-        } else {
-            [0, 0, 0, 255]
-        };
-        generator.set_colors(bg, fg);
-    }
-    
-    let logo_buffer = options.logo_buffer.as_ref().map(|b| b.as_ref());
-    
-    let png_data = generator.generate_png_with_buffer(
-        logo_buffer,
-        logo_size_ratio
-    )?;
-    
-    Ok(png_data.into())
-}
 
 #[napi]
 pub fn convert_svg_to_png(svg_content: String, width: Option<u32>, height: Option<u32>) -> Result<Buffer> {
