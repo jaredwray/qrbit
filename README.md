@@ -367,7 +367,13 @@ const jpegBuffer = QrBit.convertSvgToJpeg(svg, 400, 400, 85);
 |  QRCode toBuffer (v1.5.4)               |   -49%    |     804   |      1ms  |  ±0.77%  |     794   |
 |  styled-qr-code-node toBuffer (v1.5.2)  |   -85%    |     238   |      4ms  |  ±0.74%  |     238   |
 
-`Rust` is used for `toPng()` to optimize performance for PNG generation and heavy image processing without needing node `canvas` installed.
+## QR Codes JPG (No Logo)
+|                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
+|-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
+|  QrBit toJpg (v1.2.0)                   |    🥇     |     663   |      2ms  |  ±0.37%  |     662   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -36%    |     424   |      2ms  |  ±2.13%  |     418   |
+
+`Rust` is used for `toPng()` and `toJpg` to optimize performance for image generation and heavy image processing without needing node `canvas` installed.
 
 ## QR Codes with Embedded Logos
 |                name                |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |

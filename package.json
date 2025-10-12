@@ -33,6 +33,7 @@
 		"benchmark:common": "tsx benchmark/qrcode-common-svg.ts && tsx benchmark/qrcode-common-png.ts",
 		"benchmark:svg": "tsx benchmark/qrcode-svg.ts",
 		"benchmark:png": "tsx benchmark/qrcode-png.ts",
+		"benchmark:jpg": "tsx benchmark/qrcode-jpg.ts",
 		"benchmark:logo": "tsx benchmark/qrcode-logo.ts",
 		"benchmark": "pnpm benchmark:svg && pnpm benchmark:png && pnpm benchmark:logo",
 		"generate-examples": "rimraf ./examples && pnpm tsx ./scripts/generate-examples.ts",
