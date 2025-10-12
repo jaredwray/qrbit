@@ -177,7 +177,7 @@ qr.cache = false; // Disable caching
 
 ## Methods
 
-### .toSvg(options?: toOptions): Promise<string>
+### .toSvg(options?: toOptions)
 
 Generate SVG QR code with optional caching. Uses native QRCode library for simple cases, Rust implementation for logos.
 
@@ -195,7 +195,7 @@ console.log(svg); // <svg xmlns="http://www.w3.org/2000/svg"...
 const svgNoCache = await qr.toSvg({ cache: false });
 ```
 
-### .toSvgFile(filePath: string, options?: toOptions): Promise<void>
+### .toSvgFile(filePath: string, options?: toOptions)
 
 Generate SVG QR code and save it to a file. Creates directories if they don't exist.
 
@@ -213,7 +213,7 @@ await qr.toSvgFile("./output/qr-code.svg");
 await qr.toSvgFile("./output/qr-code.svg", { cache: false });
 ```
 
-### .toPng(options?: toOptions): Promise<Buffer>
+### .toPng(options?: toOptions)
 
 Generate PNG QR code with optional caching. Uses high-performance SVG to PNG conversion.
 
@@ -233,7 +233,7 @@ fs.writeFileSync("qr-code.png", pngBuffer);
 const pngNoCache = await qr.toPng({ cache: false });
 ```
 
-### .toPngFile(filePath: string, options?: toOptions): Promise<void>
+### .toPngFile(filePath: string, options?: toOptions)
 
 Generate PNG QR code and save it to a file. Creates directories if they don't exist.
 
