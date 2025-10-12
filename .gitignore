@@ -165,3 +165,4 @@ src/*wasi*js
 
 # IDEs
 .idea
+/test/temp
