@@ -17,7 +17,7 @@ A fast QR code generator with logo embedding support, built with Rust and native
 - **Cross-platform**: Works on iOS, Windows, Linux, and macOS
 - **Logo embedding**: Add custom logos to your QR codes with no need for node canvas!
 - **Customizable**: Custom colors, sizes, and margins
-- **Multiple formats**: Generate SVG and PNG outputs
+- **Multiple formats**: Generate SVG, PNG, and JPEG outputs
 - **Scalable**: With caching you can also use a secondary store for persistence
 - **Well-tested**: Comprehensive test coverage with Vitest
 - **Maintained**: Actively maintained with regular updates
@@ -64,6 +64,14 @@ const svg = await qr.toSvg();
 console.log(svg); // here is the svg with an embedded logo!
 ```
 
+```javascript
+const qr = new QrBit({ 
+  text: "https://github.com/jaredwray/qrbit", 
+  logo: '/path/to/logo.png',
+  size: 200 });
+const png = await qr.toPng(); // buffer of the png!
+```
+
 # API
 
 ## constructor(options: QrOptions)
@@ -83,6 +91,11 @@ interface QrOptions {
   backgroundColor?: string;        // Background color (default: "#FFFFFF")
   foregroundColor?: string;        // Foreground color (default: "#000000")
   cache?: Cacheable | boolean;     // Caching configuration (default: true)
+}
+
+interface toOptions {
+  cache?: boolean;                 // Enable/disable caching (default: true)
+  quality?: number;                // JPEG quality 1-100 (default: 90) - only for toJpg methods
 }
 ```
 
@@ -177,7 +190,7 @@ qr.cache = false; // Disable caching
 
 ## Methods
 
-### .toSvg(options?: toOptions): Promise<string>
+### .toSvg(options?: toOptions)
 
 Generate SVG QR code with optional caching. Uses native QRCode library for simple cases, Rust implementation for logos.
 
@@ -195,7 +208,7 @@ console.log(svg); // <svg xmlns="http://www.w3.org/2000/svg"...
 const svgNoCache = await qr.toSvg({ cache: false });
 ```
 
-### .toSvgFile(filePath: string, options?: toOptions): Promise<void>
+### .toSvgFile(filePath: string, options?: toOptions)
 
 Generate SVG QR code and save it to a file. Creates directories if they don't exist.
 
@@ -213,7 +226,7 @@ await qr.toSvgFile("./output/qr-code.svg");
 await qr.toSvgFile("./output/qr-code.svg", { cache: false });
 ```
 
-### .toPng(options?: toOptions): Promise<Buffer>
+### .toPng(options?: toOptions)
 
 Generate PNG QR code with optional caching. Uses high-performance SVG to PNG conversion.
 
@@ -233,7 +246,7 @@ fs.writeFileSync("qr-code.png", pngBuffer);
 const pngNoCache = await qr.toPng({ cache: false });
 ```
 
-### .toPngFile(filePath: string, options?: toOptions): Promise<void>
+### .toPngFile(filePath: string, options?: toOptions)
 
 Generate PNG QR code and save it to a file. Creates directories if they don't exist.
 
@@ -249,6 +262,90 @@ await qr.toPngFile("./output/qr-code.png");
 
 // With options
 await qr.toPngFile("./output/qr-code.png", { cache: false });
+```
+
+### .toJpg(options?: toOptions)
+
+Generate JPEG QR code with optional caching and quality control. Uses high-performance SVG to JPEG conversion.
+
+**Parameters:**
+- `options.cache?: boolean` - Whether to use caching (default: true)
+- `options.quality?: number` - JPEG quality from 1-100 (default: 90)
+
+**Returns:** Promise<Buffer> - The JPEG buffer
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+const jpgBuffer = await qr.toJpg();
+
+// With high quality
+const jpgHigh = await qr.toJpg({ quality: 95 });
+
+// With compression for smaller file size
+const jpgCompressed = await qr.toJpg({ quality: 70 });
+
+// Save to file
+fs.writeFileSync("qr-code.jpg", jpgBuffer);
+
+// Without caching
+const jpgNoCache = await qr.toJpg({ cache: false, quality: 85 });
+```
+
+### .toJpgFile(filePath: string, options?: toOptions)
+
+Generate JPEG QR code and save it to a file. Creates directories if they don't exist.
+
+**Parameters:**
+- `filePath: string` - The file path where to save the JPEG
+- `options.cache?: boolean` - Whether to use caching (default: true)
+- `options.quality?: number` - JPEG quality from 1-100 (default: 90)
+
+**Returns:** Promise<void>
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+await qr.toJpgFile("./output/qr-code.jpg");
+
+// With high quality
+await qr.toJpgFile("./output/qr-code.jpg", { quality: 95 });
+
+// With compression
+await qr.toJpgFile("./output/qr-code.jpg", { quality: 70, cache: false });
+```
+
+### Static Methods
+
+#### QrBit.convertSvgToPng(svgContent: string, width?: number, height?: number)
+
+Convert SVG content to PNG buffer using the native Rust implementation.
+
+**Parameters:**
+- `svgContent: string` - The SVG content as a string
+- `width?: number` - Optional width for the PNG output
+- `height?: number` - Optional height for the PNG output
+
+**Returns:** Buffer - The PNG buffer
+
+```javascript
+const svg = '<svg>...</svg>';
+const pngBuffer = QrBit.convertSvgToPng(svg, 400, 400);
+```
+
+#### QrBit.convertSvgToJpeg(svgContent: string, width?: number, height?: number, quality?: number)
+
+Convert SVG content to JPEG buffer using the native Rust implementation.
+
+**Parameters:**
+- `svgContent: string` - The SVG content as a string
+- `width?: number` - Optional width for the JPEG output
+- `height?: number` - Optional height for the JPEG output
+- `quality?: number` - JPEG quality from 1-100 (default: 90)
+
+**Returns:** Buffer - The JPEG buffer
+
+```javascript
+const svg = '<svg>...</svg>';
+const jpegBuffer = QrBit.convertSvgToJpeg(svg, 400, 400, 85);
 ```
 
 # Benchmarks
@@ -422,7 +519,62 @@ await qr.toPngFile("10_buffer_logo.png");
 ```
 ![Buffer Logo QR Code](examples/10_buffer_logo.png)
 
-These examples demonstrate the versatility and capabilities of QrBit for generating QR codes with various customizations, from simple text encoding to complex styled codes with embedded logos.
+## 11. High Quality JPEG
+JPEG format with high quality setting.
+```javascript
+const qr = new QrBit({
+  text: "High Quality JPEG",
+  size: 300
+});
+await qr.toJpgFile("11_jpg_high_quality.jpg", { quality: 95 });
+```
+![High Quality JPEG QR Code](examples/11_jpg_high_quality.jpg)
+
+## 12. JPEG with Logo and Blue Theme
+JPEG with embedded logo and custom blue background.
+```javascript
+const qr = new QrBit({
+  text: "JPEG with Logo",
+  logo: "./logo.png",
+  size: 400,
+  logoSizeRatio: 0.25,
+  backgroundColor: "#2196F3",
+  foregroundColor: "#FFFFFF"
+});
+await qr.toJpgFile("12_jpg_logo_blue.jpg", { quality: 90 });
+```
+![JPEG with Logo Blue QR Code](examples/12_jpg_logo_blue.jpg)
+
+## 13. Compressed JPEG with Green Theme
+JPEG with lower quality for smaller file size.
+```javascript
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit",
+  size: 300,
+  backgroundColor: "#4CAF50",
+  foregroundColor: "#FFFFFF"
+});
+await qr.toJpgFile("13_jpg_compressed_green.jpg", { quality: 70 });
+```
+![Compressed JPEG Green QR Code](examples/13_jpg_compressed_green.jpg)
+
+## 14. JPEG with Buffer Logo and Orange Theme
+JPEG using buffer-based logo with orange background.
+```javascript
+const logoBuffer = fs.readFileSync("./logo.png");
+const qr = new QrBit({
+  text: "JPEG Buffer Logo",
+  logo: logoBuffer,
+  size: 350,
+  logoSizeRatio: 0.2,
+  backgroundColor: "#FF9800",
+  foregroundColor: "#FFFFFF"
+});
+await qr.toJpgFile("14_jpg_buffer_logo_orange.jpg", { quality: 85 });
+```
+![JPEG Buffer Logo Orange QR Code](examples/14_jpg_buffer_logo_orange.jpg)
+
+These examples demonstrate the versatility and capabilities of QrBit for generating QR codes with various customizations, from simple text encoding to complex styled codes with embedded logos, supporting SVG, PNG, and JPEG formats with quality control.
 
 ## Contributing
 

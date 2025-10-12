@@ -5,6 +5,7 @@ import { Cacheable } from "cacheable";
 import { Hookified, type HookifiedOptions } from "hookified";
 import QRCode, { type QRCodeToStringOptions } from "qrcode";
 import {
+	convertSvgToJpeg as nativeConvertSvgToJpeg,
 	convertSvgToPng as nativeConvertSvgToPng,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
@@ -77,6 +78,7 @@ export interface QrResult {
 
 export type toOptions = {
 	cache?: boolean;
+	quality?: number;
 };
 
 /**
@@ -93,6 +95,7 @@ export class QrBit extends Hookified {
 	private _foregroundColor: string;
 	private _cache: Cacheable | undefined;
 	private _napi = {
+		convertSvgToJpeg: nativeConvertSvgToJpeg,
 		convertSvgToPng: nativeConvertSvgToPng,
 		generateQrSvg: nativeGenerateQrSvg,
 		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
@@ -417,6 +420,61 @@ export class QrBit extends Hookified {
 	}
 
 	/**
+	 * Generate JPEG QR code with optional caching.
+	 * Generates the QR as SVG either in rust if it has a logo or native. Then does a conversion on it.
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @param options.quality - JPEG quality 1-100 (default: 90)
+	 * @returns {Promise<Buffer>} The JPEG buffer
+	 */
+	public async toJpg(options?: toOptions): Promise<Buffer> {
+		let result: Buffer;
+		const quality = options?.quality ?? 90;
+		const renderKey = `napi-jpeg-${quality}`;
+
+		// check the cache
+		if (this._cache && options?.cache !== false) {
+			const key = this.generateCacheKey(renderKey);
+			const cached = await this._cache.get<Buffer>(key);
+			if (cached) {
+				// Ensure we return a Buffer, not Uint8Array
+				return Buffer.from(cached);
+			}
+		}
+
+		const svg = await this.toSvg();
+		result = QrBit.convertSvgToJpeg(svg, undefined, undefined, quality);
+
+		if (this._cache && options?.cache !== false) {
+			// set the cache, generate the key from hash
+			const key = this.generateCacheKey(renderKey);
+			// cache the value
+			await this._cache.set(key, result);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Generate JPEG QR code and save it to a file.
+	 * Creates directories if they don't exist.
+	 * @param filePath - The file path where to save the JPEG
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @param options.quality - JPEG quality 1-100 (default: 90)
+	 * @returns {Promise<void>} Resolves when file is written
+	 */
+	public async toJpgFile(filePath: string, options?: toOptions): Promise<void> {
+		const jpegBuffer = await this.toJpg(options);
+
+		// Create directory if it doesn't exist
+		const dir = path.dirname(filePath);
+		await fs.promises.mkdir(dir, { recursive: true });
+
+		await fs.promises.writeFile(filePath, jpegBuffer);
+	}
+
+	/**
 	 * Generate SVG QR code and save it to a file.
 	 * Creates directories if they don't exist.
 	 * @param filePath - The file path where to save the SVG
@@ -447,6 +505,23 @@ export class QrBit extends Hookified {
 		height?: number,
 	): Buffer {
 		return nativeConvertSvgToPng(svgContent, width, height);
+	}
+
+	/**
+	 * Convert SVG content to JPEG buffer using the native Rust implementation.
+	 * @param svgContent - The SVG content as a string
+	 * @param width - Optional width for the JPEG output
+	 * @param height - Optional height for the JPEG output
+	 * @param quality - Optional JPEG quality 1-100 (default: 90)
+	 * @returns {Buffer} The JPEG buffer
+	 */
+	public static convertSvgToJpeg(
+		svgContent: string,
+		width?: number,
+		height?: number,
+		quality?: number,
+	): Buffer {
+		return nativeConvertSvgToJpeg(svgContent, width, height, quality);
 	}
 
 	/**
