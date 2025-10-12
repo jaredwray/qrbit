@@ -64,6 +64,14 @@ const svg = await qr.toSvg();
 console.log(svg); // here is the svg with an embedded logo!
 ```
 
+```javascript
+const qr = new QrBit({ 
+  text: "https://github.com/jaredwray/qrbit", 
+  logo: '/path/to/logo.png',
+  size: 200 });
+const png = await qr.toPng(); // buffer of the png!
+```
+
 # API
 
 ## constructor(options: QrOptions)
