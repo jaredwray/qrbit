@@ -6,9 +6,6 @@ import { Hookified, type HookifiedOptions } from "hookified";
 import QRCode, { type QRCodeToStringOptions } from "qrcode";
 import {
 	convertSvgToPng as nativeConvertSvgToPng,
-	generateQr as nativeGenerateQr,
-	generateQrPng as nativeGenerateQrPng,
-	generateQrPngWithBuffer as nativeGenerateQrPngWithBuffer,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 } from "./native.js";
@@ -97,9 +94,6 @@ export class QrBit extends Hookified {
 	private _cache: Cacheable | undefined;
 	private _napi = {
 		convertSvgToPng: nativeConvertSvgToPng,
-		generateQr: nativeGenerateQr,
-		generateQrPng: nativeGenerateQrPng,
-		generateQrPngWithBuffer: nativeGenerateQrPngWithBuffer,
 		generateQrSvg: nativeGenerateQrSvg,
 		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
 	};
