@@ -7,12 +7,12 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # REQUIRED for npm Trusted Publishing
-  packages: write  # Only needed if you also push GitHub packages
+  id-token: write       # REQUIRED for npm Trusted Publishing
+  packages: write       # Only needed if you also push GitHub Packages
 
 jobs:
   # ----------------------------------------------------------
-  # 1. Matrix build for Rust napi binaries
+  # 1. Build Rust + napi binaries for all targets
   # ----------------------------------------------------------
   build-binaries:
     name: Build Rust Binaries
@@ -24,27 +24,33 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             build_env: alpine
+            container: node:22-alpine
+
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+
           - os: macos-latest
             target: x86_64-apple-darwin
 
-    container: ${{ matrix.build_env == 'alpine' && 'node:22-alpine' || '' }}
+    container: ${{ matrix.container || '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js (only non-Alpine)
+      # Setup Node (non-alpine)
+      - name: Use Node.js
         if: matrix.build_env != 'alpine'
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install Alpine Build Deps
+      # Alpine dependencies
+      - name: Install Alpine Build Dependencies
         if: matrix.build_env == 'alpine'
         run: |
           apk add --no-cache python3 make g++ musl-dev clang llvm build-base bash curl
@@ -52,7 +58,7 @@ jobs:
       - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Dependencies
+      - name: Install JS dependencies
         run: npm install -g pnpm && pnpm install
 
       - name: Add Rust Target
@@ -60,19 +66,23 @@ jobs:
 
       - name: Build napi-rs Binary
         run: |
-          pnpm napi build --platform --release --output-dir packaged-binaries --target ${{ matrix.target }}
+          pnpm napi build \
+            --platform \
+            --release \
+            --output-dir packaged-binaries \
+            --target ${{ matrix.target }}
 
-      - name: Upload Artifact
+      - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
           path: packaged-binaries/*.node
 
   # ----------------------------------------------------------
-  # 2. Build JS/TS code once on Linux
+  # 2. Build JS/TS layer once
   # ----------------------------------------------------------
   build-js:
-    name: Build TypeScript
+    name: Build JS Bundle
     runs-on: ubuntu-latest
     needs: build-binaries
 
@@ -83,20 +93,20 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install deps + build
+      - name: Install dependencies and build TS
         run: |
           npm install -g pnpm
           pnpm install
           pnpm build:release
 
-      - name: Upload dist (JS)
+      - name: Upload JS dist
         uses: actions/upload-artifact@v4
         with:
           name: js-dist
           path: dist/**/*
 
   # ----------------------------------------------------------
-  # 3. Combine everything and publish with Trusted Publishing
+  # 3. Final assembly + npm publish (Trusted Publishing)
   # ----------------------------------------------------------
   publish:
     name: Publish to npm (Trusted Publishing)
@@ -113,25 +123,43 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm && pnpm install
 
+      # Download JS build
       - name: Download JS artifacts
         uses: actions/download-artifact@v4
         with:
           name: js-dist
-          path: dist
+          path: tmp-js
 
-      - name: Download all napi binaries
+      # Download all native binaries
+      - name: Download binary artifacts
         uses: actions/download-artifact@v4
         with:
-          path: dist
+          path: tmp-bin
 
-      - name: Show assembled dist
-        run: ls -alhR dist
-
-      - name: Confirm OIDC availability
+      # Flatten all artifacts into dist/
+      - name: Assemble flat dist directory
         run: |
-          echo "URL:   $ACTIONS_ID_TOKEN_REQUEST_URL"
-          echo "TOKEN: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+          rm -rf dist
+          mkdir -p dist
 
-      - name: Publish to npm (Trusted Publishing + provenance)
+          # Copy JS output
+          cp -R tmp-js/* dist/
+
+          # Copy all .node files from all targets
+          find tmp-bin -type f -name "*.node" -exec cp {} dist/ \;
+
+      - name: Show Final Dist
+        run: |
+          echo "----- FINAL DIST CONTENTS -----"
+          ls -alh dist/
+
+      # Confirm OIDC is available for Trusted Publishing
+      - name: Verify OIDC
+        run: |
+          echo "OIDC URL:   $ACTIONS_ID_TOKEN_REQUEST_URL"
+          echo "OIDC TOKEN: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+
+      # The actual publish step WITH provenance
+      - name: Publish to npm
         run: |
           npm publish --provenance --access public
