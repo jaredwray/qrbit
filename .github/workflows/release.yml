@@ -128,5 +128,4 @@ jobs:
           echo "OIDC TOKEN: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
 
       - name: Publish with Provenance
-        run: |
-         npm publish --ignore-scripts --no-git-checks
+        run: npm publish
