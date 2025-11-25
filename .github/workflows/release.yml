@@ -5,6 +5,11 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
 jobs:
   build-artifacts:
     name: build-artifacts
@@ -119,7 +124,4 @@ jobs:
 
       - name: Publish
         run: |
-         npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
-         npm publish --ignore-scripts
-        env:
-         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+         pnpm publish --ignore-scripts --provenance --access public
