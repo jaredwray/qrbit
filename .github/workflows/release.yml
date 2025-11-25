@@ -122,6 +122,6 @@ jobs:
         run: |
             ls -alh ./dist
 
-      - name: Publish
+      - name: Publish with Provenance
         run: |
          pnpm publish --ignore-scripts --provenance --access public
