@@ -24,5 +24,12 @@ You can contribute changes to this repo by opening a pull request:
 
 If you need more information on the steps to create a pull request, you can find a detailed walkthrough in the [Github documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)
 
+# Maintenance and Updates
+
+Qrbit uses Typescript / Nodejs and Rust so to do maintenance you will need to look at both:
+
+- Typescript / Nodejs - Use `node-check-updates` which will install globally and run `ncu` to see what modules to upgrade.
+- Rust - run `rustup upgrade` to get latest and then `cargo install cargo-outdated` then `cargo outdated --root-deps-only`
+
 # Code of Conduct
 Please refer to our [Code of Conduct](CODE_OF_CONDUCT.md) readme for how to contribute to this open source project and work within the community. 
