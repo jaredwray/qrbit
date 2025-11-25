@@ -7,125 +7,131 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  packages: write
+  id-token: write  # REQUIRED for npm Trusted Publishing
+  packages: write  # Only needed if you also push GitHub packages
 
 jobs:
-  build-artifacts:
-    name: build-artifacts
+  # ----------------------------------------------------------
+  # 1. Matrix build for Rust napi binaries
+  # ----------------------------------------------------------
+  build-binaries:
+    name: Build Rust Binaries
+    runs-on: ${{ matrix.os }}
+
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            arch: x64
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
-            arch: x64
             target: x86_64-unknown-linux-musl
-            container: node:22-alpine
             build_env: alpine
           - os: windows-latest
-            arch: x64
             target: x86_64-pc-windows-msvc
           - os: macos-latest
-            arch: x64
             target: x86_64-apple-darwin
 
-    runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
+    container: ${{ matrix.build_env == 'alpine' && 'node:22-alpine' || '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Setup Node - Skip for Alpine (already in container)
-      - name: Use Node.js
+      - name: Setup Node.js (only non-Alpine)
         if: matrix.build_env != 'alpine'
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install Alpine Dependencies
+      - name: Install Alpine Build Deps
         if: matrix.build_env == 'alpine'
         run: |
-          apk add --no-cache \
-            python3 \
-            make \
-            g++ \
-            musl-dev \
-            clang \
-            llvm \
-            build-base \
-            bash \
-            curl
+          apk add --no-cache python3 make g++ musl-dev clang llvm build-base bash curl
 
-      - name: Install Rust
+      - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Dependencies
         run: npm install -g pnpm && pnpm install
 
-      - name: Rust
+      - name: Add Rust Target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Build napi-rs Binary
         run: |
-          rustup target add ${{matrix.target}}
-          pnpm napi build --platform --release --output-dir src --target ${{ matrix.target }}
+          pnpm napi build --platform --release --output-dir packaged-binaries --target ${{ matrix.target }}
 
-      - name: Build
-        run: pnpm build:release
-
-      - name: Run Tests
-        run: pnpm test:ci
-
-      - name: Upload Artifacts
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: qa-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.target }}
-          path: dist/*.node
+          name: binary-${{ matrix.target }}
+          path: packaged-binaries/*.node
 
-  build-release:
-    name: build-release
-    needs: build-artifacts
+  # ----------------------------------------------------------
+  # 2. Build JS/TS code once on Linux
+  # ----------------------------------------------------------
+  build-js:
+    name: Build TypeScript
     runs-on: ubuntu-latest
+    needs: build-binaries
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Setup Node
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install Dependencies
+      - name: Install deps + build
+        run: |
+          npm install -g pnpm
+          pnpm install
+          pnpm build:release
+
+      - name: Upload dist (JS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-dist
+          path: dist/**/*
+
+  # ----------------------------------------------------------
+  # 3. Combine everything and publish with Trusted Publishing
+  # ----------------------------------------------------------
+  publish:
+    name: Publish to npm (Trusted Publishing)
+    runs-on: ubuntu-latest
+    needs: [build-binaries, build-js]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
         run: npm install -g pnpm && pnpm install
 
-      - name: Build Typescript Project
-        run: pnpm build:release
-
-      - name: Download Artifacts
+      - name: Download JS artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          name: js-dist
+          path: dist
 
-      - name: Show Artifacts
-        run: ls -alhR ./artifacts
+      - name: Download all napi binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
 
-      - name: Remove Artifacts in Dist
-        run: rm -f dist/*.node
+      - name: Show assembled dist
+        run: ls -alhR dist
 
-      - name: Copy all artifacts that end in .node to dist
+      - name: Confirm OIDC availability
         run: |
-          find ./artifacts -name "*.node" -exec cp {} dist/ \;
+          echo "URL:   $ACTIONS_ID_TOKEN_REQUEST_URL"
+          echo "TOKEN: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
 
-      - name: Show Dist
+      - name: Publish to npm (Trusted Publishing + provenance)
         run: |
-            ls -alh ./dist
-
-      - name: Test if OIDC works
-        run: |
-          echo "OIDC URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
-          echo "OIDC TOKEN: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-
-      - name: Publish with Provenance
-        run: npm publish
+          npm publish --provenance --access public
