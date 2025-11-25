@@ -129,4 +129,4 @@ jobs:
 
       - name: Publish with Provenance
         run: |
-         pnpm publish --ignore-scripts --no-git-checks --provenance --access public
+         npm publish --ignore-scripts --no-git-checks
