@@ -271,7 +271,7 @@ describe("JPEG Caching", () => {
 
 		expect(jpg1).toEqual(jpg2);
 
-		const cacheKey = qr.generateCacheKey("napi-jpeg-90");
+		const cacheKey = await qr.generateCacheKey("napi-jpeg-90");
 		expect(qr.cache).toBeDefined();
 		expect(qr.cache).toBeInstanceOf(Cacheable);
 		const has = await qr.cache?.has(cacheKey);
@@ -287,7 +287,7 @@ describe("JPEG Caching", () => {
 
 		expect(jpg1).toEqual(jpg2);
 
-		const cacheKey = qr.generateCacheKey("napi-jpeg-90");
+		const cacheKey = await qr.generateCacheKey("napi-jpeg-90");
 		expect(qr.cache).toBeDefined();
 		expect(qr.cache).toBeInstanceOf(Cacheable);
 		const has = await qr.cache?.has(cacheKey);
@@ -302,8 +302,8 @@ describe("JPEG Caching", () => {
 		const jpg60 = await qr.toJpg({ quality: 60 });
 
 		// Both should be cached with different keys
-		const cacheKey90 = qr.generateCacheKey("napi-jpeg-90");
-		const cacheKey60 = qr.generateCacheKey("napi-jpeg-60");
+		const cacheKey90 = await qr.generateCacheKey("napi-jpeg-90");
+		const cacheKey60 = await qr.generateCacheKey("napi-jpeg-60");
 
 		const has90 = await qr.cache?.has(cacheKey90);
 		const has60 = await qr.cache?.has(cacheKey60);
@@ -322,7 +322,7 @@ describe("JPEG Caching", () => {
 
 		await qr.toJpg();
 
-		const cacheKey = qr.generateCacheKey("napi-jpeg-90");
+		const cacheKey = await qr.generateCacheKey("napi-jpeg-90");
 		const has = await cache.has(cacheKey);
 		expect(has).toBe(true);
 	});
