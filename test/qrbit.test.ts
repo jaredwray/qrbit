@@ -293,7 +293,7 @@ describe("Caching", () => {
 
 		expect(result1).toEqual(result2);
 
-		const cacheKey = qr.generateCacheKey(`native-svg`);
+		const cacheKey = await qr.generateCacheKey(`native-svg`);
 		expect(qr.cache).toBeDefined();
 		expect(qr.cache).toBeInstanceOf(Cacheable);
 		const has = await qr.cache?.has(cacheKey);
@@ -309,7 +309,7 @@ describe("Caching", () => {
 
 		expect(result1).toEqual(result2);
 
-		const cacheKey = qr.generateCacheKey(`native-svg`);
+		const cacheKey = await qr.generateCacheKey(`native-svg`);
 		expect(qr.cache).toBeDefined();
 		expect(qr.cache).toBeInstanceOf(Cacheable);
 		const has = await qr.cache?.has(cacheKey);
@@ -325,7 +325,7 @@ describe("Caching", () => {
 
 		expect(result1).toEqual(result2);
 
-		const cacheKey = qr.generateCacheKey(`napi-png`);
+		const cacheKey = await qr.generateCacheKey(`napi-png`);
 		expect(qr.cache).toBeDefined();
 		expect(qr.cache).toBeInstanceOf(Cacheable);
 		const has = await qr.cache?.has(cacheKey);
@@ -341,7 +341,7 @@ describe("Caching", () => {
 
 		expect(result1).toEqual(result2);
 
-		const cacheKey = qr.generateCacheKey(`napi-png`);
+		const cacheKey = await qr.generateCacheKey(`napi-png`);
 		expect(qr.cache).toBeDefined();
 		expect(qr.cache).toBeInstanceOf(Cacheable);
 		const has = await qr.cache?.has(cacheKey);
