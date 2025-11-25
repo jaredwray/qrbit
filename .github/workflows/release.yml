@@ -66,11 +66,7 @@ jobs:
 
       - name: Build napi-rs Binary
         run: |
-          pnpm napi build \
-            --platform \
-            --release \
-            --output-dir packaged-binaries \
-            --target ${{ matrix.target }}
+          pnpm napi build --platform --release --output-dir packaged-binaries --target ${{ matrix.target }}
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
