@@ -1,6 +1,6 @@
 {
 	"name": "qrbit",
-	"version": "1.3.2",
+	"version": "1.3.3",
 	"description": "A fast QR code generator with logo embedding support",
 	"type": "module",
 	"main": "dist/qrbit.cjs",
