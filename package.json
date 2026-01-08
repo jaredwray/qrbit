@@ -46,7 +46,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",
-		"@faker-js/faker": "^10.1.0",
+		"@faker-js/faker": "^10.2.0",
 		"@loskir/styled-qr-code-node": "^1.5.2",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
 		"@napi-rs/cli": "^3.5.0",
