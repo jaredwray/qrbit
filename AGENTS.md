@@ -1,6 +1,6 @@
 # Agent Guidelines for QrBit
 
-QrBit is a fast QR code generator with logo embedding support, built with Rust (via napi-rs) and native Node.js packages for maximum performance.
+QrBit is a fast QR code generator with logo embedding support, built with Rust (via napi-rs) as a native Node.js addon for maximum performance.
 
 ## Project Overview
 
