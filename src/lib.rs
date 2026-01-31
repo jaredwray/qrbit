@@ -450,3 +450,63 @@ pub fn convert_svg_to_jpeg(svg_content: String, width: Option<u32>, height: Opti
 
     Ok(jpeg_buffer.into())
 }
+
+#[napi]
+pub fn convert_svg_to_webp(svg_content: String, width: Option<u32>, height: Option<u32>, _quality: Option<u8>) -> Result<Buffer> {
+    use resvg::usvg;
+    use resvg::tiny_skia;
+    use std::io::Cursor;
+
+    // Parse the SVG content into uSVG tree with medium-quality options
+    let mut options = usvg::Options::default();
+    options.shape_rendering = usvg::ShapeRendering::CrispEdges;
+    options.text_rendering = usvg::TextRendering::OptimizeSpeed;
+    options.image_rendering = usvg::ImageRendering::OptimizeQuality;
+    options.default_size = usvg::Size::from_wh(200.0, 200.0).unwrap();
+
+    let tree = usvg::Tree::from_str(&svg_content, &options)
+        .map_err(|e| Error::from_reason(format!("Failed to parse SVG: {}", e)))?;
+
+    // Get the tree size or use provided dimensions with medium scaling
+    let tree_size = tree.size();
+    let scale_factor = if width.is_none() && height.is_none() { 2.0 } else { 2.0 };
+
+    let pixmap_width = width.unwrap_or((tree_size.width() * scale_factor) as u32);
+    let pixmap_height = height.unwrap_or((tree_size.height() * scale_factor) as u32);
+
+    // Create a pixmap buffer with transparent background (WebP supports transparency)
+    let mut pixmap = tiny_skia::Pixmap::new(pixmap_width, pixmap_height)
+        .ok_or_else(|| Error::from_reason("Failed to create pixmap"))?;
+
+    // Clear with transparent background (WebP supports alpha channel)
+    pixmap.fill(tiny_skia::Color::TRANSPARENT);
+
+    // Calculate the transform to scale the SVG to fit the pixmap
+    let scale_x = pixmap_width as f32 / tree_size.width();
+    let scale_y = pixmap_height as f32 / tree_size.height();
+    let transform = tiny_skia::Transform::from_scale(scale_x, scale_y);
+
+    // Render the SVG to the pixmap
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+
+    // Keep RGBA data (WebP supports alpha channel)
+    let rgba_image = image::RgbaImage::from_raw(
+        pixmap_width,
+        pixmap_height,
+        pixmap.data().to_vec()
+    ).ok_or_else(|| Error::from_reason("Failed to create RGBA image"))?;
+
+    // Encode as WebP lossless
+    let mut webp_buffer = Vec::new();
+    let cursor = Cursor::new(&mut webp_buffer);
+
+    let encoder = image::codecs::webp::WebPEncoder::new_lossless(cursor);
+    encoder.encode(
+        rgba_image.as_raw(),
+        pixmap_width,
+        pixmap_height,
+        image::ExtendedColorType::Rgba8
+    ).map_err(|e| Error::from_reason(format!("Failed to encode WebP: {}", e)))?;
+
+    Ok(webp_buffer.into())
+}

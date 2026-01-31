@@ -7,6 +7,7 @@ import QRCode, { type QRCodeToStringOptions } from "qrcode";
 import {
 	convertSvgToJpeg as nativeConvertSvgToJpeg,
 	convertSvgToPng as nativeConvertSvgToPng,
+	convertSvgToWebp as nativeConvertSvgToWebp,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 } from "./native.js";
@@ -97,6 +98,7 @@ export class QrBit extends Hookified {
 	private _napi = {
 		convertSvgToJpeg: nativeConvertSvgToJpeg,
 		convertSvgToPng: nativeConvertSvgToPng,
+		convertSvgToWebp: nativeConvertSvgToWebp,
 		generateQrSvg: nativeGenerateQrSvg,
 		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
 	};
@@ -388,7 +390,7 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg();
+		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToPng(svg);
 
 		if (this._cache && options?.cache !== false) {
@@ -442,7 +444,7 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg();
+		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToJpeg(svg, undefined, undefined, quality);
 
 		if (this._cache && options?.cache !== false) {
@@ -472,6 +474,65 @@ export class QrBit extends Hookified {
 		await fs.promises.mkdir(dir, { recursive: true });
 
 		await fs.promises.writeFile(filePath, jpegBuffer);
+	}
+
+	/**
+	 * Generate WebP QR code with optional caching.
+	 * Generates the QR as SVG either in rust if it has a logo or native. Then does a conversion on it.
+	 * Note: WebP encoding uses lossless compression - quality parameter is reserved for future lossy support.
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @param options.quality - Reserved for future lossy WebP support (currently ignored)
+	 * @returns {Promise<Buffer>} The WebP buffer
+	 */
+	public async toWebp(options?: toOptions): Promise<Buffer> {
+		let result: Buffer;
+		const quality = options?.quality ?? 90;
+		const renderKey = `napi-webp-${quality}`;
+
+		// check the cache
+		if (this._cache && options?.cache !== false) {
+			const key = await this.generateCacheKey(renderKey);
+			const cached = await this._cache.get<Buffer>(key);
+			if (cached) {
+				// Ensure we return a Buffer, not Uint8Array
+				return Buffer.from(cached);
+			}
+		}
+
+		const svg = await this.toSvg(options);
+		result = QrBit.convertSvgToWebp(svg);
+
+		if (this._cache && options?.cache !== false) {
+			// set the cache, generate the key from hash
+			const key = await this.generateCacheKey(renderKey);
+			// cache the value
+			await this._cache.set(key, result);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Generate WebP QR code and save it to a file.
+	 * Creates directories if they don't exist.
+	 * @param filePath - The file path where to save the WebP
+	 * @param options - Generation options
+	 * @param options.cache - Whether to use caching (default: true)
+	 * @param options.quality - Reserved for future lossy WebP support (currently ignored)
+	 * @returns {Promise<void>} Resolves when file is written
+	 */
+	public async toWebpFile(
+		filePath: string,
+		options?: toOptions,
+	): Promise<void> {
+		const webpBuffer = await this.toWebp(options);
+
+		// Create directory if it doesn't exist
+		const dir = path.dirname(filePath);
+		await fs.promises.mkdir(dir, { recursive: true });
+
+		await fs.promises.writeFile(filePath, webpBuffer);
 	}
 
 	/**
@@ -522,6 +583,24 @@ export class QrBit extends Hookified {
 		quality?: number,
 	): Buffer {
 		return nativeConvertSvgToJpeg(svgContent, width, height, quality);
+	}
+
+	/**
+	 * Convert SVG content to WebP buffer using the native Rust implementation.
+	 * Note: WebP encoding uses lossless compression - quality parameter is reserved for future lossy support.
+	 * @param svgContent - The SVG content as a string
+	 * @param width - Optional width for the WebP output
+	 * @param height - Optional height for the WebP output
+	 * @param quality - Reserved for future lossy WebP support (currently ignored)
+	 * @returns {Buffer} The WebP buffer
+	 */
+	public static convertSvgToWebp(
+		svgContent: string,
+		width?: number,
+		height?: number,
+		quality?: number,
+	): Buffer {
+		return nativeConvertSvgToWebp(svgContent, width, height, quality);
 	}
 
 	/**
