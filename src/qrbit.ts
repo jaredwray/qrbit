@@ -390,7 +390,7 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg();
+		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToPng(svg);
 
 		if (this._cache && options?.cache !== false) {
@@ -444,7 +444,7 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg();
+		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToJpeg(svg, undefined, undefined, quality);
 
 		if (this._cache && options?.cache !== false) {
@@ -500,7 +500,7 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg();
+		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToWebp(svg);
 
 		if (this._cache && options?.cache !== false) {
