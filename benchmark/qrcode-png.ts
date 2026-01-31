@@ -15,18 +15,26 @@ const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled
 
 const qr = new QrBit({ text: faker.internet.url() });
 
+// generate 10000 urls with faker
+const urls = Array.from({ length: 10000 }, () => faker.internet.url());
+
 bench.add(`QrBit toPng (v${qrbitVersion})`, async () => {
-	qr.text = faker.internet.url();
+	qr.text = urls[Math.floor(Math.random() * urls.length)];
 	await qr.toPng();
+});
+
+bench.add(`QrBit toPng (v${qrbitVersion}) Cached`, async () => {
+	qr.text = urls[Math.floor(Math.random() * urls.length)];
+	await qr.toPng({ cache: true });
 });
  
 bench.add(`QRCode toBuffer (v${qrcodeVersion})`, async () => {
-	const text = faker.internet.url();
+	const text = urls[Math.floor(Math.random() * urls.length)];
 	await QRCode.toBuffer(text, { type: "png" });
 });
 
 bench.add(`styled-qr-code-node toBuffer (v${styledQrCodeNodeVersion})`, async () => {
-	const text = faker.internet.url();
+	const text = urls[Math.floor(Math.random() * urls.length)];
 	const qr = new QRCodeCanvas({
 		data: text,
 	});

@@ -1,40 +1,30 @@
-import QRCode from "qrcode";
 import { Bench } from "tinybench";
 import {faker} from "@faker-js/faker";
 import { tinybenchPrinter } from "@monstermann/tinybench-pretty-printer";
 import pkg from "../package.json";
 import { QrBit } from "../src/qrbit.js";
 import { cleanVersion } from "./utils.js";
-import {QRCodeCanvas} from '@loskir/styled-qr-code-node';
 
-const bench = new Bench({ name: "QR Codes JPG (No Logo)", iterations: 100 });
+const bench = new Bench({ name: "QR Codes WebP (No Logo)", iterations: 100 });
 
 const qrbitVersion = cleanVersion(pkg.version);
-const qrcodeVersion = cleanVersion(pkg.dependencies.qrcode);
-const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled-qr-code-node"]);
 
 const qr = new QrBit({ text: faker.internet.url() });
 
 // generate 10000 urls with faker
 const urls = Array.from({ length: 10000 }, () => faker.internet.url());
 
-bench.add(`QrBit toJpg (v${qrbitVersion})`, async () => {
+bench.add(`QrBit toWebp (v${qrbitVersion})`, async () => {
 	qr.text = urls[Math.floor(Math.random() * urls.length)];
-	await qr.toJpg();
+	await qr.toWebp();
 });
 
-bench.add(`QrBit toJpg (v${qrbitVersion}) Cached`, async () => {
+bench.add(`QrBit toWebp Cached (v${qrbitVersion})`, async () => {
 	qr.text = urls[Math.floor(Math.random() * urls.length)];
-	await qr.toJpg();
+	await qr.toWebp();
 });
 
-bench.add(`styled-qr-code-node toBuffer (v${styledQrCodeNodeVersion})`, async () => {
-	const text = urls[Math.floor(Math.random() * urls.length)];
-	const qr = new QRCodeCanvas({
-		data: text,
-	});
-	await qr.toBuffer("jpg");
-});
+// Note: styled-qr-code-node does not support WebP format
 
 await bench.run();
 

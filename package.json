@@ -1,6 +1,6 @@
 {
 	"name": "qrbit",
-	"version": "1.3.4",
+	"version": "1.4.0",
 	"description": "A fast QR code generator with logo embedding support",
 	"type": "module",
 	"main": "dist/qrbit.cjs",
@@ -38,8 +38,9 @@
 		"benchmark:svg": "tsx benchmark/qrcode-svg.ts",
 		"benchmark:png": "tsx benchmark/qrcode-png.ts",
 		"benchmark:jpg": "tsx benchmark/qrcode-jpg.ts",
+		"benchmark:webp": "tsx benchmark/qrcode-webp.ts",
 		"benchmark:logo": "tsx benchmark/qrcode-logo.ts",
-		"benchmark": "pnpm benchmark:svg && pnpm benchmark:png && pnpm benchmark:logo",
+		"benchmark": "pnpm benchmark:svg && pnpm benchmark:png && pnpm benchmark:jpg && pnpme benchmark:webp && pnpm benchmark:logo",
 		"generate-examples": "rimraf ./examples && pnpm tsx ./scripts/generate-examples.ts",
 		"artifacts": "napi artifacts",
 		"version": "napi version"
