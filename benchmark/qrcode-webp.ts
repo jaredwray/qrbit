@@ -11,8 +11,16 @@ const qrbitVersion = cleanVersion(pkg.version);
 
 const qr = new QrBit({ text: faker.internet.url() });
 
+// generate 10000 urls with faker
+const urls = Array.from({ length: 10000 }, () => faker.internet.url());
+
 bench.add(`QrBit toWebp (v${qrbitVersion})`, async () => {
-	qr.text = faker.internet.url();
+	qr.text = urls[Math.floor(Math.random() * urls.length)];
+	await qr.toWebp();
+});
+
+bench.add(`QrBit toWebp Cached (v${qrbitVersion})`, async () => {
+	qr.text = urls[Math.floor(Math.random() * urls.length)];
 	await qr.toWebp();
 });
 

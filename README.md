@@ -418,17 +418,25 @@ const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 `Rust` is there for performance and when doing heavy image processing without needing node `canvas` installed. If you do not add a logo then the `Native` version is what you will get for SVG. 
 
 ## QR Codes PNG (No Logo)
-|                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
-|-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit toPng (v1.0.0)                   |    🥇     |       2K  |    647µs  |  ±0.68%  |       2K  |
-|  QRCode toBuffer (v1.5.4)               |   -49%    |     804   |      1ms  |  ±0.77%  |     794   |
-|  styled-qr-code-node toBuffer (v1.5.2)  |   -85%    |     238   |      4ms  |  ±0.74%  |     238   |
+|                  name                   |  summary  |  ops/sec  |  time/op  |  margin   |  samples  |
+|-----------------------------------------|:---------:|----------:|----------:|:---------:|----------:|
+|  QrBit toPng (v1.4.0) Cached            |    🥇     |       6K  |      1ms  |  ±12.19%  |     992   |
+|  QrBit toPng (v1.4.0)                   |   -52%    |       3K  |      1ms  |  ±16.23%  |     899   |
+|  QRCode toBuffer (v1.5.4)               |   -92%    |     437   |      2ms  |  ±1.23%   |     428   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -98%    |     141   |      7ms  |  ±0.82%   |     141   |
 
 ## QR Codes JPG (No Logo)
-|                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
-|-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit toJpg (v1.2.0)                   |    🥇     |     663   |      2ms  |  ±0.37%  |     662   |
-|  styled-qr-code-node toBuffer (v1.5.2)  |   -36%    |     424   |      2ms  |  ±2.13%  |     418   |
+|                  name                   |  summary  |  ops/sec  |  time/op  |  margin   |  samples  |
+|-----------------------------------------|:---------:|----------:|----------:|:---------:|----------:|
+|  QrBit toJpg (v1.4.0)                   |    🥇     |       1K  |      3ms  |  ±32.99%  |     372   |
+|  QrBit toJpg (v1.4.0) Cached            |   -19%    |   1,000   |      3ms  |  ±36.82%  |     367   |
+|  styled-qr-code-node toBuffer (v1.5.2)  |   -78%    |     269   |      4ms  |  ±1.13%   |     266   |
+
+## QR Codes WebP (No Logo)
+|              name              |  summary  |  ops/sec  |  time/op  |  margin   |  samples  |
+|--------------------------------|:---------:|----------:|----------:|:---------:|----------:|
+|  QrBit toWebp Cached (v1.4.0)  |    🥇     |       7K  |    911µs  |  ±11.27%  |       1K  |
+|  QrBit toWebp (v1.4.0)         |   -44%    |       4K  |    998µs  |  ±14.47%  |       1K  |
 
 `Rust` is used for `toPng()`, `toJpg()`, and `toWebp()` to optimize performance for image generation and heavy image processing without needing node `canvas` installed.
 
@@ -443,22 +451,6 @@ const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 |  styled-qr-code-node SVG (v1.5.2)  |   -84%    |     134   |      7ms  |  ±0.59%  |     135   |
 
 `Buffer` is much slower as we have to push the stream across to the rust module. For fastest performance provide the path of the image.
-
-## QR Codes SVG with Caching
-|                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
-|-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit toSvg (Native) (v1.0.0)          |    🥇     |      95K  |     94µs  |  ±2.08%  |      11K  |
-|  QRCode toString (v1.5.4)               |   -93%    |       6K  |    161µs  |  ±0.37%  |       6K  |
-|  QrBit toSvg (Rust) (v1.0.0)            |   -99%    |     938   |      1ms  |  ±1.12%  |     907   |
-|  styled-qr-code-node toBuffer (v1.5.2)  |   -99%    |     710   |      1ms  |  ±1.10%  |     700   |
-
-
-## QR Codes PNG with Caching
-|                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
-|-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit toPng (v1.0.0)                   |    🥇     |      13K  |    584µs  |  ±1.84%  |       2K  |
-|  QRCode toBuffer (v1.5.4)               |   -94%    |     760   |      1ms  |  ±1.54%  |     741   |
-|  styled-qr-code-node toBuffer (v1.5.2)  |   -98%    |     233   |      4ms  |  ±2.10%  |     231   |
 
 # Examples
 
