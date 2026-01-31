@@ -45,20 +45,20 @@
 		"version": "napi version"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.8",
+		"@biomejs/biome": "^2.3.13",
 		"@faker-js/faker": "^10.2.0",
 		"@loskir/styled-qr-code-node": "^1.5.2",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
 		"@napi-rs/cli": "^3.5.0",
-		"@types/node": "^25.0.2",
+		"@types/node": "^25.1.0",
 		"@types/qrcode": "^1.5.6",
-		"@vitest/coverage-v8": "^4.0.15",
+		"@vitest/coverage-v8": "^4.0.18",
 		"rimraf": "^6.1.2",
 		"tinybench": "^6.0.0",
 		"tsup": "^8.5.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
-		"vitest": "^4.0.15"
+		"vitest": "^4.0.18"
 	},
 	"repository": {
 		"type": "git",
