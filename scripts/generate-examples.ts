@@ -150,6 +150,46 @@ async function generateJpgExamples(): Promise<void> {
 	await jpgBufferQr.toJpgFile(path.join(OUTPUT_DIR, "14_jpg_buffer_logo_orange.jpg"), { quality: 85 });
 }
 
+async function generateWebpExamples(): Promise<void> {
+	console.log("🌐 Generating WebP examples...");
+
+	// 15. Basic WebP
+	const webpBasic = new QrBit({ text: "Basic WebP QR Code", size: 300 });
+	await webpBasic.toWebpFile(path.join(OUTPUT_DIR, "15_webp_basic.webp"));
+
+	// 16. WebP with logo and blue theme
+	const webpLogo = new QrBit({
+		text: "WebP with Logo",
+		logo: LOGO_PATH,
+		size: 400,
+		logoSizeRatio: 0.25,
+		backgroundColor: "#1e3a5f",
+		foregroundColor: "#FFFFFF",
+	});
+	await webpLogo.toWebpFile(path.join(OUTPUT_DIR, "16_webp_logo_blue.webp"));
+
+	// 17. WebP large with green theme
+	const webpLarge = new QrBit({
+		text: "https://github.com/jaredwray/qrbit",
+		size: 500,
+		backgroundColor: "#4CAF50",
+		foregroundColor: "#FFFFFF",
+	});
+	await webpLarge.toWebpFile(path.join(OUTPUT_DIR, "17_webp_large_green.webp"));
+
+	// 18. WebP with buffer logo and purple theme
+	const logoBuffer = fs.readFileSync(LOGO_PATH);
+	const webpBuffer = new QrBit({
+		text: "WebP Buffer Logo",
+		logo: logoBuffer,
+		size: 350,
+		logoSizeRatio: 0.2,
+		backgroundColor: "#9C27B0",
+		foregroundColor: "#FFFFFF",
+	});
+	await webpBuffer.toWebpFile(path.join(OUTPUT_DIR, "18_webp_buffer_logo_purple.webp"));
+}
+
 async function main(): Promise<void> {
 	console.log("🚀 Starting QrBit example generation...\n");
 
@@ -162,6 +202,7 @@ async function main(): Promise<void> {
 		await generateSpecialExamples();
 		await generateBufferLogoExample();
 		await generateJpgExamples();
+		await generateWebpExamples();
 
 		console.log("\n✅ All examples generated successfully!");
 		console.log(`📁 Check the '${OUTPUT_DIR}' directory for generated files.`);

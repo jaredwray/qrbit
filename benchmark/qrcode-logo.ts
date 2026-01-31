@@ -39,6 +39,16 @@ bench.add(`QrBit SVG (Buffer) (v${qrbitVersion})`, async () => {
 	await qrBuffer.toSvg();
 });
 
+bench.add(`QrBit WebP (Path) (v${qrbitVersion})`, async () => {
+	qr.text = faker.internet.url();
+	await qr.toWebp();
+});
+
+bench.add(`QrBit WebP (Buffer) (v${qrbitVersion})`, async () => {
+	qrBuffer.text = faker.internet.url();
+	await qrBuffer.toWebp();
+});
+
 bench.add(`styled-qr-code-node PNG (v${styledQrCodeNodeVersion})`, async () => {
 	const text = faker.internet.url();
 	const qr = new QRCodeCanvas({

@@ -17,7 +17,7 @@ A fast QR code generator with logo embedding support, built with Rust and native
 - **Cross-platform**: Works on iOS, Windows, Linux, and macOS
 - **Logo embedding**: Add custom logos to your QR codes with no need for node canvas!
 - **Customizable**: Custom colors, sizes, and margins
-- **Multiple formats**: Generate SVG, PNG, and JPEG outputs
+- **Multiple formats**: Generate SVG, PNG, JPEG, and WebP outputs
 - **Scalable**: With caching you can also use a secondary store for persistence
 - **Well-tested**: Comprehensive test coverage with Vitest
 - **Maintained**: Actively maintained with regular updates
@@ -95,7 +95,7 @@ interface QrOptions {
 
 interface toOptions {
   cache?: boolean;                 // Enable/disable caching (default: true)
-  quality?: number;                // JPEG quality 1-100 (default: 90) - only for toJpg methods
+  quality?: number;                // Quality 1-100 (default: 90) - for toJpg; reserved for toWebp
 }
 ```
 
@@ -313,6 +313,46 @@ await qr.toJpgFile("./output/qr-code.jpg", { quality: 95 });
 await qr.toJpgFile("./output/qr-code.jpg", { quality: 70, cache: false });
 ```
 
+### .toWebp(options?: toOptions)
+
+Generate WebP QR code with optional caching. Uses high-performance SVG to WebP conversion with lossless encoding.
+
+**Parameters:**
+- `options.cache?: boolean` - Whether to use caching (default: true)
+- `options.quality?: number` - Reserved for future lossy WebP support
+
+**Returns:** Promise<Buffer> - The WebP buffer
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+const webpBuffer = await qr.toWebp();
+
+// Save to file
+fs.writeFileSync("qr-code.webp", webpBuffer);
+
+// Without caching
+const webpNoCache = await qr.toWebp({ cache: false });
+```
+
+### .toWebpFile(filePath: string, options?: toOptions)
+
+Generate WebP QR code and save it to a file. Creates directories if they don't exist.
+
+**Parameters:**
+- `filePath: string` - The file path where to save the WebP
+- `options.cache?: boolean` - Whether to use caching (default: true)
+- `options.quality?: number` - Reserved for future lossy WebP support
+
+**Returns:** Promise<void>
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+await qr.toWebpFile("./output/qr-code.webp");
+
+// With options
+await qr.toWebpFile("./output/qr-code.webp", { cache: false });
+```
+
 ### Static Methods
 
 #### QrBit.convertSvgToPng(svgContent: string, width?: number, height?: number)
@@ -348,6 +388,23 @@ const svg = '<svg>...</svg>';
 const jpegBuffer = QrBit.convertSvgToJpeg(svg, 400, 400, 85);
 ```
 
+#### QrBit.convertSvgToWebp(svgContent: string, width?: number, height?: number, quality?: number)
+
+Convert SVG content to WebP buffer using the native Rust implementation with lossless encoding.
+
+**Parameters:**
+- `svgContent: string` - The SVG content as a string
+- `width?: number` - Optional width for the WebP output
+- `height?: number` - Optional height for the WebP output
+- `quality?: number` - Reserved for future lossy WebP support
+
+**Returns:** Buffer - The WebP buffer
+
+```javascript
+const svg = '<svg>...</svg>';
+const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
+```
+
 # Benchmarks
 
 ## QR Codes SVG (No Logo)
@@ -373,7 +430,7 @@ const jpegBuffer = QrBit.convertSvgToJpeg(svg, 400, 400, 85);
 |  QrBit toJpg (v1.2.0)                   |    🥇     |     663   |      2ms  |  ±0.37%  |     662   |
 |  styled-qr-code-node toBuffer (v1.5.2)  |   -36%    |     424   |      2ms  |  ±2.13%  |     418   |
 
-`Rust` is used for `toPng()` and `toJpg` to optimize performance for image generation and heavy image processing without needing node `canvas` installed.
+`Rust` is used for `toPng()`, `toJpg()`, and `toWebp()` to optimize performance for image generation and heavy image processing without needing node `canvas` installed.
 
 ## QR Codes with Embedded Logos
 |                name                |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
@@ -580,7 +637,62 @@ await qr.toJpgFile("14_jpg_buffer_logo_orange.jpg", { quality: 85 });
 ```
 ![JPEG Buffer Logo Orange QR Code](examples/14_jpg_buffer_logo_orange.jpg)
 
-These examples demonstrate the versatility and capabilities of QrBit for generating QR codes with various customizations, from simple text encoding to complex styled codes with embedded logos, supporting SVG, PNG, and JPEG formats with quality control.
+## 15. Basic WebP
+WebP format with lossless encoding.
+```javascript
+const qr = new QrBit({
+  text: "Basic WebP QR Code",
+  size: 300
+});
+await qr.toWebpFile("15_webp_basic.webp");
+```
+![Basic WebP QR Code](examples/15_webp_basic.webp)
+
+## 16. WebP with Logo and Blue Theme
+WebP with embedded logo and custom blue background.
+```javascript
+const qr = new QrBit({
+  text: "WebP with Logo",
+  logo: "./logo.png",
+  size: 400,
+  logoSizeRatio: 0.25,
+  backgroundColor: "#1e3a5f",
+  foregroundColor: "#FFFFFF"
+});
+await qr.toWebpFile("16_webp_logo_blue.webp");
+```
+![WebP with Logo Blue QR Code](examples/16_webp_logo_blue.webp)
+
+## 17. Large WebP with Green Theme
+Large WebP QR code with green color scheme.
+```javascript
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit",
+  size: 500,
+  backgroundColor: "#4CAF50",
+  foregroundColor: "#FFFFFF"
+});
+await qr.toWebpFile("17_webp_large_green.webp");
+```
+![Large WebP Green QR Code](examples/17_webp_large_green.webp)
+
+## 18. WebP with Buffer Logo and Purple Theme
+WebP using buffer-based logo with purple background.
+```javascript
+const logoBuffer = fs.readFileSync("./logo.png");
+const qr = new QrBit({
+  text: "WebP Buffer Logo",
+  logo: logoBuffer,
+  size: 350,
+  logoSizeRatio: 0.2,
+  backgroundColor: "#9C27B0",
+  foregroundColor: "#FFFFFF"
+});
+await qr.toWebpFile("18_webp_buffer_logo_purple.webp");
+```
+![WebP Buffer Logo Purple QR Code](examples/18_webp_buffer_logo_purple.webp)
+
+These examples demonstrate the versatility and capabilities of QrBit for generating QR codes with various customizations, from simple text encoding to complex styled codes with embedded logos, supporting SVG, PNG, JPEG, and WebP formats.
 
 ## Contributing
 
