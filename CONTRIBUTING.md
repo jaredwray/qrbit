@@ -28,7 +28,7 @@ If you need more information on the steps to create a pull request, you can find
 
 Qrbit uses Typescript / Nodejs and Rust so to do maintenance you will need to look at both:
 
-- Typescript / Nodejs - Use `node-check-updates` which will install globally and run `ncu` to see what modules to upgrade.
+- Typescript / Nodejs - Use `pnpm outdated` to see what modules to upgrade.
 - Rust - run `rustup upgrade` to get latest and then `cargo install cargo-outdated` then `cargo outdated --root-deps-only`
 
 # Code of Conduct
