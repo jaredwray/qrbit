@@ -328,6 +328,7 @@ export class QrBit extends Hookified {
 			const qrCodeOptions: QRCodeToStringOptions = {
 				type: "svg",
 				width: qrOptions.size,
+				errorCorrectionLevel: this._errorCorrection,
 				color: {
 					dark: qrOptions.foregroundColor,
 					light: qrOptions.backgroundColor,
