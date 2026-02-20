@@ -62,6 +62,12 @@ export type QrOptions = {
 	 */
 	foregroundColor?: string;
 	/**
+	 * The error correction level of the QR code.
+	 * @type {"L" | "M" | "Q" | "H"}
+	 * @default "M"
+	 */
+	errorCorrection?: "L" | "M" | "Q" | "H";
+	/**
 	 * Caching is enabled by default. You can disable it by setting this option to false. You can also pass
 	 * a custom Cacheable instance.
 	 * @type {Cacheable | boolean}
@@ -94,6 +100,7 @@ export class QrBit extends Hookified {
 	private _logoSizeRatio: number;
 	private _backgroundColor: string;
 	private _foregroundColor: string;
+	private _errorCorrection: "L" | "M" | "Q" | "H";
 	private _cache: Cacheable | undefined;
 	private _napi = {
 		convertSvgToJpeg: nativeConvertSvgToJpeg,
@@ -116,6 +123,7 @@ export class QrBit extends Hookified {
 		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
 		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
 		this._foregroundColor = options.foregroundColor ?? "#000000";
+		this._errorCorrection = options.errorCorrection ?? "M";
 		if (options.cache !== undefined) {
 			// if it is boolean and true then create a new cacheable instance
 			if (options.cache === true) {
@@ -250,6 +258,23 @@ export class QrBit extends Hookified {
 	}
 
 	/**
+	 * Get the error correction level of the QR code.
+	 * @returns {"L" | "M" | "Q" | "H"} The error correction level
+	 * @default "M"
+	 */
+	public get errorCorrection(): "L" | "M" | "Q" | "H" {
+		return this._errorCorrection;
+	}
+
+	/**
+	 * Set the error correction level of the QR code.
+	 * @param value - The error correction level (L, M, Q, H)
+	 */
+	public set errorCorrection(value: "L" | "M" | "Q" | "H") {
+		this._errorCorrection = value;
+	}
+
+	/**
 	 * Get the cache instance.
 	 * @returns {Cacheable | undefined} The cache instance or undefined if caching is disabled
 	 */
@@ -342,6 +367,7 @@ export class QrBit extends Hookified {
 				logoSizeRatio: this._logoSizeRatio,
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
+				errorCorrection: this._errorCorrection,
 			};
 			return this._napi.generateQrSvgWithBuffer(nativeOptionsBuffer);
 		} else {
@@ -354,6 +380,7 @@ export class QrBit extends Hookified {
 				logoSizeRatio: this._logoSizeRatio,
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
+				errorCorrection: this._errorCorrection,
 			};
 
 			if (this._logo && this.isLogoString()) {
@@ -617,6 +644,7 @@ export class QrBit extends Hookified {
 			logoSizeRatio: this._logoSizeRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
+			errorCorrection: this._errorCorrection,
 			renderKey,
 		};
 
