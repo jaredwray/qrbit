@@ -73,10 +73,11 @@ export type QrOptions = {
 	foregroundColor?: string;
 	/**
 	 * The error correction level of the QR code.
-	 * @type {"L" | "M" | "Q" | "H"}
+	 * Accepts initials ("L", "M", "Q", "H") or full names ("Low", "Medium", "Quartile", "High").
+	 * @type {ECLevel}
 	 * @default "M"
 	 */
-	errorCorrection?: "L" | "M" | "Q" | "H";
+	errorCorrection?: ECLevel;
 	/**
 	 * Caching is enabled by default. You can disable it by setting this option to false. You can also pass
 	 * a custom Cacheable instance.
@@ -110,7 +111,7 @@ export class QrBit extends Hookified {
 	private _logoSizeRatio: number;
 	private _backgroundColor: string;
 	private _foregroundColor: string;
-	private _errorCorrection: "L" | "M" | "Q" | "H";
+	private _errorCorrection: ECLevel;
 	private _cache: Cacheable | undefined;
 	private _napi = {
 		convertSvgToJpeg: nativeConvertSvgToJpeg,
@@ -269,18 +270,19 @@ export class QrBit extends Hookified {
 
 	/**
 	 * Get the error correction level of the QR code.
-	 * @returns {"L" | "M" | "Q" | "H"} The error correction level
+	 * @returns {ECLevel} The error correction level
 	 * @default "M"
 	 */
-	public get errorCorrection(): "L" | "M" | "Q" | "H" {
+	public get errorCorrection(): ECLevel {
 		return this._errorCorrection;
 	}
 
 	/**
 	 * Set the error correction level of the QR code.
-	 * @param value - The error correction level (L, M, Q, H)
+	 * Accepts initials ("L", "M", "Q", "H") or full names ("Low", "Medium", "Quartile", "High").
+	 * @param value - The error correction level
 	 */
-	public set errorCorrection(value: "L" | "M" | "Q" | "H") {
+	public set errorCorrection(value: ECLevel) {
 		this._errorCorrection = value;
 	}
 
