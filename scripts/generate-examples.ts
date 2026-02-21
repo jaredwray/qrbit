@@ -209,7 +209,7 @@ async function generateErrorCorrectionExamples(): Promise<void> {
 	const ecHigh = new QrBit({
 		text,
 		size: 400,
-		errorCorrection: "H",
+		errorCorrection: "High",
 		backgroundColor: "#1e3a5f",
 		foregroundColor: "#FFFFFF",
 	});
