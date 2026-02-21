@@ -84,15 +84,15 @@ Creates a new QrBit instance with the specified options.
 
 ```typescript
 interface QrOptions {
-  text: string;                            // The text content to encode
-  size?: number;                           // Size in pixels (default: 200)
-  margin?: number;                         // Margin in pixels (default: undefined)
-  logo?: string | Buffer;                  // Logo file path or buffer
-  logoSizeRatio?: number;                  // Logo size ratio (default: 0.2)
-  backgroundColor?: string;                // Background color (default: "#FFFFFF")
-  foregroundColor?: string;                // Foreground color (default: "#000000")
-  errorCorrection?: "L" | "M" | "Q" | "H"; // Error correction level (default: "M")
-  cache?: Cacheable | boolean;             // Caching configuration (default: true)
+  text: string;                    // The text content to encode
+  size?: number;                   // Size in pixels (default: 200)
+  margin?: number;                 // Margin in pixels (default: undefined)
+  logo?: string | Buffer;          // Logo file path or buffer
+  logoSizeRatio?: number;          // Logo size ratio (default: 0.2)
+  backgroundColor?: string;        // Background color (default: "#FFFFFF")
+  foregroundColor?: string;        // Foreground color (default: "#000000")
+  errorCorrection?: ECLevel;       // "L"|"M"|"Q"|"H"|"Low"|"Medium"|"Quartile"|"High" (default: "M")
+  cache?: Cacheable | boolean;     // Caching configuration (default: true)
 }
 
 interface toOptions {
@@ -183,14 +183,16 @@ qr.foregroundColor = "#FFFFFF"; // White foreground
 ### errorCorrection
 Get or set the error correction level. Higher levels recover more damage but produce denser codes.
 
-- `"L"` — Low (~7% recovery)
-- `"M"` — Medium (~15% recovery, default)
-- `"Q"` — Quartile (~25% recovery)
-- `"H"` — High (~30% recovery, recommended when using logos)
+Accepts initials or full names:
+- `"L"` / `"Low"` — Low (~7% recovery)
+- `"M"` / `"Medium"` — Medium (~15% recovery, default)
+- `"Q"` / `"Quartile"` — Quartile (~25% recovery)
+- `"H"` / `"High"` — High (~30% recovery, recommended when using logos)
 
 ```javascript
 const qr = new QrBit({ text: "Hello World" });
 qr.errorCorrection = "H";
+qr.errorCorrection = "High"; // equivalent
 ```
 
 ### cache
