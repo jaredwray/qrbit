@@ -337,10 +337,18 @@ export class QrBit extends Hookified {
 		}
 
 		if (!this._logo) {
+			const ecFullNameMap: Record<string, "L" | "M" | "Q" | "H"> = {
+				Low: "L",
+				Medium: "M",
+				Quartile: "Q",
+				High: "H",
+			};
+
 			const qrCodeOptions: QRCodeToStringOptions = {
 				type: "svg",
 				width: qrOptions.size,
-				errorCorrectionLevel: this._errorCorrection,
+				errorCorrectionLevel:
+					ecFullNameMap[this._errorCorrection] ?? this._errorCorrection,
 				color: {
 					dark: qrOptions.foregroundColor,
 					light: qrOptions.backgroundColor,
