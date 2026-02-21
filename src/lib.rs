@@ -280,10 +280,10 @@ impl QrGenerator {
 
 fn parse_ec_level(level_str: Option<&str>) -> EcLevel {
     match level_str.unwrap_or("M").to_uppercase().as_str() {
-        "L" => EcLevel::L,
-        "M" => EcLevel::M,
-        "Q" => EcLevel::Q,
-        "H" => EcLevel::H,
+        "L" | "LOW" => EcLevel::L,
+        "M" | "MEDIUM" => EcLevel::M,
+        "Q" | "QUARTILE" => EcLevel::Q,
+        "H" | "HIGH" => EcLevel::H,
         _ => EcLevel::M,
     }
 }
