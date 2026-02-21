@@ -18,6 +18,16 @@ export enum QrBitEvents {
 	error = "error",
 }
 
+export type ECLevel =
+	| "L"
+	| "M"
+	| "Q"
+	| "H"
+	| "Low"
+	| "Medium"
+	| "Quartile"
+	| "High";
+
 const logoFileDoesNotExistMessage = (logo: string) =>
 	`Logo file not found: ${logo}. Proceeding without logo.`;
 
