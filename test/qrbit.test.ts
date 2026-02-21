@@ -242,13 +242,19 @@ describe("Error Correction", () => {
 		const text = faker.internet.url();
 		const qrL = new QrBit({ text, errorCorrection: "L" });
 		const qrH = new QrBit({ text, errorCorrection: "H" });
+		const qrLow = new QrBit({ text, errorCorrection: "Low" });
+		const qrHigh = new QrBit({ text, errorCorrection: "High" });
 
 		const svgL = await qrL.toSvg();
 		const svgH = await qrH.toSvg();
+		const svgLow = await qrLow.toSvg();
+		const svgHigh = await qrHigh.toSvg();
 
 		expect(svgL).toContain("<svg");
 		expect(svgH).toContain("<svg");
 		expect(svgL).not.toEqual(svgH);
+		expect(svgLow).toEqual(svgL);
+		expect(svgHigh).toEqual(svgH);
 	});
 
 	it("should generate different SVG output for different error correction levels via napi path", async () => {
@@ -263,24 +269,59 @@ describe("Error Correction", () => {
 			errorCorrection: "H",
 			logo: testLogoPathSmall,
 		});
+		const qrLow = new QrBit({
+			text,
+			errorCorrection: "Low",
+			logo: testLogoPathSmall,
+		});
+		const qrHigh = new QrBit({
+			text,
+			errorCorrection: "High",
+			logo: testLogoPathSmall,
+		});
 
 		const svgL = await qrL.toSvg();
 		const svgH = await qrH.toSvg();
+		const svgLow = await qrLow.toSvg();
+		const svgHigh = await qrHigh.toSvg();
 
 		expect(svgL).toContain("<svg");
 		expect(svgH).toContain("<svg");
 		expect(svgL).not.toEqual(svgH);
+		expect(svgLow).toEqual(svgL);
+		expect(svgHigh).toEqual(svgH);
 	});
 
 	it("should generate valid SVG for all error correction levels", async () => {
 		const text = faker.internet.url();
 
-		for (const level of ["L", "M", "Q", "H"] as const) {
+		for (const level of [
+			"L",
+			"M",
+			"Q",
+			"H",
+			"Low",
+			"Medium",
+			"Quartile",
+			"High",
+		] as const) {
 			const qr = new QrBit({ text, errorCorrection: level });
 			const svg = await qr.toSvg();
 			expect(svg).toContain("<svg");
 			expect(svg).toContain("</svg>");
 		}
+	});
+
+	it("should produce same output for initial and full name", async () => {
+		const text = faker.internet.url();
+
+		const qrInitial = new QrBit({ text, errorCorrection: "H" });
+		const qrFullName = new QrBit({ text, errorCorrection: "High" });
+
+		const svgInitial = await qrInitial.toSvg();
+		const svgFullName = await qrFullName.toSvg();
+
+		expect(svgInitial).toEqual(svgFullName);
 	});
 });
 
