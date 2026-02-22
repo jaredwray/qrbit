@@ -142,6 +142,15 @@ describe("QrBit Properties", () => {
 		expect(qr.foregroundColor).toBe("#0000FF");
 	});
 
+	it("should get and set errorCorrection property", () => {
+		const text = faker.internet.url();
+		const qr = new QrBit({ text });
+		expect(qr.errorCorrection).toBe("M"); // default value
+
+		qr.errorCorrection = "H";
+		expect(qr.errorCorrection).toBe("H");
+	});
+
 	it("should initialize with custom values", () => {
 		const text = faker.string.alphanumeric(20);
 		const qr = new QrBit({
@@ -152,6 +161,7 @@ describe("QrBit Properties", () => {
 			logoSizeRatio: 0.3,
 			backgroundColor: "#FFFF00",
 			foregroundColor: "#FF00FF",
+			errorCorrection: "H",
 		});
 
 		expect(qr.text).toBe(text);
@@ -161,6 +171,7 @@ describe("QrBit Properties", () => {
 		expect(qr.logoSizeRatio).toBe(0.3);
 		expect(qr.backgroundColor).toBe("#FFFF00");
 		expect(qr.foregroundColor).toBe("#FF00FF");
+		expect(qr.errorCorrection).toBe("H");
 	});
 
 	it("should use properties when generating QR code", async () => {
@@ -223,6 +234,94 @@ describe("Error Handling", () => {
 		const result = await qr.toSvg();
 
 		expect(result).toContain("<svg");
+	});
+});
+
+describe("Error Correction", () => {
+	it("should generate different SVG output for different error correction levels via native path", async () => {
+		const text = faker.internet.url();
+		const qrL = new QrBit({ text, errorCorrection: "L" });
+		const qrH = new QrBit({ text, errorCorrection: "H" });
+		const qrLow = new QrBit({ text, errorCorrection: "Low" });
+		const qrHigh = new QrBit({ text, errorCorrection: "High" });
+
+		const svgL = await qrL.toSvg();
+		const svgH = await qrH.toSvg();
+		const svgLow = await qrLow.toSvg();
+		const svgHigh = await qrHigh.toSvg();
+
+		expect(svgL).toContain("<svg");
+		expect(svgH).toContain("<svg");
+		expect(svgL).not.toEqual(svgH);
+		expect(svgLow).toEqual(svgL);
+		expect(svgHigh).toEqual(svgH);
+	});
+
+	it("should generate different SVG output for different error correction levels via napi path", async () => {
+		const text = faker.internet.url();
+		const qrL = new QrBit({
+			text,
+			errorCorrection: "L",
+			logo: testLogoPathSmall,
+		});
+		const qrH = new QrBit({
+			text,
+			errorCorrection: "H",
+			logo: testLogoPathSmall,
+		});
+		const qrLow = new QrBit({
+			text,
+			errorCorrection: "Low",
+			logo: testLogoPathSmall,
+		});
+		const qrHigh = new QrBit({
+			text,
+			errorCorrection: "High",
+			logo: testLogoPathSmall,
+		});
+
+		const svgL = await qrL.toSvg();
+		const svgH = await qrH.toSvg();
+		const svgLow = await qrLow.toSvg();
+		const svgHigh = await qrHigh.toSvg();
+
+		expect(svgL).toContain("<svg");
+		expect(svgH).toContain("<svg");
+		expect(svgL).not.toEqual(svgH);
+		expect(svgLow).toEqual(svgL);
+		expect(svgHigh).toEqual(svgH);
+	});
+
+	it("should generate valid SVG for all error correction levels", async () => {
+		const text = faker.internet.url();
+
+		for (const level of [
+			"L",
+			"M",
+			"Q",
+			"H",
+			"Low",
+			"Medium",
+			"Quartile",
+			"High",
+		] as const) {
+			const qr = new QrBit({ text, errorCorrection: level });
+			const svg = await qr.toSvg();
+			expect(svg).toContain("<svg");
+			expect(svg).toContain("</svg>");
+		}
+	});
+
+	it("should produce same output for initial and full name", async () => {
+		const text = faker.internet.url();
+
+		const qrInitial = new QrBit({ text, errorCorrection: "H" });
+		const qrFullName = new QrBit({ text, errorCorrection: "High" });
+
+		const svgInitial = await qrInitial.toSvg();
+		const svgFullName = await qrFullName.toSvg();
+
+		expect(svgInitial).toEqual(svgFullName);
 	});
 });
 

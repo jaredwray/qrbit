@@ -190,6 +190,32 @@ async function generateWebpExamples(): Promise<void> {
 	await webpBuffer.toWebpFile(path.join(OUTPUT_DIR, "18_webp_buffer_logo_purple.webp"));
 }
 
+async function generateErrorCorrectionExamples(): Promise<void> {
+	console.log("🛡️  Generating error correction examples...");
+
+	const text = "https://github.com/jaredwray/qrbit?test=this+is+an+error+correction+test";
+
+	// 19. Low error correction
+	const ecLow = new QrBit({
+		text,
+		size: 400,
+		errorCorrection: "L",
+		backgroundColor: "#1e3a5f",
+		foregroundColor: "#FFFFFF",
+	});
+	await ecLow.toPngFile(path.join(OUTPUT_DIR, "19_ec_low.png"));
+
+	// 20. High error correction
+	const ecHigh = new QrBit({
+		text,
+		size: 400,
+		errorCorrection: "High",
+		backgroundColor: "#1e3a5f",
+		foregroundColor: "#FFFFFF",
+	});
+	await ecHigh.toPngFile(path.join(OUTPUT_DIR, "20_ec_high.png"));
+}
+
 async function main(): Promise<void> {
 	console.log("🚀 Starting QrBit example generation...\n");
 
@@ -203,6 +229,7 @@ async function main(): Promise<void> {
 		await generateBufferLogoExample();
 		await generateJpgExamples();
 		await generateWebpExamples();
+		await generateErrorCorrectionExamples();
 
 		console.log("\n✅ All examples generated successfully!");
 		console.log(`📁 Check the '${OUTPUT_DIR}' directory for generated files.`);

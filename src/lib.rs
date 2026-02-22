@@ -3,7 +3,7 @@ use imageproc::drawing::draw_filled_rect_mut;
 use imageproc::rect::Rect;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use qrcode::QrCode;
+use qrcode::{QrCode, EcLevel};
 
 #[napi(object)]
 pub struct QrOptions {
@@ -14,6 +14,7 @@ pub struct QrOptions {
     pub logo_size_ratio: Option<f64>,
     pub background_color: Option<String>,
     pub foreground_color: Option<String>,
+    pub error_correction: Option<String>,
 }
 
 #[napi(object)]
@@ -25,6 +26,7 @@ pub struct QrOptionsWithBuffer {
     pub logo_size_ratio: Option<f64>,
     pub background_color: Option<String>,
     pub foreground_color: Option<String>,
+    pub error_correction: Option<String>,
 }
 
 #[napi(object)]
@@ -44,8 +46,8 @@ pub struct QrGenerator {
 }
 
 impl QrGenerator {
-    pub fn new(text: &str, size: u32, margin: u32) -> napi::Result<Self> {
-        let code = QrCode::new(text).map_err(|e| Error::from_reason(format!("QR code generation failed: {}", e)))?;
+    pub fn new(text: &str, size: u32, margin: u32, ec_level: EcLevel) -> napi::Result<Self> {
+        let code = QrCode::with_error_correction_level(text, ec_level).map_err(|e| Error::from_reason(format!("QR code generation failed: {}", e)))?;
         
         Ok(Self {
             code,
@@ -276,6 +278,16 @@ impl QrGenerator {
 
 }
 
+fn parse_ec_level(level_str: Option<&str>) -> EcLevel {
+    match level_str.unwrap_or("M").to_uppercase().as_str() {
+        "L" | "LOW" => EcLevel::L,
+        "M" | "MEDIUM" => EcLevel::M,
+        "Q" | "QUARTILE" => EcLevel::Q,
+        "H" | "HIGH" => EcLevel::H,
+        _ => EcLevel::M,
+    }
+}
+
 fn parse_color(color_str: &str) -> napi::Result<[u8; 4]> {
     if color_str.starts_with('#') && color_str.len() == 7 {
         let r = u8::from_str_radix(&color_str[1..3], 16)
@@ -296,9 +308,10 @@ pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
     let size = options.size.unwrap_or(200);
     let margin = options.margin.unwrap_or(20);
     let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
-    
-    let mut generator = QrGenerator::new(&options.text, size, margin)?;
-    
+    let ec_level = parse_ec_level(options.error_correction.as_deref());
+
+    let mut generator = QrGenerator::new(&options.text, size, margin, ec_level)?;
+
     if let Some(bg_color) = &options.background_color {
         let bg = parse_color(bg_color)?;
         let fg = if let Some(fg_color) = &options.foreground_color {
@@ -308,7 +321,7 @@ pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
         };
         generator.set_colors(bg, fg);
     }
-    
+
     generator.generate_svg(
         options.logo_path.as_deref(), 
         logo_size_ratio
@@ -321,8 +334,9 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
     let size = options.size.unwrap_or(200);
     let margin = options.margin.unwrap_or(20);
     let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
-    
-    let mut generator = QrGenerator::new(&options.text, size, margin)?;
+    let ec_level = parse_ec_level(options.error_correction.as_deref());
+
+    let mut generator = QrGenerator::new(&options.text, size, margin, ec_level)?;
     
     if let Some(bg_color) = &options.background_color {
         let bg = parse_color(bg_color)?;
@@ -333,9 +347,9 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
         };
         generator.set_colors(bg, fg);
     }
-    
+
     let logo_buffer = options.logo_buffer.as_ref().map(|b| b.as_ref());
-    
+
     generator.generate_svg_with_buffer(
         logo_buffer,
         logo_size_ratio

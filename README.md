@@ -16,6 +16,7 @@ A fast QR code generator with logo embedding support, built with Rust and native
 - **Fast SVG**: High performance SVG support via `QrCode` when no logo is needed
 - **Cross-platform**: Works on iOS, Windows, Linux, and macOS
 - **Logo embedding**: Add custom logos to your QR codes with no need for node canvas!
+- **Error correction**: Configurable error correction levels (L, M, Q, H)
 - **Customizable**: Custom colors, sizes, and margins
 - **Multiple formats**: Generate SVG, PNG, JPEG, and WebP outputs
 - **Scalable**: With caching you can also use a secondary store for persistence
@@ -90,6 +91,7 @@ interface QrOptions {
   logoSizeRatio?: number;          // Logo size ratio (default: 0.2)
   backgroundColor?: string;        // Background color (default: "#FFFFFF")
   foregroundColor?: string;        // Foreground color (default: "#000000")
+  errorCorrection?: ECLevel;       // "L"|"M"|"Q"|"H"|"Low"|"Medium"|"Quartile"|"High" (default: "M")
   cache?: Cacheable | boolean;     // Caching configuration (default: true)
 }
 
@@ -110,7 +112,8 @@ const qr = new QrBit({
   logo: "./logo.png",
   logoSizeRatio: 0.25,
   backgroundColor: "#FFFFFF",
-  foregroundColor: "#000000"
+  foregroundColor: "#000000",
+  errorCorrection: "H"
 });
 ```
 
@@ -175,6 +178,21 @@ Get or set the foreground color in hex format.
 ```javascript
 const qr = new QrBit({ text: "Hello World" });
 qr.foregroundColor = "#FFFFFF"; // White foreground
+```
+
+### errorCorrection
+Get or set the error correction level. Higher levels recover more damage but produce denser codes.
+
+Accepts initials or full names:
+- `"L"` / `"Low"` — Low (~7% recovery)
+- `"M"` / `"Medium"` — Medium (~15% recovery, default)
+- `"Q"` / `"Quartile"` — Quartile (~25% recovery)
+- `"H"` / `"High"` — High (~30% recovery, recommended when using logos)
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+qr.errorCorrection = "H";
+qr.errorCorrection = "High"; // equivalent
 ```
 
 ### cache
@@ -683,6 +701,34 @@ const qr = new QrBit({
 await qr.toWebpFile("18_webp_buffer_logo_purple.webp");
 ```
 ![WebP Buffer Logo Purple QR Code](examples/18_webp_buffer_logo_purple.webp)
+
+## 19. Low Error Correction
+QR code with low (L) error correction level, suitable for clean environments with minimal risk of damage.
+```javascript
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit?test=this+is+an+error+correction+test",
+  size: 400,
+  errorCorrection: "L",
+  backgroundColor: "#1e3a5f",
+  foregroundColor: "#FFFFFF"
+});
+await qr.toPngFile("19_ec_low.png");
+```
+![Low Error Correction QR Code](examples/19_ec_low.png)
+
+## 20. High Error Correction
+QR code with high (H) error correction level, recovers up to 30% damage — ideal for logos or printed codes.
+```javascript
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit?test=this+is+an+error+correction+test",
+  size: 400,
+  errorCorrection: "H",
+  backgroundColor: "#1e3a5f",
+  foregroundColor: "#FFFFFF"
+});
+await qr.toPngFile("20_ec_high.png");
+```
+![High Error Correction QR Code](examples/20_ec_high.png)
 
 These examples demonstrate the versatility and capabilities of QrBit for generating QR codes with various customizations, from simple text encoding to complex styled codes with embedded logos, supporting SVG, PNG, JPEG, and WebP formats.
 
