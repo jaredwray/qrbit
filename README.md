@@ -25,11 +25,31 @@ A fast QR code generator with logo embedding support, built with Rust and native
 
 # Table of Contents
 - [Installation](#installation)
-- [Reqirements](#requirements)
+- [Requirements](#requirements)
 - [API](#api)
   - [Constructor](#constructoroptions-qroptions)
   - [Properties](#properties)
+    - [text](#text)
+    - [size](#size)
+    - [margin](#margin)
+    - [logo](#logo)
+    - [logoSizeRatio](#logosizeRatio)
+    - [backgroundColor](#backgroundcolor)
+    - [foregroundColor](#foregroundcolor)
+    - [errorCorrection](#errorcorrection)
+    - [cache](#cache)
   - [Methods](#methods)
+    - [.toSvg()](#tosvgoptions-tooptions)
+    - [.toSvgNapi()](#tosvgnapi)
+    - [.toSvgFile()](#tosvgfilefilepath-string-options-tooptions)
+    - [.toPng()](#topngoptions-tooptions)
+    - [.toPngFile()](#topngfilefilepath-string-options-tooptions)
+    - [.toJpg()](#tojpgoptions-tooptions)
+    - [.toJpgFile()](#tojpgfilefilepath-string-options-tooptions)
+    - [.toWebp()](#towebpoptions-tooptions)
+    - [.toWebpFile()](#towebpfilefilepath-string-options-tooptions)
+    - [Utility Methods](#utility-methods)
+    - [Static Methods](#static-methods)
 - [Benchmarks](#benchmarks)
 - [Examples](#examples)
 - [Contributing](#contributing)
@@ -226,6 +246,18 @@ console.log(svg); // <svg xmlns="http://www.w3.org/2000/svg"...
 const svgNoCache = await qr.toSvg({ cache: false });
 ```
 
+### .toSvgNapi()
+
+Generate SVG QR code using the native Rust implementation directly. Automatically selects between file path and buffer logo functions. If a logo file path doesn't exist, emits an error event but still generates the SVG.
+
+**Returns:** Promise\<string\> - The SVG string
+
+```javascript
+const qr = new QrBit({ text: "Hello World", logo: "./logo.png" });
+const svg = await qr.toSvgNapi();
+console.log(svg); // <svg xmlns="http://www.w3.org/2000/svg"...
+```
+
 ### .toSvgFile(filePath: string, options?: toOptions)
 
 Generate SVG QR code and save it to a file. Creates directories if they don't exist.
@@ -369,6 +401,52 @@ await qr.toWebpFile("./output/qr-code.webp");
 
 // With options
 await qr.toWebpFile("./output/qr-code.webp", { cache: false });
+```
+
+### Utility Methods
+
+#### .generateCacheKey(renderKey: string)
+
+Generate a hash-based cache key from the current QR code options. Useful for custom caching strategies.
+
+**Parameters:**
+- `renderKey: string` - Format identifier (e.g., `napi-png`, `native-svg`, `napi-svg`)
+
+**Returns:** Promise\<string\> - The hash string
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+const key = await qr.generateCacheKey("napi-png");
+console.log(key); // hash string based on current options
+```
+
+#### .isLogoString()
+
+Check if the logo property is a string (file path) rather than a Buffer.
+
+**Returns:** boolean - `true` if logo is a string, `false` otherwise
+
+```javascript
+const qr = new QrBit({ text: "Hello World", logo: "./logo.png" });
+console.log(qr.isLogoString()); // true
+
+qr.logo = fs.readFileSync("./logo.png");
+console.log(qr.isLogoString()); // false
+```
+
+#### .logoFileExists(filePath: string)
+
+Check if a file exists at the specified path.
+
+**Parameters:**
+- `filePath: string` - The file path to check
+
+**Returns:** Promise\<boolean\> - `true` if file exists and is accessible, `false` otherwise
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+const exists = await qr.logoFileExists("./logo.png");
+console.log(exists); // true or false
 ```
 
 ### Static Methods
