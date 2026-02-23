@@ -248,14 +248,21 @@ const svgNoCache = await qr.toSvg({ cache: false });
 
 ### .toSvgNapi()
 
-Generate SVG QR code using the native Rust implementation directly. Automatically selects between file path and buffer logo functions. If a logo file path doesn't exist, emits an error event but still generates the SVG.
+Generate SVG QR code using the native Rust implementation directly. Automatically selects between file path and buffer logo functions. If a logo file path doesn't exist, a `QrBitEvents.error` event is emitted.
+
+> **Note:** By default (`throwOnEmitError = true`), emitting an error with no registered listener will **throw** rather than fall back to generating the SVG without a logo. To handle the error and still receive the SVG, register an error listener before calling this method.
 
 **Returns:** Promise\<string\> - The SVG string
 
 ```javascript
+// Default behavior – throws if logo file is missing and no error listener is registered
 const qr = new QrBit({ text: "Hello World", logo: "./logo.png" });
 const svg = await qr.toSvgNapi();
 console.log(svg); // <svg xmlns="http://www.w3.org/2000/svg"...
+
+// To fall back gracefully, register an error listener first
+qr.on("error", (err) => console.warn("Logo not found:", err));
+const svgFallback = await qr.toSvgNapi(); // generates SVG without logo
 ```
 
 ### .toSvgFile(filePath: string, options?: toOptions)
