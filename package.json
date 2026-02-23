@@ -51,7 +51,7 @@
 		"@loskir/styled-qr-code-node": "^1.5.2",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
 		"@napi-rs/cli": "^3.5.0",
-		"@types/node": "^25.1.0",
+		"@types/node": "^25.3.0",
 		"@types/qrcode": "^1.5.6",
 		"@vitest/coverage-v8": "^4.0.18",
 		"rimraf": "^6.1.2",
@@ -98,7 +98,7 @@
 	},
 	"dependencies": {
 		"cacheable": "^2.3.2",
-		"hookified": "^1.15.0",
+		"hookified": "^1.15.1",
 		"qrcode": "^1.5.4"
 	}
 }
