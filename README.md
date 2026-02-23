@@ -33,7 +33,7 @@ A fast QR code generator with logo embedding support, built with Rust and native
     - [size](#size)
     - [margin](#margin)
     - [logo](#logo)
-    - [logoSizeRatio](#logosizeRatio)
+    - [logoSizeRatio](#logosizeratio)
     - [backgroundColor](#backgroundcolor)
     - [foregroundColor](#foregroundcolor)
     - [errorCorrection](#errorcorrection)
