@@ -466,7 +466,7 @@ describe("Buffer Logo", () => {
 });
 
 describe("File Operations", () => {
-	const tempDir = "./test/temp";
+	const tempDir = "./test/temp/qrbit-file-ops";
 	const testPngPath = `${tempDir}/test-qr.png`;
 	const testSvgPath = `${tempDir}/test-qr.svg`;
 
@@ -656,7 +656,7 @@ describe("File Operations", () => {
 });
 
 describe("Logo File Validation", () => {
-	const tempDir = "./test/temp";
+	const tempDir = "./test/temp/qrbit-logo-validation";
 	const existingFile = `${tempDir}/existing.txt`;
 	const nonExistentFile = `${tempDir}/does-not-exist.txt`;
 

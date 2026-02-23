@@ -122,7 +122,7 @@ describe("WebP Generation", () => {
 });
 
 describe("WebP File Operations", () => {
-	const tempDir = "./test/temp";
+	const tempDir = "./test/temp/webp";
 	const testWebpPath = `${tempDir}/test-qr.webp`;
 
 	beforeEach(async () => {

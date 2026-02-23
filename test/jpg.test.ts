@@ -121,7 +121,7 @@ describe("JPEG Generation", () => {
 });
 
 describe("JPEG File Operations", () => {
-	const tempDir = "./test/temp";
+	const tempDir = "./test/temp/jpg";
 	const testJpgPath = `${tempDir}/test-qr.jpg`;
 
 	beforeEach(async () => {
