@@ -18,7 +18,7 @@ svg = "0.18"
 base64 = "0.22"
 resvg = "0.47"
 tiny-skia = "0.12"
-napi        = "3.8.3"
+napi = "3.8.3"
 napi-derive = "3.5.2"
 
 [build-dependencies]
