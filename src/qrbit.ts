@@ -146,9 +146,6 @@ export class QrBit extends Hookified {
 		} else {
 			this._cache = new Cacheable();
 		}
-
-		// set throwOnEmitError to true if there are no listeners
-		this.throwOnEmitError = true;
 	}
 
 	/**

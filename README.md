@@ -94,7 +94,14 @@ QrBit v2 upgrades the underlying [`hookified`](https://github.com/jaredwray/hook
    const qr = new QrBit({ text: "hello", eventLogger: myLogger });
    ```
 
-3. If you reference `throwHookErrors`, use `throwOnHookError` instead.
+3. If you reference `throwHookErrors`, use `throwOnHookError` instead:
+   ```javascript
+   // Before (v1)
+   const qr = new QrBit({ text: "hello", throwHookErrors: true });
+
+   // After (v2)
+   const qr = new QrBit({ text: "hello", throwOnHookError: true });
+   ```
 
 4. If you rely on `throwOnEmptyListeners` being `false`, explicitly set it:
    ```javascript
