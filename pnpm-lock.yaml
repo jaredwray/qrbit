@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       cacheable:
-        specifier: ^2.3.2
-        version: 2.3.2
+        specifier: ^2.3.3
+        version: 2.3.3
       hookified:
         specifier: ^1.15.1
         version: 1.15.1
@@ -141,11 +141,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cacheable/memory@2.0.7':
-    resolution: {integrity: sha512-RbxnxAMf89Tp1dLhXMS7ceft/PGsDl1Ip7T20z5nZ+pwIAsQ1p2izPjVG69oCLv/jfQ7HDPHTWK0c9rcAWXN3A==}
+  '@cacheable/memory@2.0.8':
+    resolution: {integrity: sha512-FvEb29x5wVwu/Kf93IWwsOOEuhHh6dYCJF3vcKLzXc0KXIW181AOzv6ceT4ZpBHDvAfG60eqb+ekmrnLHIy+jw==}
 
-  '@cacheable/utils@2.3.3':
-    resolution: {integrity: sha512-JsXDL70gQ+1Vc2W/KUFfkAJzgb4puKwwKehNLuB+HrNKWf91O736kGfxn4KujXCCSuh6mRRL4XEB0PkAFjWS0A==}
+  '@cacheable/utils@2.4.0':
+    resolution: {integrity: sha512-PeMMsqjVq+bF0WBsxFBxr/WozBJiZKY0rUojuaCoIaKnEl3Ju1wfEwS+SV1DU/cSe8fqHIPiYJFif8T3MVt4cQ==}
 
   '@emnapi/core@1.5.0':
     resolution: {integrity: sha512-sbP8GzB1WDzacS8fgNPpHlp6C9VZe+SJP3F90W9rLemaQj2PzIuTEl1qDOYQf58YIpyjViI24y9aPWCjEzY2cg==}
@@ -1448,8 +1448,8 @@ packages:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
     engines: {node: '>=8'}
 
-  cacheable@2.3.2:
-    resolution: {integrity: sha512-w+ZuRNmex9c1TR9RcsxbfTKCjSL0rh1WA5SABbrWprIHeNBdmyQLSYonlDy9gpD+63XT8DgZ/wNh1Smvc9WnJA==}
+  cacheable@2.3.3:
+    resolution: {integrity: sha512-iffYMX4zxKp54evOH27fm92hs+DeC1DhXmNVN8Tr94M/iZIV42dqTHSR2Ik4TOSPyOAwKr7Yu3rN9ALoLkbWyQ==}
 
   camelcase@5.3.1:
     resolution: {integrity: sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg==}
@@ -1673,8 +1673,8 @@ packages:
   has-unicode@2.0.1:
     resolution: {integrity: sha512-8Rf9Y83NBReMnx0gFzA8JImQACstCYWUplepDa9xprwwtmgEZUF0h/i5xSA625zB/I37EtrswSST6OXxwaaIJQ==}
 
-  hashery@1.4.0:
-    resolution: {integrity: sha512-Wn2i1In6XFxl8Az55kkgnFRiAlIAushzh26PTjL2AKtQcEfXrcLa7Hn5QOWGZEf3LU057P9TwwZjFyxfS1VuvQ==}
+  hashery@1.5.0:
+    resolution: {integrity: sha512-nhQ6ExaOIqti2FDWoEMWARUqIKyjr2VcZzXShrI+A3zpeiuPWzx6iPftt44LhP74E5sW36B75N6VHbvRtpvO6Q==}
     engines: {node: '>=20'}
 
   hookified@1.15.1:
@@ -2386,16 +2386,16 @@ snapshots:
   '@biomejs/cli-win32-x64@2.4.7':
     optional: true
 
-  '@cacheable/memory@2.0.7':
+  '@cacheable/memory@2.0.8':
     dependencies:
-      '@cacheable/utils': 2.3.3
+      '@cacheable/utils': 2.4.0
       '@keyv/bigmap': 1.3.1(keyv@5.6.0)
       hookified: 1.15.1
       keyv: 5.6.0
 
-  '@cacheable/utils@2.3.3':
+  '@cacheable/utils@2.4.0':
     dependencies:
-      hashery: 1.4.0
+      hashery: 1.5.0
       keyv: 5.6.0
 
   '@emnapi/core@1.5.0':
@@ -2716,7 +2716,7 @@ snapshots:
 
   '@keyv/bigmap@1.3.1(keyv@5.6.0)':
     dependencies:
-      hashery: 1.4.0
+      hashery: 1.5.0
       hookified: 1.15.1
       keyv: 5.6.0
 
@@ -3348,10 +3348,10 @@ snapshots:
 
   cac@6.7.14: {}
 
-  cacheable@2.3.2:
+  cacheable@2.3.3:
     dependencies:
-      '@cacheable/memory': 2.0.7
-      '@cacheable/utils': 2.3.3
+      '@cacheable/memory': 2.0.8
+      '@cacheable/utils': 2.4.0
       hookified: 1.15.1
       keyv: 5.6.0
       qified: 0.6.0
@@ -3596,7 +3596,7 @@ snapshots:
 
   has-unicode@2.0.1: {}
 
-  hashery@1.4.0:
+  hashery@1.5.0:
     dependencies:
       hookified: 1.15.1
 
