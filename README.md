@@ -55,6 +55,59 @@ A fast QR code generator with logo embedding support, built with Rust and native
 - [Contributing](#contributing)
 - [License and Copyright](#license-and-copyright)
 
+# Migration from v1 to v2
+
+QrBit v2 upgrades the underlying [`hookified`](https://github.com/jaredwray/hookified) dependency from v1 to v2. This is a breaking change for consumers who use `HookifiedOptions` properties in their `QrOptions`.
+
+## Breaking Changes
+
+| v1 (qrbit 1.x) | v2 (qrbit 2.x) |
+|---|---|
+| `logger` option | Renamed to `eventLogger` |
+| `throwHookErrors` option | Removed, use `throwOnHookError` |
+| `throwOnEmptyListeners` defaults to `false` | Now defaults to `true` |
+| `maxListeners` defaults to `100` | Now defaults to `0` (unlimited) |
+| `HookEntry` type | Replaced by `IHook` interface |
+| `Hook` type (function alias) | Renamed to `HookFn` |
+
+## What Didn't Change
+
+- All QR code generation methods (`.toSvg()`, `.toPng()`, `.toJpg()`, `.toWebp()`, and their file variants) work identically.
+- Event emitting (`.on()`, `.emit()`, `.once()`, `.off()`) works identically.
+- Constructor options for QR code configuration (`text`, `size`, `margin`, `logo`, `logoSizeRatio`, `backgroundColor`, `foregroundColor`, `errorCorrection`, `cache`) are unchanged.
+- Caching behavior is unchanged.
+- Logo embedding (path and buffer) works identically.
+
+## Migration Steps
+
+1. Update your `qrbit` dependency to v2:
+   ```bash
+   npm install qrbit@latest
+   ```
+
+2. If you pass a `logger` in your options, rename it to `eventLogger`:
+   ```javascript
+   // Before (v1)
+   const qr = new QrBit({ text: "hello", logger: myLogger });
+
+   // After (v2)
+   const qr = new QrBit({ text: "hello", eventLogger: myLogger });
+   ```
+
+3. If you reference `throwHookErrors`, use `throwOnHookError` instead:
+   ```javascript
+   // Before (v1)
+   const qr = new QrBit({ text: "hello", throwHookErrors: true });
+
+   // After (v2)
+   const qr = new QrBit({ text: "hello", throwOnHookError: true });
+   ```
+
+4. If you rely on `throwOnEmptyListeners` being `false`, explicitly set it:
+   ```javascript
+   const qr = new QrBit({ text: "hello", throwOnEmptyListeners: false });
+   ```
+
 # Installation
 
 ```bash
