@@ -4,6 +4,7 @@ use imageproc::rect::Rect;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use qrcode::{QrCode, EcLevel};
+use quircs::Quirc;
 
 #[napi(object)]
 pub struct QrOptions {
@@ -523,4 +524,103 @@ pub fn convert_svg_to_webp(svg_content: String, width: Option<u32>, height: Opti
     ).map_err(|e| Error::from_reason(format!("Failed to encode WebP: {}", e)))?;
 
     Ok(webp_buffer.into())
+}
+
+#[napi(object)]
+pub struct DecodeResult {
+    pub valid: bool,
+    pub data: Option<String>,
+    pub format: String,
+    pub version: Option<u32>,
+    pub ecl: Option<String>,
+    pub error: Option<String>,
+}
+
+fn decode_qr_from_image(input: &[u8]) -> std::result::Result<DecodeResult, String> {
+    let img = image::load_from_memory(input)
+        .map_err(|e| format!("Failed to load image: {}", e))?;
+    let gray = img.to_luma8();
+    let (width, height) = gray.dimensions();
+
+    let mut decoder = Quirc::new();
+    let codes = decoder.identify(width as usize, height as usize, &gray);
+
+    for code in codes {
+        match code {
+            Ok(code) => {
+                match code.decode() {
+                    Ok(data) => {
+                        let ecl_str = match data.ecc_level {
+                            quircs::EccLevel::L => "L",
+                            quircs::EccLevel::M => "M",
+                            quircs::EccLevel::Q => "Q",
+                            quircs::EccLevel::H => "H",
+                        };
+                        let payload = String::from_utf8_lossy(&data.payload).to_string();
+                        return Ok(DecodeResult {
+                            valid: true,
+                            data: Some(payload),
+                            format: "qr".to_string(),
+                            version: Some(data.version as u32),
+                            ecl: Some(ecl_str.to_string()),
+                            error: None,
+                        });
+                    }
+                    Err(e) => {
+                        return Ok(DecodeResult {
+                            valid: false,
+                            data: None,
+                            format: "qr".to_string(),
+                            version: None,
+                            ecl: None,
+                            error: Some(format!("QR decode failed: {}", e)),
+                        });
+                    }
+                }
+            }
+            Err(e) => {
+                return Ok(DecodeResult {
+                    valid: false,
+                    data: None,
+                    format: "qr".to_string(),
+                    version: None,
+                    ecl: None,
+                    error: Some(format!("QR identification failed: {}", e)),
+                });
+            }
+        }
+    }
+
+    Ok(DecodeResult {
+        valid: false,
+        data: None,
+        format: "qr".to_string(),
+        version: None,
+        ecl: None,
+        error: Some("No QR code found in image".to_string()),
+    })
+}
+
+#[napi]
+pub fn decode(input: Buffer) -> Result<Option<String>> {
+    match decode_qr_from_image(&input) {
+        Ok(result) => Ok(result.data),
+        Err(e) => Err(Error::from_reason(e)),
+    }
+}
+
+#[napi]
+pub fn decode_detailed(input: Buffer) -> Result<DecodeResult> {
+    match decode_qr_from_image(&input) {
+        Ok(result) => Ok(result),
+        Err(e) => Err(Error::from_reason(e)),
+    }
+}
+
+#[napi]
+pub fn validate_qr(input: Buffer) -> Result<DecodeResult> {
+    match decode_qr_from_image(&input) {
+        Ok(result) => Ok(result),
+        Err(e) => Err(Error::from_reason(e)),
+    }
 }

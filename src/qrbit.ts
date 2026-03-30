@@ -8,8 +8,11 @@ import {
 	convertSvgToJpeg as nativeConvertSvgToJpeg,
 	convertSvgToPng as nativeConvertSvgToPng,
 	convertSvgToWebp as nativeConvertSvgToWebp,
+	decode as nativeDecode,
+	decodeDetailed as nativeDecodeDetailed,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
+	validateQr as nativeValidateQr,
 } from "./native.js";
 
 export enum QrBitEvents {
@@ -75,7 +78,7 @@ export type QrOptions = {
 	 * The error correction level of the QR code.
 	 * Accepts initials ("L", "M", "Q", "H") or full names ("Low", "Medium", "Quartile", "High").
 	 * @type {ECLevel}
-	 * @default "M"
+	 * @default "H"
 	 */
 	errorCorrection?: ECLevel;
 	/**
@@ -99,6 +102,24 @@ export type toOptions = {
 	quality?: number;
 };
 
+export type DecodeResult = {
+	valid: boolean;
+	data?: string;
+	format: "qr";
+	version?: number;
+	ecl?: "L" | "M" | "Q" | "H";
+	error?: string;
+};
+
+export type ValidateOptions = {
+	content?: {
+		type?: "url" | "json" | "text" | "any";
+		allowedHosts?: string[];
+		startsWith?: string;
+		regex?: string;
+	};
+};
+
 /**
  * QR code generator with logo support and caching capabilities.
  * Supports both file path and buffer-based logos with automatic optimization.
@@ -117,8 +138,11 @@ export class QrBit extends Hookified {
 		convertSvgToJpeg: nativeConvertSvgToJpeg,
 		convertSvgToPng: nativeConvertSvgToPng,
 		convertSvgToWebp: nativeConvertSvgToWebp,
+		decode: nativeDecode,
+		decodeDetailed: nativeDecodeDetailed,
 		generateQrSvg: nativeGenerateQrSvg,
 		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
+		validateQr: nativeValidateQr,
 	};
 
 	/**
@@ -134,7 +158,7 @@ export class QrBit extends Hookified {
 		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
 		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
 		this._foregroundColor = options.foregroundColor ?? "#000000";
-		this._errorCorrection = options.errorCorrection ?? "M";
+		this._errorCorrection = options.errorCorrection ?? "H";
 		if (options.cache !== undefined) {
 			// if it is boolean and true then create a new cacheable instance
 			if (options.cache === true) {
@@ -268,7 +292,7 @@ export class QrBit extends Hookified {
 	/**
 	 * Get the error correction level of the QR code.
 	 * @returns {ECLevel} The error correction level
-	 * @default "M"
+	 * @default "H"
 	 */
 	public get errorCorrection(): ECLevel {
 		return this._errorCorrection;
@@ -646,6 +670,164 @@ export class QrBit extends Hookified {
 		quality?: number,
 	): Buffer {
 		return nativeConvertSvgToWebp(svgContent, width, height, quality);
+	}
+
+	/**
+	 * Decode a QR code from an image buffer, Uint8Array, or file path.
+	 * @param input - Image data as Buffer, Uint8Array, or file path string
+	 * @returns {Promise<string | null>} The decoded text content, or null if no QR found
+	 */
+	public static async decode(
+		input: Buffer | Uint8Array | string,
+	): Promise<string | null> {
+		const buffer = await QrBit.resolveInput(input);
+		return nativeDecode(buffer);
+	}
+
+	/**
+	 * Decode a QR code from an image with detailed results.
+	 * @param input - Image data as Buffer, Uint8Array, or file path string
+	 * @returns {Promise<DecodeResult>} Detailed decode result including version and ECL
+	 */
+	public static async decodeDetailed(
+		input: Buffer | Uint8Array | string,
+	): Promise<DecodeResult> {
+		const buffer = await QrBit.resolveInput(input);
+		return nativeDecodeDetailed(buffer) as DecodeResult;
+	}
+
+	/**
+	 * Validate a QR code image with optional content validation.
+	 * Layer 1 (Rust): Checks QR exists, decodes successfully, proper format.
+	 * Layer 2 (TypeScript): Validates content (URL, JSON, prefix, regex).
+	 * @param input - Image data as Buffer, Uint8Array, or file path string
+	 * @param options - Optional content validation rules
+	 * @returns {Promise<DecodeResult>} Validation result
+	 */
+	public static async validate(
+		input: Buffer | Uint8Array | string,
+		options?: ValidateOptions,
+	): Promise<DecodeResult> {
+		const buffer = await QrBit.resolveInput(input);
+		const result = nativeValidateQr(buffer) as DecodeResult;
+
+		if (result.valid && result.data && options?.content) {
+			try {
+				QrBit.validateDecodedPayload(result.data, options);
+			} catch (error: unknown) {
+				return {
+					...result,
+					valid: false,
+					error: (error as Error).message,
+				};
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Generate a PNG QR code and verify it remains scannable.
+	 * Generates the QR, then decodes it to ensure readability.
+	 * @param options - Generation options
+	 * @returns {Promise<Buffer>} The verified PNG buffer
+	 * @throws {Error} If the generated QR code cannot be decoded
+	 */
+	public async safeGeneratePng(options?: toOptions): Promise<Buffer> {
+		const png = await this.toPng(options);
+		const result = await QrBit.decodeDetailed(png);
+		if (!result.valid) {
+			throw new Error(
+				`Generated QR code is not scannable: ${result.error ?? "unknown error"}`,
+			);
+		}
+
+		if (result.data !== this._text) {
+			throw new Error("Generated QR code content does not match input text");
+		}
+
+		return png;
+	}
+
+	/**
+	 * Generate an SVG QR code and verify it remains scannable.
+	 * Converts SVG to PNG internally for verification, then returns the SVG.
+	 * @param options - Generation options
+	 * @returns {Promise<string>} The verified SVG string
+	 * @throws {Error} If the generated QR code cannot be decoded
+	 */
+	public async safeGenerateSvg(options?: toOptions): Promise<string> {
+		const svg = await this.toSvg(options);
+		const png = QrBit.convertSvgToPng(svg);
+		const result = await QrBit.decodeDetailed(png);
+		if (!result.valid) {
+			throw new Error(
+				`Generated QR code is not scannable: ${result.error ?? "unknown error"}`,
+			);
+		}
+
+		if (result.data !== this._text) {
+			throw new Error("Generated QR code content does not match input text");
+		}
+
+		return svg;
+	}
+
+	/**
+	 * Resolve input to a Buffer for decode/validate operations.
+	 * @param input - Buffer, Uint8Array, or file path string
+	 * @returns {Promise<Buffer>} The resolved buffer
+	 */
+	private static async resolveInput(
+		input: Buffer | Uint8Array | string,
+	): Promise<Buffer> {
+		if (typeof input === "string") {
+			return fs.promises.readFile(input);
+		}
+
+		if (Buffer.isBuffer(input)) {
+			return input;
+		}
+
+		return Buffer.from(input);
+	}
+
+	/**
+	 * Validate decoded QR payload against content rules.
+	 * @param value - The decoded string
+	 * @param options - Validation options
+	 * @throws {Error} If validation fails
+	 */
+	private static validateDecodedPayload(
+		value: string,
+		options?: ValidateOptions,
+	): boolean {
+		if (!options?.content) {
+			return true;
+		}
+
+		const { type, allowedHosts, startsWith, regex } = options.content;
+
+		if (type === "url") {
+			const url = new URL(value);
+			if (allowedHosts && !allowedHosts.includes(url.host)) {
+				throw new Error("Host not allowed");
+			}
+		}
+
+		if (type === "json") {
+			JSON.parse(value);
+		}
+
+		if (startsWith && !value.startsWith(startsWith)) {
+			throw new Error("Invalid prefix");
+		}
+
+		if (regex && !new RegExp(regex).test(value)) {
+			throw new Error("Regex mismatch");
+		}
+
+		return true;
 	}
 
 	/**
