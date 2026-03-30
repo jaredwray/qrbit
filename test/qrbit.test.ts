@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { faker } from "@faker-js/faker";
 import { Cacheable } from "cacheable";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QrBit } from "../src/qrbit";
 
 const testLogoPath = "test/fixtures/test_logo.png";
@@ -145,10 +145,10 @@ describe("QrBit Properties", () => {
 	it("should get and set errorCorrection property", () => {
 		const text = faker.internet.url();
 		const qr = new QrBit({ text });
-		expect(qr.errorCorrection).toBe("M"); // default value
+		expect(qr.errorCorrection).toBe("H"); // default value
 
-		qr.errorCorrection = "H";
-		expect(qr.errorCorrection).toBe("H");
+		qr.errorCorrection = "L";
+		expect(qr.errorCorrection).toBe("L");
 	});
 
 	it("should initialize with custom values", () => {
@@ -816,5 +816,409 @@ describe("SVG to PNG Conversion", () => {
 		expect(() => {
 			QrBit.convertSvgToPng(invalidSvg);
 		}).toThrow();
+	});
+});
+
+describe("QrBit Decode", () => {
+	it("should decode a generated PNG QR code", async () => {
+		const text = "https://example.com";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const decoded = await QrBit.decode(png);
+		expect(decoded).toBe(text);
+	});
+
+	it("should decode a generated PNG with logo", async () => {
+		const text = "hello world";
+		const qr = new QrBit({
+			text,
+			logo: testLogoPathSmall,
+			errorCorrection: "H",
+		});
+		const png = await qr.toPng();
+		const decoded = await QrBit.decode(png);
+		expect(decoded).toBe(text);
+	});
+
+	it("should return null for non-QR image", async () => {
+		// Create a small solid white PNG (no QR code)
+		const svg =
+			'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="white"/></svg>';
+		const png = QrBit.convertSvgToPng(svg);
+		const decoded = await QrBit.decode(png);
+		expect(decoded).toBeNull();
+	});
+
+	it("should decode detailed with version and ecl info", async () => {
+		const text = "detailed test";
+		const qr = new QrBit({ text, errorCorrection: "H" });
+		const png = await qr.toPng();
+		const result = await QrBit.decodeDetailed(png);
+		expect(result.valid).toBe(true);
+		expect(result.data).toBe(text);
+		expect(result.format).toBe("qr");
+		expect(result.version).toBeGreaterThan(0);
+		expect(result.ecl).toBe("H");
+		expect(result.error).toBeUndefined();
+	});
+
+	it("should return invalid DecodeResult for non-QR image", async () => {
+		const svg =
+			'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="white"/></svg>';
+		const png = QrBit.convertSvgToPng(svg);
+		const result = await QrBit.decodeDetailed(png);
+		expect(result.valid).toBe(false);
+		expect(result.data).toBeUndefined();
+		expect(result.error).toBeDefined();
+	});
+
+	it("should decode from Uint8Array input", async () => {
+		const text = "uint8 test";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const uint8 = new Uint8Array(png);
+		const decoded = await QrBit.decode(uint8);
+		expect(decoded).toBe(text);
+	});
+
+	it("should decode from file path", async () => {
+		const text = "file path test";
+		const qr = new QrBit({ text });
+		const filePath = "test/fixtures/decode_test.png";
+		await qr.toPngFile(filePath);
+		const decoded = await QrBit.decode(filePath);
+		expect(decoded).toBe(text);
+		// cleanup
+		await fs.promises.unlink(filePath);
+	});
+
+	it("should decode QR codes with different error correction levels", async () => {
+		for (const ecl of ["L", "M", "Q", "H"] as const) {
+			const text = `ecl-${ecl}-test`;
+			const qr = new QrBit({ text, errorCorrection: ecl });
+			const png = await qr.toPng();
+			const result = await QrBit.decodeDetailed(png);
+			expect(result.valid).toBe(true);
+			expect(result.data).toBe(text);
+			expect(result.ecl).toBe(ecl);
+		}
+	});
+
+	it("should decode QR codes with special characters", async () => {
+		const text = "https://example.com/?q=hello&lang=en#section";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const decoded = await QrBit.decode(png);
+		expect(decoded).toBe(text);
+	});
+});
+
+describe("QrBit Validate", () => {
+	it("should validate a correct QR code", async () => {
+		const text = "https://example.com";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png);
+		expect(result.valid).toBe(true);
+		expect(result.data).toBe(text);
+	});
+
+	it("should validate with URL content type and allowed hosts", async () => {
+		const text = "https://example.com/page";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "url", allowedHosts: ["example.com"] },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should fail validation with disallowed host", async () => {
+		const text = "https://evil.com/phishing";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "url", allowedHosts: ["example.com"] },
+		});
+		expect(result.valid).toBe(false);
+		expect(result.error).toBe("Host not allowed");
+	});
+
+	it("should validate with JSON content type", async () => {
+		const text = '{"key": "value"}';
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "json" },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should fail validation with invalid JSON content", async () => {
+		const text = "not json";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "json" },
+		});
+		expect(result.valid).toBe(false);
+		expect(result.error).toBeDefined();
+	});
+
+	it("should validate with startsWith check", async () => {
+		const text = "https://example.com/path";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { startsWith: "https://" },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should fail validation with wrong prefix", async () => {
+		const text = "http://example.com";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { startsWith: "https://" },
+		});
+		expect(result.valid).toBe(false);
+		expect(result.error).toBe("Invalid prefix");
+	});
+
+	it("should validate with regex check", async () => {
+		const text = "ABC-123";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { regex: "^[A-Z]+-\\d+$" },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should fail validation with regex mismatch", async () => {
+		const text = "abc-xyz";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { regex: "^[A-Z]+-\\d+$" },
+		});
+		expect(result.valid).toBe(false);
+		expect(result.error).toBe("Regex mismatch");
+	});
+
+	it("should return invalid for non-QR image", async () => {
+		const svg =
+			'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="white"/></svg>';
+		const png = QrBit.convertSvgToPng(svg);
+		const result = await QrBit.validate(png);
+		expect(result.valid).toBe(false);
+	});
+
+	it("should validate without content options (QR-level only)", async () => {
+		const text = "just plain text";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png);
+		expect(result.valid).toBe(true);
+		expect(result.data).toBe(text);
+	});
+});
+
+describe("QrBit Safe Generate", () => {
+	it("should safely generate a PNG", async () => {
+		const text = "safe png test";
+		const qr = new QrBit({ text });
+		const png = await qr.safeGeneratePng();
+		expect(png).toBeInstanceOf(Buffer);
+		expect(png.length).toBeGreaterThan(0);
+		// Verify it's a valid PNG
+		expect(png[0]).toBe(0x89);
+		expect(png[1]).toBe(0x50);
+	});
+
+	it("should safely generate an SVG", async () => {
+		const text = "safe svg test";
+		const qr = new QrBit({ text });
+		const svg = await qr.safeGenerateSvg();
+		expect(typeof svg).toBe("string");
+		expect(svg).toContain("<svg");
+	});
+
+	it("should safely generate PNG with logo", async () => {
+		const text = "safe logo test";
+		const qr = new QrBit({
+			text,
+			logo: testLogoPathSmall,
+			errorCorrection: "H",
+		});
+		const png = await qr.safeGeneratePng();
+		expect(png).toBeInstanceOf(Buffer);
+		// Verify the generated QR decodes correctly
+		const decoded = await QrBit.decode(png);
+		expect(decoded).toBe(text);
+	});
+
+	it("should safely generate SVG with logo", async () => {
+		const text = "safe svg logo test";
+		const qr = new QrBit({
+			text,
+			logo: testLogoPathSmall,
+			errorCorrection: "H",
+		});
+		const svg = await qr.safeGenerateSvg();
+		expect(svg).toContain("<svg");
+		expect(svg).toContain("data:image/png;base64,");
+	});
+
+	it("should roundtrip: generate then decode matches original text", async () => {
+		const text = "https://github.com/jaredwray/qrbit";
+		const qr = new QrBit({ text });
+		const png = await qr.safeGeneratePng();
+		const decoded = await QrBit.decode(png);
+		expect(decoded).toBe(text);
+	});
+
+	it("should safely generate with custom colors", async () => {
+		const text = "colored qr test";
+		const qr = new QrBit({
+			text,
+			backgroundColor: "#FFFFFF",
+			foregroundColor: "#000000",
+		});
+		const png = await qr.safeGeneratePng();
+		const decoded = await QrBit.decode(png);
+		expect(decoded).toBe(text);
+	});
+});
+
+describe("QrBit Default ECL", () => {
+	it("should default to H error correction level", () => {
+		const qr = new QrBit({ text: "test" });
+		expect(qr.errorCorrection).toBe("H");
+	});
+
+	it("should allow overriding default ECL", () => {
+		const qr = new QrBit({ text: "test", errorCorrection: "L" });
+		expect(qr.errorCorrection).toBe("L");
+	});
+});
+
+describe("QrBit Safe Generate Error Paths", () => {
+	it("safeGeneratePng should throw when QR is not scannable", async () => {
+		const qr = new QrBit({ text: "test" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: false,
+			format: "qr",
+			error: "corrupted",
+		});
+		await expect(qr.safeGeneratePng()).rejects.toThrow(
+			"Generated QR code is not scannable: corrupted",
+		);
+		spy.mockRestore();
+	});
+
+	it("safeGeneratePng should throw when decoded content does not match", async () => {
+		const qr = new QrBit({ text: "expected text" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: true,
+			data: "different text",
+			format: "qr",
+		});
+		await expect(qr.safeGeneratePng()).rejects.toThrow(
+			"Generated QR code content does not match input text",
+		);
+		spy.mockRestore();
+	});
+
+	it("safeGenerateSvg should throw when QR is not scannable", async () => {
+		const qr = new QrBit({ text: "test" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: false,
+			format: "qr",
+			error: "no qr found",
+		});
+		await expect(qr.safeGenerateSvg()).rejects.toThrow(
+			"Generated QR code is not scannable: no qr found",
+		);
+		spy.mockRestore();
+	});
+
+	it("safeGenerateSvg should throw when decoded content does not match", async () => {
+		const qr = new QrBit({ text: "expected text" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: true,
+			data: "wrong text",
+			format: "qr",
+		});
+		await expect(qr.safeGenerateSvg()).rejects.toThrow(
+			"Generated QR code content does not match input text",
+		);
+		spy.mockRestore();
+	});
+
+	it("safeGeneratePng should throw with 'unknown error' when error is undefined", async () => {
+		const qr = new QrBit({ text: "test" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: false,
+			format: "qr",
+		});
+		await expect(qr.safeGeneratePng()).rejects.toThrow(
+			"Generated QR code is not scannable: unknown error",
+		);
+		spy.mockRestore();
+	});
+});
+
+describe("QrBit Validate Edge Cases", () => {
+	it("should fail validation for invalid URL content", async () => {
+		const text = "not a url at all";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "url" },
+		});
+		expect(result.valid).toBe(false);
+		expect(result.error).toBeDefined();
+	});
+
+	it("should validate with content type 'any' (no extra checks)", async () => {
+		const text = "anything goes";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "any" },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should validate with content type 'text' (no extra checks)", async () => {
+		const text = "plain text";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "text" },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should validate URL without allowedHosts constraint", async () => {
+		const text = "https://any-host.com/path";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "url" },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should validate URL with port using hostname not host", async () => {
+		const text = "https://example.com:8080/path";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "url", allowedHosts: ["example.com"] },
+		});
+		expect(result.valid).toBe(true);
 	});
 });
