@@ -806,7 +806,7 @@ export class QrBit extends Hookified {
 
 		if (type === "url") {
 			const url = new URL(value);
-			if (allowedHosts && !allowedHosts.includes(url.host)) {
+			if (allowedHosts && !allowedHosts.includes(url.hostname)) {
 				throw new Error("Host not allowed");
 			}
 		}

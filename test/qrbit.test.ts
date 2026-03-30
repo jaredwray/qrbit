@@ -1211,4 +1211,14 @@ describe("QrBit Validate Edge Cases", () => {
 		});
 		expect(result.valid).toBe(true);
 	});
+
+	it("should validate URL with port using hostname not host", async () => {
+		const text = "https://example.com:8080/path";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "url", allowedHosts: ["example.com"] },
+		});
+		expect(result.valid).toBe(true);
+	});
 });
