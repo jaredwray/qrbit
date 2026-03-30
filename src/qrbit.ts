@@ -711,9 +711,9 @@ export class QrBit extends Hookified {
 		const buffer = await QrBit.resolveInput(input);
 		const result = nativeValidateQr(buffer) as DecodeResult;
 
-		if (result.valid && result.data && options?.content) {
+		if (result.valid && result.data != null && options?.content) {
 			try {
-				QrBit.validateDecodedPayload(result.data, options);
+				QrBit.validateDecodedPayload(result.data, options.content);
 			} catch (error: unknown) {
 				return {
 					...result,
@@ -800,13 +800,9 @@ export class QrBit extends Hookified {
 	 */
 	private static validateDecodedPayload(
 		value: string,
-		options?: ValidateOptions,
+		content: NonNullable<ValidateOptions["content"]>,
 	): boolean {
-		if (!options?.content) {
-			return true;
-		}
-
-		const { type, allowedHosts, startsWith, regex } = options.content;
+		const { type, allowedHosts, startsWith, regex } = content;
 
 		if (type === "url") {
 			const url = new URL(value);

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { faker } from "@faker-js/faker";
 import { Cacheable } from "cacheable";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QrBit } from "../src/qrbit";
 
 const testLogoPath = "test/fixtures/test_logo.png";
@@ -1101,5 +1101,114 @@ describe("QrBit Default ECL", () => {
 	it("should allow overriding default ECL", () => {
 		const qr = new QrBit({ text: "test", errorCorrection: "L" });
 		expect(qr.errorCorrection).toBe("L");
+	});
+});
+
+describe("QrBit Safe Generate Error Paths", () => {
+	it("safeGeneratePng should throw when QR is not scannable", async () => {
+		const qr = new QrBit({ text: "test" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: false,
+			format: "qr",
+			error: "corrupted",
+		});
+		await expect(qr.safeGeneratePng()).rejects.toThrow(
+			"Generated QR code is not scannable: corrupted",
+		);
+		spy.mockRestore();
+	});
+
+	it("safeGeneratePng should throw when decoded content does not match", async () => {
+		const qr = new QrBit({ text: "expected text" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: true,
+			data: "different text",
+			format: "qr",
+		});
+		await expect(qr.safeGeneratePng()).rejects.toThrow(
+			"Generated QR code content does not match input text",
+		);
+		spy.mockRestore();
+	});
+
+	it("safeGenerateSvg should throw when QR is not scannable", async () => {
+		const qr = new QrBit({ text: "test" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: false,
+			format: "qr",
+			error: "no qr found",
+		});
+		await expect(qr.safeGenerateSvg()).rejects.toThrow(
+			"Generated QR code is not scannable: no qr found",
+		);
+		spy.mockRestore();
+	});
+
+	it("safeGenerateSvg should throw when decoded content does not match", async () => {
+		const qr = new QrBit({ text: "expected text" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: true,
+			data: "wrong text",
+			format: "qr",
+		});
+		await expect(qr.safeGenerateSvg()).rejects.toThrow(
+			"Generated QR code content does not match input text",
+		);
+		spy.mockRestore();
+	});
+
+	it("safeGeneratePng should throw with 'unknown error' when error is undefined", async () => {
+		const qr = new QrBit({ text: "test" });
+		const spy = vi.spyOn(QrBit, "decodeDetailed").mockResolvedValueOnce({
+			valid: false,
+			format: "qr",
+		});
+		await expect(qr.safeGeneratePng()).rejects.toThrow(
+			"Generated QR code is not scannable: unknown error",
+		);
+		spy.mockRestore();
+	});
+});
+
+describe("QrBit Validate Edge Cases", () => {
+	it("should fail validation for invalid URL content", async () => {
+		const text = "not a url at all";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "url" },
+		});
+		expect(result.valid).toBe(false);
+		expect(result.error).toBeDefined();
+	});
+
+	it("should validate with content type 'any' (no extra checks)", async () => {
+		const text = "anything goes";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "any" },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should validate with content type 'text' (no extra checks)", async () => {
+		const text = "plain text";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "text" },
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it("should validate URL without allowedHosts constraint", async () => {
+		const text = "https://any-host.com/path";
+		const qr = new QrBit({ text });
+		const png = await qr.toPng();
+		const result = await QrBit.validate(png, {
+			content: { type: "url" },
+		});
+		expect(result.valid).toBe(true);
 	});
 });

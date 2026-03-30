@@ -545,6 +545,8 @@ fn decode_qr_from_image(input: &[u8]) -> std::result::Result<DecodeResult, Strin
     let mut decoder = Quirc::new();
     let codes = decoder.identify(width as usize, height as usize, &gray);
 
+    let mut last_error: Option<String> = None;
+
     for code in codes {
         match code {
             Ok(code) => {
@@ -567,26 +569,12 @@ fn decode_qr_from_image(input: &[u8]) -> std::result::Result<DecodeResult, Strin
                         });
                     }
                     Err(e) => {
-                        return Ok(DecodeResult {
-                            valid: false,
-                            data: None,
-                            format: "qr".to_string(),
-                            version: None,
-                            ecl: None,
-                            error: Some(format!("QR decode failed: {}", e)),
-                        });
+                        last_error = Some(format!("QR decode failed: {}", e));
                     }
                 }
             }
             Err(e) => {
-                return Ok(DecodeResult {
-                    valid: false,
-                    data: None,
-                    format: "qr".to_string(),
-                    version: None,
-                    ecl: None,
-                    error: Some(format!("QR identification failed: {}", e)),
-                });
+                last_error = Some(format!("QR identification failed: {}", e));
             }
         }
     }
@@ -597,7 +585,7 @@ fn decode_qr_from_image(input: &[u8]) -> std::result::Result<DecodeResult, Strin
         format: "qr".to_string(),
         version: None,
         ecl: None,
-        error: Some("No QR code found in image".to_string()),
+        error: Some(last_error.unwrap_or_else(|| "No QR code found in image".to_string())),
     })
 }
 
