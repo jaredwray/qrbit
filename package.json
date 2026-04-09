@@ -47,10 +47,12 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.10",
+		"@emnapi/core": "^1.9.2",
+		"@emnapi/runtime": "^1.9.2",
 		"@faker-js/faker": "^10.4.0",
 		"@loskir/styled-qr-code-node": "^1.5.2",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
-		"@napi-rs/cli": "^3.5.0",
+		"@napi-rs/cli": "^3.6.0",
 		"@types/node": "^25.5.2",
 		"@types/qrcode": "^1.5.6",
 		"@vitest/coverage-v8": "^4.1.3",
