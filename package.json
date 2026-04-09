@@ -50,7 +50,7 @@
 		"@emnapi/core": "^1.9.2",
 		"@emnapi/runtime": "^1.9.2",
 		"@faker-js/faker": "^10.4.0",
-		"@loskir/styled-qr-code-node": "^1.5.2",
+		"@loskir/styled-qr-code-node": "^2.0.0",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
 		"@napi-rs/cli": "^3.6.0",
 		"@types/node": "^25.5.2",
