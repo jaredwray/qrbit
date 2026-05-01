@@ -577,14 +577,16 @@ fn try_decode_luma(
 fn decode_qr_from_image(input: &[u8]) -> std::result::Result<DecodeResult, String> {
     let img = image::load_from_memory(input)
         .map_err(|e| format!("Failed to load image: {}", e))?;
-    let gray = img.to_luma8();
+    let mut gray = img.to_luma8();
     let (width, height) = gray.dimensions();
 
     match try_decode_luma(&gray, width, height) {
         Ok(result) => return Ok(result),
         Err(first_error) => {
-            let inverted: Vec<u8> = gray.iter().map(|p| 255 - p).collect();
-            match try_decode_luma(&inverted, width, height) {
+            for p in gray.iter_mut() {
+                *p = 255 - *p;
+            }
+            match try_decode_luma(&gray, width, height) {
                 Ok(result) => return Ok(result),
                 Err(second_error) => {
                     let error = second_error
