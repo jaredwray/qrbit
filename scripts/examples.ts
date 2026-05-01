@@ -12,7 +12,7 @@ export type ExampleSpec = {
 	toOptions?: toOptions;
 };
 
-export const LOGO_PATH = "./test/fixtures/test_logo.png";
+export const LOGO_PATH = "./test/fixtures/test_logo_large.png";
 
 export function buildOptions(spec: ExampleSpec): QrOptions {
 	const { logo, ...rest } = spec.options;

@@ -4,7 +4,7 @@ import { Cacheable } from "cacheable";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QrBit } from "../src/qrbit";
 
-const testLogoPath = "test/fixtures/test_logo.png";
+const testLogoPath = "test/fixtures/test_logo_large.png";
 const testLogoPathSmall = "test/fixtures/test_logo_small.png";
 
 describe("QrBit Class", () => {
