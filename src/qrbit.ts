@@ -408,9 +408,11 @@ export class QrBit extends Hookified {
 		};
 
 		// check the cache
-		if (this._cache && options?.cache !== false) {
-			const key = await this.generateCacheKey(renderKey);
-			const cached = await this._cache.get<string>(key);
+		const cache = options?.cache !== false ? this._cache : undefined;
+		let cacheKey: string | undefined;
+		if (cache) {
+			cacheKey = await this.generateCacheKey(renderKey);
+			const cached = await cache.get<string>(cacheKey);
 			if (cached) {
 				return cached;
 			}
@@ -441,11 +443,8 @@ export class QrBit extends Hookified {
 			result = await this.toSvgNapi();
 		}
 
-		if (this._cache && options?.cache !== false) {
-			// set the cache, generate the key from hash
-			const key = await this.generateCacheKey(renderKey);
-			// cache the value
-			await this._cache.set(key, result);
+		if (cache && cacheKey) {
+			await cache.set(cacheKey, result);
 		}
 
 		return result;
@@ -513,9 +512,11 @@ export class QrBit extends Hookified {
 		const renderKey = `napi-png`;
 
 		// check the cache
-		if (this._cache && options?.cache !== false) {
-			const key = await this.generateCacheKey(renderKey);
-			const cached = await this._cache.get<Buffer>(key);
+		const cache = options?.cache !== false ? this._cache : undefined;
+		let cacheKey: string | undefined;
+		if (cache) {
+			cacheKey = await this.generateCacheKey(renderKey);
+			const cached = await cache.get<Buffer>(cacheKey);
 			if (cached) {
 				// Ensure we return a Buffer, not Uint8Array
 				return Buffer.from(cached);
@@ -525,11 +526,8 @@ export class QrBit extends Hookified {
 		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToPng(svg);
 
-		if (this._cache && options?.cache !== false) {
-			// set the cache, generate the key from hash
-			const key = await this.generateCacheKey(renderKey);
-			// cache the value
-			await this._cache.set(key, result);
+		if (cache && cacheKey) {
+			await cache.set(cacheKey, result);
 		}
 
 		return result;
@@ -567,9 +565,11 @@ export class QrBit extends Hookified {
 		const renderKey = `napi-jpeg-${quality}`;
 
 		// check the cache
-		if (this._cache && options?.cache !== false) {
-			const key = await this.generateCacheKey(renderKey);
-			const cached = await this._cache.get<Buffer>(key);
+		const cache = options?.cache !== false ? this._cache : undefined;
+		let cacheKey: string | undefined;
+		if (cache) {
+			cacheKey = await this.generateCacheKey(renderKey);
+			const cached = await cache.get<Buffer>(cacheKey);
 			if (cached) {
 				// Ensure we return a Buffer, not Uint8Array
 				return Buffer.from(cached);
@@ -579,11 +579,8 @@ export class QrBit extends Hookified {
 		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToJpeg(svg, undefined, undefined, quality);
 
-		if (this._cache && options?.cache !== false) {
-			// set the cache, generate the key from hash
-			const key = await this.generateCacheKey(renderKey);
-			// cache the value
-			await this._cache.set(key, result);
+		if (cache && cacheKey) {
+			await cache.set(cacheKey, result);
 		}
 
 		return result;
@@ -623,9 +620,11 @@ export class QrBit extends Hookified {
 		const renderKey = `napi-webp-${quality}`;
 
 		// check the cache
-		if (this._cache && options?.cache !== false) {
-			const key = await this.generateCacheKey(renderKey);
-			const cached = await this._cache.get<Buffer>(key);
+		const cache = options?.cache !== false ? this._cache : undefined;
+		let cacheKey: string | undefined;
+		if (cache) {
+			cacheKey = await this.generateCacheKey(renderKey);
+			const cached = await cache.get<Buffer>(cacheKey);
 			if (cached) {
 				// Ensure we return a Buffer, not Uint8Array
 				return Buffer.from(cached);
@@ -635,11 +634,8 @@ export class QrBit extends Hookified {
 		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToWebp(svg);
 
-		if (this._cache && options?.cache !== false) {
-			// set the cache, generate the key from hash
-			const key = await this.generateCacheKey(renderKey);
-			// cache the value
-			await this._cache.set(key, result);
+		if (cache && cacheKey) {
+			await cache.set(cacheKey, result);
 		}
 
 		return result;

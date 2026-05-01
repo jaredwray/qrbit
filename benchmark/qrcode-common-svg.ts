@@ -21,7 +21,6 @@ const urls = Array.from({ length: 10000 }, () => faker.internet.url());
 bench.add(`QrBit toSvg (Native) (v${qrbitVersion})`, async () => {
 	qr.text = urls[Math.floor(Math.random() * urls.length)];
 	await qr.toSvg();
-	await qr.toSvg();
 });
 
 bench.add(`QrBit toSvg (Rust) (v${qrbitVersion})`, async () => {

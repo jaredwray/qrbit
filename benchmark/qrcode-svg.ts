@@ -18,7 +18,6 @@ const qr = new QrBit({ text: faker.internet.url() });
 bench.add(`QrBit toSvg (Native) (v${qrbitVersion})`, async () => {
 	qr.text = faker.internet.url();
 	await qr.toSvg();
-	await qr.toSvg();
 });
 
 bench.add(`QrBit toSvg (Rust) (v${qrbitVersion})`, async () => {
