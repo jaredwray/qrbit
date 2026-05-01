@@ -5,7 +5,7 @@ import pkg from "../package.json";
 import { QrBit } from "../src/qrbit.js";
 import { cleanVersion } from "./utils.js";
 import {QRCodeCanvas} from '@loskir/styled-qr-code-node';
-import { faker } from "@faker-js/faker/locale/zu_ZA";
+import { faker } from "@faker-js/faker";
 
 const bench = new Bench({ name: "QR Codes with Embedded Logos", iterations: 100 });
 

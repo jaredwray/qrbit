@@ -4,7 +4,7 @@ import { Cacheable } from "cacheable";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QrBit } from "../src/qrbit";
 
-const testLogoPath = "test/fixtures/test_logo.png";
+const testLogoPath = "test/fixtures/test_logo_large.png";
 const testLogoPathSmall = "test/fixtures/test_logo_small.png";
 
 describe("QrBit Class", () => {
@@ -1085,6 +1085,167 @@ describe("QrBit Safe Generate", () => {
 			text,
 			backgroundColor: "#FFFFFF",
 			foregroundColor: "#000000",
+		});
+		const png = await qr.safeGeneratePng();
+		const decoded = await QrBit.decode(png);
+		expect(decoded).toBe(text);
+	});
+});
+
+describe("Logo Background Patch", () => {
+	function countOccurrences(haystack: string, needle: string): number {
+		let count = 0;
+		let idx = haystack.indexOf(needle);
+		while (idx !== -1) {
+			count++;
+			idx = haystack.indexOf(needle, idx + needle.length);
+		}
+		return count;
+	}
+
+	it("should default logoBackgroundColor to backgroundColor", () => {
+		const qr = new QrBit({
+			text: "default patch",
+			logo: testLogoPathSmall,
+			backgroundColor: "#ABCDEF",
+		});
+		expect(qr.logoBackgroundColor).toBe("#ABCDEF");
+	});
+
+	it("should default logoPaddingRatio to 0.1", () => {
+		const qr = new QrBit({ text: "default padding" });
+		expect(qr.logoPaddingRatio).toBe(0.1);
+	});
+
+	it("should render a backing rect by default for logo SVG", async () => {
+		const qr = new QrBit({
+			text: "patch present",
+			logo: testLogoPathSmall,
+			backgroundColor: "#FFFFFF",
+		});
+		const svg = await qr.toSvg();
+		// QR background rect uses 100% sizing; the patch is a sized rect with the same fill.
+		expect(svg).toContain('fill="rgb(255,255,255)"');
+		// Two rect elements with the white fill: one full-canvas background,
+		// one logo backing patch.
+		expect(
+			countOccurrences(svg, 'fill="rgb(255,255,255)"'),
+		).toBeGreaterThanOrEqual(2);
+	});
+
+	it("should not render a backing rect when logoBackgroundColor is false", async () => {
+		const qr = new QrBit({
+			text: "no patch",
+			logo: testLogoPathSmall,
+			logoBackgroundColor: false,
+			backgroundColor: "#FFFFFF",
+		});
+		const svg = await qr.toSvg();
+		expect(qr.logoBackgroundColor).toBeUndefined();
+		// Only the full-canvas background uses the white fill.
+		expect(countOccurrences(svg, 'fill="rgb(255,255,255)"')).toBe(1);
+	});
+
+	it("should honor a custom logoBackgroundColor", async () => {
+		const qr = new QrBit({
+			text: "custom patch",
+			logo: testLogoPathSmall,
+			logoBackgroundColor: "#FF00FF",
+			backgroundColor: "#FFFFFF",
+		});
+		const svg = await qr.toSvg();
+		expect(svg).toContain('fill="rgb(255,0,255)"');
+	});
+
+	it("should size the patch using logoPaddingRatio", async () => {
+		const baseOptions = {
+			text: "padding compare",
+			logo: testLogoPathSmall,
+			size: 200,
+			logoSizeRatio: 0.2,
+			backgroundColor: "#FFFFFF",
+		};
+		const noPad = await new QrBit({
+			...baseOptions,
+			logoPaddingRatio: 0,
+		}).toSvg();
+		const padded = await new QrBit({
+			...baseOptions,
+			logoPaddingRatio: 0.25,
+		}).toSvg();
+		// With padding 0 the patch matches the logo dimensions (40x40 for size 200, ratio 0.2)
+		expect(noPad).toContain('width="40"');
+		// With padding 0.25 per side the patch is 60x60.
+		expect(padded).toContain('width="60"');
+	});
+
+	it("should render a buffer-logo SVG with a backing rect by default", async () => {
+		const logoBuffer = fs.readFileSync(testLogoPathSmall);
+		const qr = new QrBit({
+			text: "buffer patch",
+			logo: logoBuffer,
+			backgroundColor: "#FFFFFF",
+		});
+		const svg = await qr.toSvgNapi();
+		expect(
+			countOccurrences(svg, 'fill="rgb(255,255,255)"'),
+		).toBeGreaterThanOrEqual(2);
+	});
+
+	it("should produce different cache keys when logoBackgroundColor changes", async () => {
+		const text = "cache invalidation";
+		const qrWith = new QrBit({
+			text,
+			logo: testLogoPathSmall,
+			logoBackgroundColor: "#FFFFFF",
+		});
+		const qrWithout = new QrBit({
+			text,
+			logo: testLogoPathSmall,
+			logoBackgroundColor: false,
+		});
+		const keyWith = await qrWith.generateCacheKey("napi-svg");
+		const keyWithout = await qrWithout.generateCacheKey("napi-svg");
+		expect(keyWith).not.toBe(keyWithout);
+	});
+
+	it("should produce different cache keys when logoPaddingRatio changes", async () => {
+		const text = "padding cache";
+		const qrA = new QrBit({
+			text,
+			logo: testLogoPathSmall,
+			logoPaddingRatio: 0.1,
+		});
+		const qrB = new QrBit({
+			text,
+			logo: testLogoPathSmall,
+			logoPaddingRatio: 0.3,
+		});
+		const keyA = await qrA.generateCacheKey("napi-svg");
+		const keyB = await qrB.generateCacheKey("napi-svg");
+		expect(keyA).not.toBe(keyB);
+	});
+
+	it("should expose getter and setter for logoBackgroundColor", () => {
+		const qr = new QrBit({ text: "setter" });
+		qr.logoBackgroundColor = "#112233";
+		expect(qr.logoBackgroundColor).toBe("#112233");
+		qr.logoBackgroundColor = false;
+		expect(qr.logoBackgroundColor).toBeUndefined();
+	});
+
+	it("should expose getter and setter for logoPaddingRatio", () => {
+		const qr = new QrBit({ text: "setter ratio" });
+		qr.logoPaddingRatio = 0.25;
+		expect(qr.logoPaddingRatio).toBe(0.25);
+	});
+
+	it("should keep generated QR scannable with default backing patch", async () => {
+		const text = "scannable with patch";
+		const qr = new QrBit({
+			text,
+			logo: testLogoPathSmall,
+			errorCorrection: "H",
 		});
 		const png = await qr.safeGeneratePng();
 		const decoded = await QrBit.decode(png);

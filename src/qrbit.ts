@@ -63,6 +63,22 @@ export type QrOptions = {
 	 */
 	logoSizeRatio?: number;
 	/**
+	 * Background color rendered behind the logo so transparent areas of
+	 * the logo don't reveal the underlying QR modules. Pass `false` to
+	 * disable the patch and overlay the logo directly on the QR.
+	 * @type {string | false}
+	 * @default backgroundColor
+	 */
+	logoBackgroundColor?: string | false;
+	/**
+	 * Padding around the logo for the backing patch, expressed as a
+	 * ratio of the logo size on each side. e.g. 0.1 makes the patch
+	 * 1.2x the logo size.
+	 * @type {number}
+	 * @default 0.1
+	 */
+	logoPaddingRatio?: number;
+	/**
 	 * The background color of the QR code.
 	 * @type {string}
 	 * @default "#FFFFFF"
@@ -130,6 +146,8 @@ export class QrBit extends Hookified {
 	private _margin: number | undefined;
 	private _logo: string | Buffer | undefined;
 	private _logoSizeRatio: number;
+	private _logoBackgroundColor: string | undefined;
+	private _logoPaddingRatio: number;
 	private _backgroundColor: string;
 	private _foregroundColor: string;
 	private _errorCorrection: ECLevel;
@@ -158,6 +176,11 @@ export class QrBit extends Hookified {
 		this._logoSizeRatio = options.logoSizeRatio ?? 0.2;
 		this._backgroundColor = options.backgroundColor ?? "#FFFFFF";
 		this._foregroundColor = options.foregroundColor ?? "#000000";
+		this._logoBackgroundColor =
+			options.logoBackgroundColor === false
+				? undefined
+				: (options.logoBackgroundColor ?? this._backgroundColor);
+		this._logoPaddingRatio = options.logoPaddingRatio ?? 0.1;
 		this._errorCorrection = options.errorCorrection ?? "H";
 		if (options.cache !== undefined) {
 			// if it is boolean and true then create a new cacheable instance
@@ -256,6 +279,42 @@ export class QrBit extends Hookified {
 	}
 
 	/**
+	 * Get the background color rendered behind the logo, or undefined
+	 * if the backing patch is disabled.
+	 * @returns {string | undefined} The logo background color in hex format
+	 */
+	public get logoBackgroundColor(): string | undefined {
+		return this._logoBackgroundColor;
+	}
+
+	/**
+	 * Set the background color rendered behind the logo. Pass `false`
+	 * to disable the patch entirely.
+	 * @param value - The logo background color, or `false` to disable
+	 */
+	public set logoBackgroundColor(value: string | false | undefined) {
+		this._logoBackgroundColor =
+			value === false || value === undefined ? undefined : value;
+	}
+
+	/**
+	 * Get the logo padding ratio.
+	 * @returns {number} The logo padding ratio per side
+	 * @default 0.1
+	 */
+	public get logoPaddingRatio(): number {
+		return this._logoPaddingRatio;
+	}
+
+	/**
+	 * Set the logo padding ratio per side.
+	 * @param value - The padding ratio (0.0 or higher)
+	 */
+	public set logoPaddingRatio(value: number) {
+		this._logoPaddingRatio = value;
+	}
+
+	/**
 	 * Get the background color of the QR code.
 	 * @returns {string} The background color in hex format
 	 * @default "#FFFFFF"
@@ -349,9 +408,11 @@ export class QrBit extends Hookified {
 		};
 
 		// check the cache
-		if (this._cache && options?.cache !== false) {
-			const key = await this.generateCacheKey(renderKey);
-			const cached = await this._cache.get<string>(key);
+		const cache = options?.cache !== false ? this._cache : undefined;
+		let cacheKey: string | undefined;
+		if (cache) {
+			cacheKey = await this.generateCacheKey(renderKey);
+			const cached = await cache.get<string>(cacheKey);
 			if (cached) {
 				return cached;
 			}
@@ -382,11 +443,8 @@ export class QrBit extends Hookified {
 			result = await this.toSvgNapi();
 		}
 
-		if (this._cache && options?.cache !== false) {
-			// set the cache, generate the key from hash
-			const key = await this.generateCacheKey(renderKey);
-			// cache the value
-			await this._cache.set(key, result);
+		if (cache && cacheKey) {
+			await cache.set(cacheKey, result);
 		}
 
 		return result;
@@ -407,6 +465,8 @@ export class QrBit extends Hookified {
 				margin: this._margin,
 				logoBuffer: this._logo,
 				logoSizeRatio: this._logoSizeRatio,
+				logoBackgroundColor: this._logoBackgroundColor,
+				logoPaddingRatio: this._logoPaddingRatio,
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
 				errorCorrection: this._errorCorrection,
@@ -420,6 +480,8 @@ export class QrBit extends Hookified {
 				margin: this._margin,
 				logoPath: this._logo as string,
 				logoSizeRatio: this._logoSizeRatio,
+				logoBackgroundColor: this._logoBackgroundColor,
+				logoPaddingRatio: this._logoPaddingRatio,
 				backgroundColor: this._backgroundColor,
 				foregroundColor: this._foregroundColor,
 				errorCorrection: this._errorCorrection,
@@ -450,9 +512,11 @@ export class QrBit extends Hookified {
 		const renderKey = `napi-png`;
 
 		// check the cache
-		if (this._cache && options?.cache !== false) {
-			const key = await this.generateCacheKey(renderKey);
-			const cached = await this._cache.get<Buffer>(key);
+		const cache = options?.cache !== false ? this._cache : undefined;
+		let cacheKey: string | undefined;
+		if (cache) {
+			cacheKey = await this.generateCacheKey(renderKey);
+			const cached = await cache.get<Buffer>(cacheKey);
 			if (cached) {
 				// Ensure we return a Buffer, not Uint8Array
 				return Buffer.from(cached);
@@ -462,11 +526,8 @@ export class QrBit extends Hookified {
 		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToPng(svg);
 
-		if (this._cache && options?.cache !== false) {
-			// set the cache, generate the key from hash
-			const key = await this.generateCacheKey(renderKey);
-			// cache the value
-			await this._cache.set(key, result);
+		if (cache && cacheKey) {
+			await cache.set(cacheKey, result);
 		}
 
 		return result;
@@ -504,9 +565,11 @@ export class QrBit extends Hookified {
 		const renderKey = `napi-jpeg-${quality}`;
 
 		// check the cache
-		if (this._cache && options?.cache !== false) {
-			const key = await this.generateCacheKey(renderKey);
-			const cached = await this._cache.get<Buffer>(key);
+		const cache = options?.cache !== false ? this._cache : undefined;
+		let cacheKey: string | undefined;
+		if (cache) {
+			cacheKey = await this.generateCacheKey(renderKey);
+			const cached = await cache.get<Buffer>(cacheKey);
 			if (cached) {
 				// Ensure we return a Buffer, not Uint8Array
 				return Buffer.from(cached);
@@ -516,11 +579,8 @@ export class QrBit extends Hookified {
 		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToJpeg(svg, undefined, undefined, quality);
 
-		if (this._cache && options?.cache !== false) {
-			// set the cache, generate the key from hash
-			const key = await this.generateCacheKey(renderKey);
-			// cache the value
-			await this._cache.set(key, result);
+		if (cache && cacheKey) {
+			await cache.set(cacheKey, result);
 		}
 
 		return result;
@@ -560,9 +620,11 @@ export class QrBit extends Hookified {
 		const renderKey = `napi-webp-${quality}`;
 
 		// check the cache
-		if (this._cache && options?.cache !== false) {
-			const key = await this.generateCacheKey(renderKey);
-			const cached = await this._cache.get<Buffer>(key);
+		const cache = options?.cache !== false ? this._cache : undefined;
+		let cacheKey: string | undefined;
+		if (cache) {
+			cacheKey = await this.generateCacheKey(renderKey);
+			const cached = await cache.get<Buffer>(cacheKey);
 			if (cached) {
 				// Ensure we return a Buffer, not Uint8Array
 				return Buffer.from(cached);
@@ -572,11 +634,8 @@ export class QrBit extends Hookified {
 		const svg = await this.toSvg(options);
 		result = QrBit.convertSvgToWebp(svg);
 
-		if (this._cache && options?.cache !== false) {
-			// set the cache, generate the key from hash
-			const key = await this.generateCacheKey(renderKey);
-			// cache the value
-			await this._cache.set(key, result);
+		if (cache && cacheKey) {
+			await cache.set(cacheKey, result);
 		}
 
 		return result;
@@ -838,6 +897,8 @@ export class QrBit extends Hookified {
 			margin: this._margin,
 			logo: this._logo || undefined,
 			logoSizeRatio: this._logoSizeRatio,
+			logoBackgroundColor: this._logoBackgroundColor,
+			logoPaddingRatio: this._logoPaddingRatio,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
 			errorCorrection: this._errorCorrection,
