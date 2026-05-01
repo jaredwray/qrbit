@@ -536,57 +536,74 @@ pub struct DecodeResult {
     pub error: Option<String>,
 }
 
-fn decode_qr_from_image(input: &[u8]) -> std::result::Result<DecodeResult, String> {
-    let img = image::load_from_memory(input)
-        .map_err(|e| format!("Failed to load image: {}", e))?;
-    let gray = img.to_luma8();
-    let (width, height) = gray.dimensions();
-
+fn try_decode_luma(
+    luma: &[u8],
+    width: u32,
+    height: u32,
+) -> std::result::Result<DecodeResult, Option<String>> {
     let mut decoder = Quirc::new();
-    let codes = decoder.identify(width as usize, height as usize, &gray);
-
+    let codes = decoder.identify(width as usize, height as usize, luma);
     let mut last_error: Option<String> = None;
 
     for code in codes {
         match code {
-            Ok(code) => {
-                match code.decode() {
-                    Ok(data) => {
-                        let ecl_str = match data.ecc_level {
-                            quircs::EccLevel::L => "L",
-                            quircs::EccLevel::M => "M",
-                            quircs::EccLevel::Q => "Q",
-                            quircs::EccLevel::H => "H",
-                        };
-                        let payload = String::from_utf8_lossy(&data.payload).to_string();
-                        return Ok(DecodeResult {
-                            valid: true,
-                            data: Some(payload),
-                            format: "qr".to_string(),
-                            version: Some(data.version as u32),
-                            ecl: Some(ecl_str.to_string()),
-                            error: None,
-                        });
-                    }
-                    Err(e) => {
-                        last_error = Some(format!("QR decode failed: {}", e));
-                    }
+            Ok(code) => match code.decode() {
+                Ok(data) => {
+                    let ecl_str = match data.ecc_level {
+                        quircs::EccLevel::L => "L",
+                        quircs::EccLevel::M => "M",
+                        quircs::EccLevel::Q => "Q",
+                        quircs::EccLevel::H => "H",
+                    };
+                    let payload = String::from_utf8_lossy(&data.payload).to_string();
+                    return Ok(DecodeResult {
+                        valid: true,
+                        data: Some(payload),
+                        format: "qr".to_string(),
+                        version: Some(data.version as u32),
+                        ecl: Some(ecl_str.to_string()),
+                        error: None,
+                    });
                 }
-            }
-            Err(e) => {
-                last_error = Some(format!("QR identification failed: {}", e));
-            }
+                Err(e) => last_error = Some(format!("QR decode failed: {}", e)),
+            },
+            Err(e) => last_error = Some(format!("QR identification failed: {}", e)),
         }
     }
 
-    Ok(DecodeResult {
-        valid: false,
-        data: None,
-        format: "qr".to_string(),
-        version: None,
-        ecl: None,
-        error: Some(last_error.unwrap_or_else(|| "No QR code found in image".to_string())),
-    })
+    Err(last_error)
+}
+
+fn decode_qr_from_image(input: &[u8]) -> std::result::Result<DecodeResult, String> {
+    let img = image::load_from_memory(input)
+        .map_err(|e| format!("Failed to load image: {}", e))?;
+    let mut gray = img.to_luma8();
+    let (width, height) = gray.dimensions();
+
+    match try_decode_luma(&gray, width, height) {
+        Ok(result) => return Ok(result),
+        Err(first_error) => {
+            for p in gray.iter_mut() {
+                *p = 255 - *p;
+            }
+            match try_decode_luma(&gray, width, height) {
+                Ok(result) => return Ok(result),
+                Err(second_error) => {
+                    let error = second_error
+                        .or(first_error)
+                        .unwrap_or_else(|| "No QR code found in image".to_string());
+                    Ok(DecodeResult {
+                        valid: false,
+                        data: None,
+                        format: "qr".to_string(),
+                        version: None,
+                        ecl: None,
+                        error: Some(error),
+                    })
+                }
+            }
+        }
+    }
 }
 
 #[napi]
