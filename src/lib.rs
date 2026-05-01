@@ -13,6 +13,8 @@ pub struct QrOptions {
     pub margin: Option<u32>,
     pub logo_path: Option<String>,
     pub logo_size_ratio: Option<f64>,
+    pub logo_background_color: Option<String>,
+    pub logo_padding_ratio: Option<f64>,
     pub background_color: Option<String>,
     pub foreground_color: Option<String>,
     pub error_correction: Option<String>,
@@ -25,6 +27,8 @@ pub struct QrOptionsWithBuffer {
     pub margin: Option<u32>,
     pub logo_buffer: Option<Buffer>,
     pub logo_size_ratio: Option<f64>,
+    pub logo_background_color: Option<String>,
+    pub logo_padding_ratio: Option<f64>,
     pub background_color: Option<String>,
     pub foreground_color: Option<String>,
     pub error_correction: Option<String>,
@@ -121,23 +125,29 @@ impl QrGenerator {
         Ok(img)
     }
 
-    pub fn generate_svg(&self, logo_path: Option<&str>, logo_size_ratio: f64) -> napi::Result<String> {
+    pub fn generate_svg(
+        &self,
+        logo_path: Option<&str>,
+        logo_size_ratio: f64,
+        logo_background_color: Option<[u8; 4]>,
+        logo_padding_ratio: f64,
+    ) -> napi::Result<String> {
         use svg::node::element::{Rectangle, Image as SvgImage};
         use svg::Document;
-        
+
         let qr_width = self.code.width();
         let module_size = self.size as f64 / qr_width as f64;
         let total_size = self.size as f64 + 2.0 * self.margin as f64;
-        
+
         let mut document = Document::new()
             .set("width", total_size)
             .set("height", total_size)
             .set("viewBox", (0, 0, total_size as i32, total_size as i32));
-        
+
         // Background
-        let bg_color = format!("rgb({},{},{})", 
-            self.background_color[0], 
-            self.background_color[1], 
+        let bg_color = format!("rgb({},{},{})",
+            self.background_color[0],
+            self.background_color[1],
             self.background_color[2]
         );
         let background = Rectangle::new()
@@ -145,38 +155,56 @@ impl QrGenerator {
             .set("height", "100%")
             .set("fill", bg_color);
         document = document.add(background);
-        
+
         // QR modules
-        let fg_color = format!("rgb({},{},{})", 
-            self.foreground_color[0], 
-            self.foreground_color[1], 
+        let fg_color = format!("rgb({},{},{})",
+            self.foreground_color[0],
+            self.foreground_color[1],
             self.foreground_color[2]
         );
-        
+
         for (y, row) in self.code.render::<char>().quiet_zone(false).build().lines().enumerate() {
             for (x, pixel) in row.chars().enumerate() {
                 if pixel == '█' {
                     let start_x = self.margin as f64 + x as f64 * module_size;
                     let start_y = self.margin as f64 + y as f64 * module_size;
-                    
+
                     let rect = Rectangle::new()
                         .set("x", start_x)
                         .set("y", start_y)
                         .set("width", module_size)
                         .set("height", module_size)
                         .set("fill", fg_color.as_str());
-                    
+
                     document = document.add(rect);
                 }
             }
         }
-        
+
         // Add logo if provided
         if let Some(logo_path) = logo_path {
             let logo_size = (self.size as f64) * logo_size_ratio;
             let center_x = (total_size - logo_size) / 2.0;
             let center_y = (total_size - logo_size) / 2.0;
-            
+
+            // Knockout patch behind the logo so transparent areas don't reveal QR modules
+            if let Some(patch_color) = logo_background_color {
+                let patch_size = logo_size * (1.0 + 2.0 * logo_padding_ratio);
+                let patch_x = (total_size - patch_size) / 2.0;
+                let patch_y = (total_size - patch_size) / 2.0;
+                let patch_fill = format!(
+                    "rgb({},{},{})",
+                    patch_color[0], patch_color[1], patch_color[2]
+                );
+                let patch = Rectangle::new()
+                    .set("x", patch_x)
+                    .set("y", patch_y)
+                    .set("width", patch_size)
+                    .set("height", patch_size)
+                    .set("fill", patch_fill);
+                document = document.add(patch);
+            }
+
             // Read logo file and convert to base64 data URL
             let data_url = match std::fs::read(logo_path) {
                 Ok(logo_buffer) => {
@@ -189,37 +217,43 @@ impl QrGenerator {
                     logo_path.to_string()
                 }
             };
-            
+
             let logo_image = SvgImage::new()
                 .set("x", center_x)
                 .set("y", center_y)
                 .set("width", logo_size)
                 .set("height", logo_size)
                 .set("href", data_url);
-            
+
             document = document.add(logo_image);
         }
-        
+
         Ok(document.to_string())
     }
 
-    pub fn generate_svg_with_buffer(&self, logo_buffer: Option<&[u8]>, logo_size_ratio: f64) -> napi::Result<String> {
+    pub fn generate_svg_with_buffer(
+        &self,
+        logo_buffer: Option<&[u8]>,
+        logo_size_ratio: f64,
+        logo_background_color: Option<[u8; 4]>,
+        logo_padding_ratio: f64,
+    ) -> napi::Result<String> {
         use svg::node::element::{Rectangle, Image as SvgImage};
         use svg::Document;
-        
+
         let qr_width = self.code.width();
         let module_size = self.size as f64 / qr_width as f64;
         let total_size = self.size as f64 + 2.0 * self.margin as f64;
-        
+
         let mut document = Document::new()
             .set("width", total_size)
             .set("height", total_size)
             .set("viewBox", (0, 0, total_size as i32, total_size as i32));
-        
+
         // Background
-        let bg_color = format!("rgb({},{},{})", 
-            self.background_color[0], 
-            self.background_color[1], 
+        let bg_color = format!("rgb({},{},{})",
+            self.background_color[0],
+            self.background_color[1],
             self.background_color[2]
         );
         let background = Rectangle::new()
@@ -227,53 +261,71 @@ impl QrGenerator {
             .set("height", "100%")
             .set("fill", bg_color);
         document = document.add(background);
-        
+
         // QR modules
-        let fg_color = format!("rgb({},{},{})", 
-            self.foreground_color[0], 
-            self.foreground_color[1], 
+        let fg_color = format!("rgb({},{},{})",
+            self.foreground_color[0],
+            self.foreground_color[1],
             self.foreground_color[2]
         );
-        
+
         for (y, row) in self.code.render::<char>().quiet_zone(false).build().lines().enumerate() {
             for (x, pixel) in row.chars().enumerate() {
                 if pixel == '█' {
                     let start_x = self.margin as f64 + x as f64 * module_size;
                     let start_y = self.margin as f64 + y as f64 * module_size;
-                    
+
                     let rect = Rectangle::new()
                         .set("x", start_x)
                         .set("y", start_y)
                         .set("width", module_size)
                         .set("height", module_size)
                         .set("fill", fg_color.as_str());
-                    
+
                     document = document.add(rect);
                 }
             }
         }
-        
+
         // Add logo if provided
         if let Some(logo_buffer) = logo_buffer {
             let logo_size = (self.size as f64) * logo_size_ratio;
             let center_x = (total_size - logo_size) / 2.0;
             let center_y = (total_size - logo_size) / 2.0;
-            
+
+            // Knockout patch behind the logo so transparent areas don't reveal QR modules
+            if let Some(patch_color) = logo_background_color {
+                let patch_size = logo_size * (1.0 + 2.0 * logo_padding_ratio);
+                let patch_x = (total_size - patch_size) / 2.0;
+                let patch_y = (total_size - patch_size) / 2.0;
+                let patch_fill = format!(
+                    "rgb({},{},{})",
+                    patch_color[0], patch_color[1], patch_color[2]
+                );
+                let patch = Rectangle::new()
+                    .set("x", patch_x)
+                    .set("y", patch_y)
+                    .set("width", patch_size)
+                    .set("height", patch_size)
+                    .set("fill", patch_fill);
+                document = document.add(patch);
+            }
+
             // Convert buffer to base64 data URL
             use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
             let base64_data = BASE64.encode(logo_buffer);
             let data_url = format!("data:image/png;base64,{}", base64_data);
-            
+
             let logo_image = SvgImage::new()
                 .set("x", center_x)
                 .set("y", center_y)
                 .set("width", logo_size)
                 .set("height", logo_size)
                 .set("href", data_url);
-            
+
             document = document.add(logo_image);
         }
-        
+
         Ok(document.to_string())
     }
 
@@ -309,6 +361,7 @@ pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
     let size = options.size.unwrap_or(200);
     let margin = options.margin.unwrap_or(20);
     let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
+    let logo_padding_ratio = options.logo_padding_ratio.unwrap_or(0.1);
     let ec_level = parse_ec_level(options.error_correction.as_deref());
 
     let mut generator = QrGenerator::new(&options.text, size, margin, ec_level)?;
@@ -323,9 +376,16 @@ pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
         generator.set_colors(bg, fg);
     }
 
+    let logo_background_color = match options.logo_background_color.as_deref() {
+        Some(color) => Some(parse_color(color)?),
+        None => None,
+    };
+
     generator.generate_svg(
-        options.logo_path.as_deref(), 
-        logo_size_ratio
+        options.logo_path.as_deref(),
+        logo_size_ratio,
+        logo_background_color,
+        logo_padding_ratio,
     )
 }
 
@@ -335,10 +395,11 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
     let size = options.size.unwrap_or(200);
     let margin = options.margin.unwrap_or(20);
     let logo_size_ratio = options.logo_size_ratio.unwrap_or(0.2);
+    let logo_padding_ratio = options.logo_padding_ratio.unwrap_or(0.1);
     let ec_level = parse_ec_level(options.error_correction.as_deref());
 
     let mut generator = QrGenerator::new(&options.text, size, margin, ec_level)?;
-    
+
     if let Some(bg_color) = &options.background_color {
         let bg = parse_color(bg_color)?;
         let fg = if let Some(fg_color) = &options.foreground_color {
@@ -349,11 +410,18 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
         generator.set_colors(bg, fg);
     }
 
+    let logo_background_color = match options.logo_background_color.as_deref() {
+        Some(color) => Some(parse_color(color)?),
+        None => None,
+    };
+
     let logo_buffer = options.logo_buffer.as_ref().map(|b| b.as_ref());
 
     generator.generate_svg_with_buffer(
         logo_buffer,
-        logo_size_ratio
+        logo_size_ratio,
+        logo_background_color,
+        logo_padding_ratio,
     )
 }
 

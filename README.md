@@ -34,6 +34,8 @@ A fast QR code generator with logo embedding support, built with Rust and native
     - [margin](#margin)
     - [logo](#logo)
     - [logoSizeRatio](#logosizeratio)
+    - [logoBackgroundColor](#logobackgroundcolor)
+    - [logoPaddingRatio](#logopaddingratio)
     - [backgroundColor](#backgroundcolor)
     - [foregroundColor](#foregroundcolor)
     - [errorCorrection](#errorcorrection)
@@ -162,6 +164,8 @@ interface QrOptions {
   margin?: number;                 // Margin in pixels (default: undefined)
   logo?: string | Buffer;          // Logo file path or buffer
   logoSizeRatio?: number;          // Logo size ratio (default: 0.2)
+  logoBackgroundColor?: string | false; // Backing patch color behind the logo (default: backgroundColor; pass false to disable)
+  logoPaddingRatio?: number;       // Patch padding per side, ratio of logo size (default: 0.1)
   backgroundColor?: string;        // Background color (default: "#FFFFFF")
   foregroundColor?: string;        // Foreground color (default: "#000000")
   errorCorrection?: ECLevel;       // "L"|"M"|"Q"|"H"|"Low"|"Medium"|"Quartile"|"High" (default: "M")
@@ -235,6 +239,27 @@ Get or set the logo size ratio relative to QR code size (0.0 to 1.0).
 ```javascript
 const qr = new QrBit({ text: "Hello World" });
 qr.logoSizeRatio = 0.3; // 30% of QR code size
+```
+
+### logoBackgroundColor
+Get or set the color rendered as a backing patch behind the logo. The patch prevents QR modules from showing through transparent areas of the logo. Defaults to `backgroundColor`. Pass `false` to disable the patch and overlay the logo directly on the QR.
+
+```javascript
+const qr = new QrBit({
+  text: "Hello World",
+  logo: "./logo.png",
+});
+qr.logoBackgroundColor = "#FFFFFF"; // explicit white patch
+qr.logoBackgroundColor = false;     // no patch (legacy behavior)
+```
+
+### logoPaddingRatio
+Get or set the padding around the logo for the backing patch, expressed as a ratio of the logo size on each side. e.g. `0.1` makes the patch 1.2× the logo size. Defaults to `0.1`.
+
+```javascript
+const qr = new QrBit({ text: "Hello World", logo: "./logo.png" });
+qr.logoPaddingRatio = 0;    // patch matches logo size exactly
+qr.logoPaddingRatio = 0.25; // patch is 1.5× logo size
 ```
 
 ### backgroundColor
