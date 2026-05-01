@@ -20,7 +20,11 @@ function runBenchmark(script: string): string {
 	const result = spawnSync("pnpm", ["exec", "tsx", script], {
 		encoding: "utf8",
 		stdio: ["inherit", "pipe", "inherit"],
+		shell: true,
 	});
+	if (result.error) {
+		throw result.error;
+	}
 	if (result.status !== 0) {
 		throw new Error(`${script} exited with status ${result.status}`);
 	}
