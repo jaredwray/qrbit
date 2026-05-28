@@ -1,4 +1,4 @@
 minimumReleaseAge: 2880
-onlyBuiltDependencies:
-  - esbuild
-  - skia-canvas
+allowBuilds:
+  esbuild: true
+  skia-canvas: true
