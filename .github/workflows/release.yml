@@ -33,12 +33,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Setup pnpm (version is read from the packageManager field in package.json)
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       # Setup Node - Skip for Alpine (already in container)
       - name: Use Node.js
         if: matrix.build_env != 'alpine'
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
       - name: Install Alpine Dependencies
         if: matrix.build_env == 'alpine'
@@ -58,7 +63,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Dependencies
-        run: npm install -g pnpm && pnpm install
+        run: pnpm install
 
       - name: Rust
         run: |
@@ -86,14 +91,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Setup pnpm (version is read from the packageManager field in package.json)
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       # Setup Node
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
       - name: Install Dependencies
-        run: npm install -g pnpm && pnpm install
+        run: pnpm install
 
       - name: Build Typescript Project
         run: pnpm build:release

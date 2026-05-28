@@ -19,11 +19,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Setup pnpm (version is read from the packageManager field in package.json)
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       # Setup Node
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
       # Setup Rust
       - name: Install Rust
@@ -36,8 +41,8 @@ jobs:
         run: cargo update
 
       - name: Install Dependencies
-        run: npm install -g pnpm && pnpm install
-      
+        run: pnpm install
+
       - name: Run Build
         run: pnpm build
 

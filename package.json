@@ -3,6 +3,7 @@
 	"version": "2.1.0",
 	"description": "A fast QR code generator with logo embedding support",
 	"type": "module",
+	"packageManager": "pnpm@11.4.0",
 	"main": "dist/qrbit.cjs",
 	"module": "dist/qrbit.js",
 	"types": "dist/qrbit.d.ts",
