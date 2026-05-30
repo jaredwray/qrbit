@@ -87,6 +87,12 @@ jobs:
     needs: build-artifacts
     runs-on: ubuntu-latest
 
+    # OIDC Trusted Publishing requires id-token: write so pnpm can mint an
+    # OIDC token and generate provenance attestations. No NPM_TOKEN needed.
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -127,9 +133,11 @@ jobs:
         run: |
             ls -alh ./dist
 
+      # Publishes via OIDC Trusted Publishing (no token), using the pnpm
+      # installed above by pnpm/action-setup. Provenance is generated
+      # automatically; --provenance keeps the intent explicit. --no-git-checks
+      # is required because pnpm otherwise refuses to publish in CI.
+      # Requires a trusted publisher to be configured for this package on
+      # npmjs.com pointing at this repo and workflow.
       - name: Publish
-        run: |
-         npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
-         npm publish --ignore-scripts
-        env:
-         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --provenance --no-git-checks --ignore-scripts
