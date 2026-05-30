@@ -87,7 +87,7 @@ jobs:
     needs: build-artifacts
     runs-on: ubuntu-latest
 
-    # OIDC Trusted Publishing requires id-token: write so npm can mint an
+    # OIDC Trusted Publishing requires id-token: write so pnpm can mint an
     # OIDC token and generate provenance attestations. No NPM_TOKEN needed.
     permissions:
       id-token: write
@@ -133,14 +133,11 @@ jobs:
         run: |
             ls -alh ./dist
 
-      # Trusted Publishing needs npm >= 11.5.1, which is newer than the npm
-      # bundled with Node.js 22.
-      - name: Update npm for Trusted Publishing
-        run: npm install -g npm@latest
-
-      # Publishes via OIDC Trusted Publishing (no token). Provenance is
-      # generated automatically; --provenance keeps the intent explicit.
+      # Publishes via OIDC Trusted Publishing (no token), using the pnpm
+      # installed above by pnpm/action-setup. Provenance is generated
+      # automatically; --provenance keeps the intent explicit. --no-git-checks
+      # is required because pnpm otherwise refuses to publish in CI.
       # Requires a trusted publisher to be configured for this package on
       # npmjs.com pointing at this repo and workflow.
       - name: Publish
-        run: npm publish --provenance --ignore-scripts
+        run: pnpm publish --provenance --no-git-checks --ignore-scripts
