@@ -1320,6 +1320,21 @@ struct Color {
     a: u8,
 }
 
+/// Mimics JavaScript `parseInt(str, 16)`: consumes the leading run of valid hex
+/// digits and ignores the rest, returning 0 when there is no valid prefix (JS
+/// yields `NaN` there, which coerces to 0 in the subsequent bitwise operations).
+/// This matches node-qrcode's tolerance of malformed hex color strings.
+fn js_parse_int_hex(s: &str) -> u32 {
+    let mut acc: u64 = 0;
+    for c in s.chars() {
+        match c.to_digit(16) {
+            Some(d) => acc = acc * 16 + d as u64,
+            None => break,
+        }
+    }
+    (acc & 0xFFFF_FFFF) as u32
+}
+
 /// Faithful port of `hex2rgba`.
 fn hex2rgba(hex: &str) -> Result<Color, String> {
     let mut hex_code: Vec<char> = hex.replace('#', "").chars().collect();
@@ -1339,9 +1354,10 @@ fn hex2rgba(hex: &str) -> Result<Color, String> {
         hex_code.push('F');
     }
 
+    // node-qrcode uses `parseInt(hexCode.join(''), 16)`, which tolerates invalid
+    // characters by parsing the valid prefix instead of throwing.
     let hex_string: String = hex_code.iter().collect();
-    let hex_value = u32::from_str_radix(&hex_string, 16)
-        .map_err(|_| format!("Invalid hex color: {}", hex))?;
+    let hex_value = js_parse_int_hex(&hex_string);
 
     let a = (hex_value & 255) as u8;
     let hex_out: String = format!("#{}", hex_code[0..6].iter().collect::<String>());

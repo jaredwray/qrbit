@@ -106,4 +106,17 @@ describe("node-qrcode SVG parity", () => {
 			expect(mine, `ec=${full}`).toEqual(theirs);
 		}
 	});
+
+	it("tolerates malformed hex colors identically to node-qrcode", async () => {
+		// node-qrcode parses the valid hex prefix via parseInt and ignores junk
+		// instead of throwing; the port mirrors that for drop-in compatibility.
+		const text = "https://qrbit.dev";
+		const colors = ["#GGGGGG", "#abz", "#abcg", "#12345g", "#000", "#FFFFFF"];
+		for (const dark of colors) {
+			const qr = new QrBit({ text, foregroundColor: dark, cache: false });
+			const mine = await qr.toSvg();
+			const theirs = await reference(text, 200, "H", dark, "#FFFFFF");
+			expect(mine, `dark=${dark}`).toEqual(theirs);
+		}
+	});
 });
