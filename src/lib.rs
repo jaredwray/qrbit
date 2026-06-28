@@ -3,8 +3,10 @@ use imageproc::drawing::draw_filled_rect_mut;
 use imageproc::rect::Rect;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use qrcode::{QrCode, EcLevel};
 use quircs::Quirc;
+
+mod nodeqr;
+use nodeqr::{BitMatrix, EcLevel};
 
 #[napi(object)]
 pub struct QrOptions {
@@ -43,7 +45,7 @@ pub struct QrResult {
 }
 
 pub struct QrGenerator {
-    code: QrCode,
+    matrix: BitMatrix,
     size: u32,
     margin: u32,
     background_color: [u8; 4],
@@ -52,10 +54,11 @@ pub struct QrGenerator {
 
 impl QrGenerator {
     pub fn new(text: &str, size: u32, margin: u32, ec_level: EcLevel) -> napi::Result<Self> {
-        let code = QrCode::with_error_correction_level(text, ec_level).map_err(|e| Error::from_reason(format!("QR code generation failed: {}", e)))?;
-        
+        let matrix = nodeqr::create(text, ec_level)
+            .map_err(|e| Error::from_reason(format!("QR code generation failed: {}", e)))?;
+
         Ok(Self {
-            code,
+            matrix,
             size,
             margin,
             background_color: [255, 255, 255, 255], // white
@@ -69,18 +72,18 @@ impl QrGenerator {
     }
 
     pub fn generate_image(&self) -> RgbaImage {
-        let qr_width = self.code.width();
+        let qr_width = self.matrix.size;
         let module_size = self.size / qr_width as u32;
         let total_size = self.size + 2 * self.margin;
-        
+
         let mut img = ImageBuffer::from_pixel(total_size, total_size, Rgba(self.background_color));
-        
-        for (y, row) in self.code.render::<char>().quiet_zone(false).build().lines().enumerate() {
-            for (x, pixel) in row.chars().enumerate() {
-                if pixel == '█' {
-                    let start_x = self.margin + x as u32 * module_size;
-                    let start_y = self.margin + y as u32 * module_size;
-                    
+
+        for row in 0..qr_width {
+            for col in 0..qr_width {
+                if self.matrix.get(row, col) != 0 {
+                    let start_x = self.margin + col as u32 * module_size;
+                    let start_y = self.margin + row as u32 * module_size;
+
                     draw_filled_rect_mut(
                         &mut img,
                         Rect::at(start_x as i32, start_y as i32).of_size(module_size, module_size),
@@ -89,7 +92,7 @@ impl QrGenerator {
                 }
             }
         }
-        
+
         img
     }
 
@@ -135,7 +138,7 @@ impl QrGenerator {
         use svg::node::element::{Rectangle, Image as SvgImage};
         use svg::Document;
 
-        let qr_width = self.code.width();
+        let qr_width = self.matrix.size;
         let module_size = self.size as f64 / qr_width as f64;
         let total_size = self.size as f64 + 2.0 * self.margin as f64;
 
@@ -163,11 +166,11 @@ impl QrGenerator {
             self.foreground_color[2]
         );
 
-        for (y, row) in self.code.render::<char>().quiet_zone(false).build().lines().enumerate() {
-            for (x, pixel) in row.chars().enumerate() {
-                if pixel == '█' {
-                    let start_x = self.margin as f64 + x as f64 * module_size;
-                    let start_y = self.margin as f64 + y as f64 * module_size;
+        for row in 0..qr_width {
+            for col in 0..qr_width {
+                if self.matrix.get(row, col) != 0 {
+                    let start_x = self.margin as f64 + col as f64 * module_size;
+                    let start_y = self.margin as f64 + row as f64 * module_size;
 
                     let rect = Rectangle::new()
                         .set("x", start_x)
@@ -241,7 +244,7 @@ impl QrGenerator {
         use svg::node::element::{Rectangle, Image as SvgImage};
         use svg::Document;
 
-        let qr_width = self.code.width();
+        let qr_width = self.matrix.size;
         let module_size = self.size as f64 / qr_width as f64;
         let total_size = self.size as f64 + 2.0 * self.margin as f64;
 
@@ -269,11 +272,11 @@ impl QrGenerator {
             self.foreground_color[2]
         );
 
-        for (y, row) in self.code.render::<char>().quiet_zone(false).build().lines().enumerate() {
-            for (x, pixel) in row.chars().enumerate() {
-                if pixel == '█' {
-                    let start_x = self.margin as f64 + x as f64 * module_size;
-                    let start_y = self.margin as f64 + y as f64 * module_size;
+        for row in 0..qr_width {
+            for col in 0..qr_width {
+                if self.matrix.get(row, col) != 0 {
+                    let start_x = self.margin as f64 + col as f64 * module_size;
+                    let start_y = self.margin as f64 + row as f64 * module_size;
 
                     let rect = Rectangle::new()
                         .set("x", start_x)
@@ -423,6 +426,37 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
         logo_background_color,
         logo_padding_ratio,
     )
+}
+
+#[napi(object)]
+pub struct QrCodeSvgOptions {
+    pub text: String,
+    pub error_correction: Option<String>,
+    /// Pixel width/height of the rendered SVG (maps to node-qrcode `width`).
+    pub width: Option<u32>,
+    /// Quiet-zone margin in modules (maps to node-qrcode `margin`, default 4).
+    pub margin: Option<i32>,
+    /// Foreground (dark module) color, hex string.
+    pub dark_color: Option<String>,
+    /// Background (light module) color, hex string.
+    pub light_color: Option<String>,
+}
+
+/// Generate a QR code SVG string that is byte-for-byte identical to
+/// `qrcode`'s `QRCode.toString(text, { type: 'svg', ... })`. This replaces the
+/// JavaScript `qrcode` dependency for the no-logo rendering path.
+#[napi]
+pub fn generate_qr_code_svg(options: QrCodeSvgOptions) -> Result<String> {
+    let ecl = nodeqr::EcLevel::from_str_or_m(options.error_correction.as_deref());
+    nodeqr::render_svg(
+        &options.text,
+        ecl,
+        options.width,
+        options.margin.map(|m| m as i64),
+        options.dark_color.as_deref(),
+        options.light_color.as_deref(),
+    )
+    .map_err(Error::from_reason)
 }
 
 
