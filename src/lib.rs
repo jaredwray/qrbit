@@ -1,6 +1,3 @@
-use image::{ImageBuffer, Rgba, RgbaImage, imageops};
-use imageproc::drawing::draw_filled_rect_mut;
-use imageproc::rect::Rect;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use quircs::Quirc;
@@ -69,63 +66,6 @@ impl QrGenerator {
     pub fn set_colors(&mut self, bg: [u8; 4], fg: [u8; 4]) {
         self.background_color = bg;
         self.foreground_color = fg;
-    }
-
-    pub fn generate_image(&self) -> RgbaImage {
-        let qr_width = self.matrix.size;
-        let module_size = self.size / qr_width as u32;
-        let total_size = self.size + 2 * self.margin;
-
-        let mut img = ImageBuffer::from_pixel(total_size, total_size, Rgba(self.background_color));
-
-        for row in 0..qr_width {
-            for col in 0..qr_width {
-                if self.matrix.get(row, col) != 0 {
-                    let start_x = self.margin + col as u32 * module_size;
-                    let start_y = self.margin + row as u32 * module_size;
-
-                    draw_filled_rect_mut(
-                        &mut img,
-                        Rect::at(start_x as i32, start_y as i32).of_size(module_size, module_size),
-                        Rgba(self.foreground_color)
-                    );
-                }
-            }
-        }
-
-        img
-    }
-
-    pub fn add_logo(&self, mut img: RgbaImage, logo_path: &str, logo_size_ratio: f64) -> napi::Result<RgbaImage> {
-        let logo = image::open(logo_path)
-            .map_err(|e| Error::from_reason(format!("Failed to open logo: {}", e)))?
-            .to_rgba8();
-        
-        let logo_size = ((self.size as f64) * logo_size_ratio) as u32;
-        let resized_logo = imageops::resize(&logo, logo_size, logo_size, imageops::FilterType::Lanczos3);
-        
-        let center_x = (img.width() - logo_size) / 2;
-        let center_y = (img.height() - logo_size) / 2;
-        
-        imageops::overlay(&mut img, &resized_logo, center_x as i64, center_y as i64);
-        
-        Ok(img)
-    }
-
-    pub fn add_logo_from_buffer(&self, mut img: RgbaImage, logo_buffer: &[u8], logo_size_ratio: f64) -> napi::Result<RgbaImage> {
-        let logo = image::load_from_memory(logo_buffer)
-            .map_err(|e| Error::from_reason(format!("Failed to load logo from buffer: {}", e)))?
-            .to_rgba8();
-        
-        let logo_size = ((self.size as f64) * logo_size_ratio) as u32;
-        let resized_logo = imageops::resize(&logo, logo_size, logo_size, imageops::FilterType::Lanczos3);
-        
-        let center_x = (img.width() - logo_size) / 2;
-        let center_y = (img.height() - logo_size) / 2;
-        
-        imageops::overlay(&mut img, &resized_logo, center_x as i64, center_y as i64);
-        
-        Ok(img)
     }
 
     pub fn generate_svg(
