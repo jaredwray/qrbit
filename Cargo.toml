@@ -13,7 +13,7 @@ crate-type = ["cdylib"]
 [dependencies]
 qrcode = "0.14"
 image = { version = "0.25.10", features = ["png", "jpeg", "webp"] }
-imageproc = "0.26.2"
+imageproc = "0.27.0"
 svg = "0.18"
 base64 = "0.22"
 resvg = "0.47"
