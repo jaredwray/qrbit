@@ -11,9 +11,13 @@ const category = process.argv[2] || "mixed";
 const count = Number(process.argv[3] || 5000);
 const seed = Number(process.argv[4] || 1);
 
-// Deterministic LCG (no shared global state across parallel runs).
-let s = (seed * 2654435761) >>> 0;
-const rnd = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff), s / 0x7fffffff);
+// Deterministic LCG, with state scoped inside the factory closure so no
+// mutable module-level state is shared across runs.
+function makeRng(initialSeed) {
+	let state = (initialSeed * 2654435761) >>> 0;
+	return () => ((state = (state * 1103515245 + 12345) & 0x7fffffff), state / 0x7fffffff);
+}
+const rnd = makeRng(seed);
 const ri = (n) => Math.floor(rnd() * n);
 const pickArr = (a) => a[ri(a.length)];
 
