@@ -253,11 +253,14 @@ fn apply_colors(
     background: Option<&str>,
     foreground: Option<&str>,
 ) -> Result<()> {
-    if let Some(bg_color) = background {
-        let bg = parse_color(bg_color)?;
+    if background.is_some() || foreground.is_some() {
+        let bg = match background {
+            Some(bg_color) => parse_color(bg_color)?,
+            None => generator.background_color,
+        };
         let fg = match foreground {
             Some(fg_color) => parse_color(fg_color)?,
-            None => [0, 0, 0, 255],
+            None => generator.foreground_color,
         };
         generator.set_colors(bg, fg);
     }
@@ -371,10 +374,25 @@ fn render_svg_to_pixmap(
     let tree = usvg::Tree::from_str(svg_content, &options)
         .map_err(|e| Error::from_reason(format!("Failed to parse SVG: {}", e)))?;
 
-    // Default to 2x supersampling when no explicit dimensions are given.
+    // Default to 2x supersampling when no explicit dimensions are given. When
+    // only one dimension is specified, scale the other proportionally to
+    // preserve the SVG's aspect ratio instead of stretching it.
     let tree_size = tree.size();
-    let pixmap_width = width.unwrap_or((tree_size.width() * 2.0) as u32);
-    let pixmap_height = height.unwrap_or((tree_size.height() * 2.0) as u32);
+    let (pixmap_width, pixmap_height) = match (width, height) {
+        (Some(w), Some(h)) => (w, h),
+        (Some(w), None) => {
+            let h = (w as f32 * tree_size.height() / tree_size.width()) as u32;
+            (w, h)
+        }
+        (None, Some(h)) => {
+            let w = (h as f32 * tree_size.width() / tree_size.height()) as u32;
+            (w, h)
+        }
+        (None, None) => (
+            (tree_size.width() * 2.0) as u32,
+            (tree_size.height() * 2.0) as u32,
+        ),
+    };
 
     let mut pixmap = tiny_skia::Pixmap::new(pixmap_width, pixmap_height)
         .ok_or_else(|| Error::from_reason("Failed to create pixmap"))?;
