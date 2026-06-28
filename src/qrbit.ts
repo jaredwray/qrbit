@@ -3,13 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { Cacheable } from "cacheable";
 import { Hookified, type HookifiedOptions } from "hookified";
-import QRCode, { type QRCodeToStringOptions } from "qrcode";
 import {
 	convertSvgToJpeg as nativeConvertSvgToJpeg,
 	convertSvgToPng as nativeConvertSvgToPng,
 	convertSvgToWebp as nativeConvertSvgToWebp,
 	decode as nativeDecode,
 	decodeDetailed as nativeDecodeDetailed,
+	generateQrCodeSvg as nativeGenerateQrCodeSvg,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 	validateQr as nativeValidateQr,
@@ -158,6 +158,7 @@ export class QrBit extends Hookified {
 		convertSvgToWebp: nativeConvertSvgToWebp,
 		decode: nativeDecode,
 		decodeDetailed: nativeDecodeDetailed,
+		generateQrCodeSvg: nativeGenerateQrCodeSvg,
 		generateQrSvg: nativeGenerateQrSvg,
 		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
 		validateQr: nativeValidateQr,
@@ -384,7 +385,8 @@ export class QrBit extends Hookified {
 
 	/**
 	 * Generate SVG QR code with optional caching.
-	 * Uses QRCode library for simple cases, Rust implementation for logos.
+	 * Uses the native Rust QR engine for both simple and logo cases. The no-logo
+	 * output is byte-for-byte identical to the legacy `qrcode` package.
 	 * @param {toOptions} options - Generation options whether to use caching (default: true)
 	 * @returns {Promise<string>} The SVG string
 	 */
@@ -419,25 +421,15 @@ export class QrBit extends Hookified {
 		}
 
 		if (!this._logo) {
-			const ecFullNameMap: Record<string, "L" | "M" | "Q" | "H"> = {
-				Low: "L",
-				Medium: "M",
-				Quartile: "Q",
-				High: "H",
-			};
-
-			const qrCodeOptions: QRCodeToStringOptions = {
-				type: "svg",
+			// Native Rust port of node-qrcode that produces byte-for-byte
+			// identical SVG output (path-based, crisp-edges, margin of 4 modules).
+			result = this._napi.generateQrCodeSvg({
+				text: this._text,
 				width: qrOptions.size,
-				errorCorrectionLevel:
-					ecFullNameMap[this._errorCorrection] ?? this._errorCorrection,
-				color: {
-					dark: qrOptions.foregroundColor,
-					light: qrOptions.backgroundColor,
-				},
-			};
-
-			result = await QRCode.toString(this._text, qrCodeOptions);
+				errorCorrection: this._errorCorrection,
+				darkColor: qrOptions.foregroundColor,
+				lightColor: qrOptions.backgroundColor,
+			});
 		} else {
 			// If logoPath is set, use the Rust implementation
 			result = await this.toSvgNapi();
