@@ -75,103 +75,19 @@ impl QrGenerator {
         logo_background_color: Option<[u8; 4]>,
         logo_padding_ratio: f64,
     ) -> napi::Result<String> {
-        use svg::node::element::{Rectangle, Image as SvgImage};
-        use svg::Document;
+        // Resolve the logo (if any) to a base64 PNG data URL, falling back to
+        // the raw path as the href if the file cannot be read.
+        let logo_data_url = logo_path.map(|path| match std::fs::read(path) {
+            Ok(bytes) => encode_png_data_url(&bytes),
+            Err(_) => path.to_string(),
+        });
 
-        let qr_width = self.matrix.size;
-        let module_size = self.size as f64 / qr_width as f64;
-        let total_size = self.size as f64 + 2.0 * self.margin as f64;
-
-        let mut document = Document::new()
-            .set("width", total_size)
-            .set("height", total_size)
-            .set("viewBox", (0, 0, total_size as i32, total_size as i32));
-
-        // Background
-        let bg_color = format!("rgb({},{},{})",
-            self.background_color[0],
-            self.background_color[1],
-            self.background_color[2]
-        );
-        let background = Rectangle::new()
-            .set("width", "100%")
-            .set("height", "100%")
-            .set("fill", bg_color);
-        document = document.add(background);
-
-        // QR modules
-        let fg_color = format!("rgb({},{},{})",
-            self.foreground_color[0],
-            self.foreground_color[1],
-            self.foreground_color[2]
-        );
-
-        for row in 0..qr_width {
-            for col in 0..qr_width {
-                if self.matrix.get(row, col) != 0 {
-                    let start_x = self.margin as f64 + col as f64 * module_size;
-                    let start_y = self.margin as f64 + row as f64 * module_size;
-
-                    let rect = Rectangle::new()
-                        .set("x", start_x)
-                        .set("y", start_y)
-                        .set("width", module_size)
-                        .set("height", module_size)
-                        .set("fill", fg_color.as_str());
-
-                    document = document.add(rect);
-                }
-            }
-        }
-
-        // Add logo if provided
-        if let Some(logo_path) = logo_path {
-            let logo_size = (self.size as f64) * logo_size_ratio;
-            let center_x = (total_size - logo_size) / 2.0;
-            let center_y = (total_size - logo_size) / 2.0;
-
-            // Knockout patch behind the logo so transparent areas don't reveal QR modules
-            if let Some(patch_color) = logo_background_color {
-                let patch_size = logo_size * (1.0 + 2.0 * logo_padding_ratio);
-                let patch_x = (total_size - patch_size) / 2.0;
-                let patch_y = (total_size - patch_size) / 2.0;
-                let patch_fill = format!(
-                    "rgb({},{},{})",
-                    patch_color[0], patch_color[1], patch_color[2]
-                );
-                let patch = Rectangle::new()
-                    .set("x", patch_x)
-                    .set("y", patch_y)
-                    .set("width", patch_size)
-                    .set("height", patch_size)
-                    .set("fill", patch_fill);
-                document = document.add(patch);
-            }
-
-            // Read logo file and convert to base64 data URL
-            let data_url = match std::fs::read(logo_path) {
-                Ok(logo_buffer) => {
-                    use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-                    let base64_data = BASE64.encode(&logo_buffer);
-                    format!("data:image/png;base64,{}", base64_data)
-                },
-                Err(_) => {
-                    // Fallback to file path if reading fails
-                    logo_path.to_string()
-                }
-            };
-
-            let logo_image = SvgImage::new()
-                .set("x", center_x)
-                .set("y", center_y)
-                .set("width", logo_size)
-                .set("height", logo_size)
-                .set("href", data_url);
-
-            document = document.add(logo_image);
-        }
-
-        Ok(document.to_string())
+        Ok(self.build_svg(
+            logo_data_url,
+            logo_size_ratio,
+            logo_background_color,
+            logo_padding_ratio,
+        ))
     }
 
     pub fn generate_svg_with_buffer(
@@ -181,6 +97,27 @@ impl QrGenerator {
         logo_background_color: Option<[u8; 4]>,
         logo_padding_ratio: f64,
     ) -> napi::Result<String> {
+        let logo_data_url = logo_buffer.map(encode_png_data_url);
+
+        Ok(self.build_svg(
+            logo_data_url,
+            logo_size_ratio,
+            logo_background_color,
+            logo_padding_ratio,
+        ))
+    }
+
+    /// Shared SVG builder for the logo-capable rendering path. `logo_data_url`
+    /// is the already-resolved `href` for the embedded logo image, or `None` to
+    /// render the QR without a logo. The output is byte-for-byte unchanged from
+    /// the previous two duplicated implementations.
+    fn build_svg(
+        &self,
+        logo_data_url: Option<String>,
+        logo_size_ratio: f64,
+        logo_background_color: Option<[u8; 4]>,
+        logo_padding_ratio: f64,
+    ) -> String {
         use svg::node::element::{Rectangle, Image as SvgImage};
         use svg::Document;
 
@@ -231,7 +168,7 @@ impl QrGenerator {
         }
 
         // Add logo if provided
-        if let Some(logo_buffer) = logo_buffer {
+        if let Some(data_url) = logo_data_url {
             let logo_size = (self.size as f64) * logo_size_ratio;
             let center_x = (total_size - logo_size) / 2.0;
             let center_y = (total_size - logo_size) / 2.0;
@@ -254,11 +191,6 @@ impl QrGenerator {
                 document = document.add(patch);
             }
 
-            // Convert buffer to base64 data URL
-            use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-            let base64_data = BASE64.encode(logo_buffer);
-            let data_url = format!("data:image/png;base64,{}", base64_data);
-
             let logo_image = SvgImage::new()
                 .set("x", center_x)
                 .set("y", center_y)
@@ -269,9 +201,16 @@ impl QrGenerator {
             document = document.add(logo_image);
         }
 
-        Ok(document.to_string())
+        document.to_string()
     }
 
+}
+
+/// Encode raw image bytes as a base64 `data:image/png;base64,...` URL for
+/// embedding directly in an SVG `<image>` href.
+fn encode_png_data_url(bytes: &[u8]) -> String {
+    use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+    format!("data:image/png;base64,{}", BASE64.encode(bytes))
 }
 
 fn parse_ec_level(level_str: Option<&str>) -> EcLevel {
@@ -298,6 +237,33 @@ fn parse_color(color_str: &str) -> napi::Result<[u8; 4]> {
     }
 }
 
+/// Parse an optional hex color, propagating parse errors and mapping `None`
+/// through unchanged.
+fn parse_optional_color(color_str: Option<&str>) -> Result<Option<[u8; 4]>> {
+    match color_str {
+        Some(color) => Ok(Some(parse_color(color)?)),
+        None => Ok(None),
+    }
+}
+
+/// Apply background/foreground colors to a generator when a background color is
+/// provided, defaulting the foreground to black to match prior behavior.
+fn apply_colors(
+    generator: &mut QrGenerator,
+    background: Option<&str>,
+    foreground: Option<&str>,
+) -> Result<()> {
+    if let Some(bg_color) = background {
+        let bg = parse_color(bg_color)?;
+        let fg = match foreground {
+            Some(fg_color) => parse_color(fg_color)?,
+            None => [0, 0, 0, 255],
+        };
+        generator.set_colors(bg, fg);
+    }
+    Ok(())
+}
+
 
 #[napi]
 pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
@@ -308,21 +274,13 @@ pub fn generate_qr_svg(options: QrOptions) -> Result<String> {
     let ec_level = parse_ec_level(options.error_correction.as_deref());
 
     let mut generator = QrGenerator::new(&options.text, size, margin, ec_level)?;
+    apply_colors(
+        &mut generator,
+        options.background_color.as_deref(),
+        options.foreground_color.as_deref(),
+    )?;
 
-    if let Some(bg_color) = &options.background_color {
-        let bg = parse_color(bg_color)?;
-        let fg = if let Some(fg_color) = &options.foreground_color {
-            parse_color(fg_color)?
-        } else {
-            [0, 0, 0, 255]
-        };
-        generator.set_colors(bg, fg);
-    }
-
-    let logo_background_color = match options.logo_background_color.as_deref() {
-        Some(color) => Some(parse_color(color)?),
-        None => None,
-    };
+    let logo_background_color = parse_optional_color(options.logo_background_color.as_deref())?;
 
     generator.generate_svg(
         options.logo_path.as_deref(),
@@ -342,21 +300,13 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
     let ec_level = parse_ec_level(options.error_correction.as_deref());
 
     let mut generator = QrGenerator::new(&options.text, size, margin, ec_level)?;
+    apply_colors(
+        &mut generator,
+        options.background_color.as_deref(),
+        options.foreground_color.as_deref(),
+    )?;
 
-    if let Some(bg_color) = &options.background_color {
-        let bg = parse_color(bg_color)?;
-        let fg = if let Some(fg_color) = &options.foreground_color {
-            parse_color(fg_color)?
-        } else {
-            [0, 0, 0, 255]
-        };
-        generator.set_colors(bg, fg);
-    }
-
-    let logo_background_color = match options.logo_background_color.as_deref() {
-        Some(color) => Some(parse_color(color)?),
-        None => None,
-    };
+    let logo_background_color = parse_optional_color(options.logo_background_color.as_deref())?;
 
     let logo_buffer = options.logo_buffer.as_ref().map(|b| b.as_ref());
 
@@ -400,45 +350,54 @@ pub fn generate_qr_code_svg(options: QrCodeSvgOptions) -> Result<String> {
 }
 
 
-#[napi]
-pub fn convert_svg_to_png(svg_content: String, width: Option<u32>, height: Option<u32>) -> Result<Buffer> {
-    use resvg::usvg;
+/// Parse an SVG string and render it to a tiny-skia pixmap at 2x supersampling
+/// (or the explicit `width`/`height` when provided), filled with `background`
+/// before rendering. Shared by the PNG/JPEG/WebP converters.
+fn render_svg_to_pixmap(
+    svg_content: &str,
+    width: Option<u32>,
+    height: Option<u32>,
+    background: resvg::tiny_skia::Color,
+) -> Result<resvg::tiny_skia::Pixmap> {
     use resvg::tiny_skia;
+    use resvg::usvg;
 
-    // Parse the SVG content into uSVG tree with medium-quality options
     let mut options = usvg::Options::default();
     options.shape_rendering = usvg::ShapeRendering::CrispEdges;
     options.text_rendering = usvg::TextRendering::OptimizeSpeed;
     options.image_rendering = usvg::ImageRendering::OptimizeQuality;
-    options.default_size = usvg::Size::from_wh(200.0, 200.0).unwrap(); // Medium default resolution
+    options.default_size = usvg::Size::from_wh(200.0, 200.0).unwrap();
 
-    let tree = usvg::Tree::from_str(&svg_content, &options)
+    let tree = usvg::Tree::from_str(svg_content, &options)
         .map_err(|e| Error::from_reason(format!("Failed to parse SVG: {}", e)))?;
 
-    // Get the tree size or use provided dimensions with medium scaling
+    // Default to 2x supersampling when no explicit dimensions are given.
     let tree_size = tree.size();
-    let scale_factor = if width.is_none() && height.is_none() { 2.0 } else { 2.0 }; // 2x supersampling for medium quality
+    let pixmap_width = width.unwrap_or((tree_size.width() * 2.0) as u32);
+    let pixmap_height = height.unwrap_or((tree_size.height() * 2.0) as u32);
 
-    let pixmap_width = width.unwrap_or((tree_size.width() * scale_factor) as u32);
-    let pixmap_height = height.unwrap_or((tree_size.height() * scale_factor) as u32);
-
-    // Create a pixmap buffer with alpha for better quality
     let mut pixmap = tiny_skia::Pixmap::new(pixmap_width, pixmap_height)
         .ok_or_else(|| Error::from_reason("Failed to create pixmap"))?;
+    pixmap.fill(background);
 
-    // Clear with transparent background for better quality
-    pixmap.fill(tiny_skia::Color::TRANSPARENT);
-
-    // Calculate the transform to scale the SVG to fit the pixmap with high quality scaling
     let scale_x = pixmap_width as f32 / tree_size.width();
     let scale_y = pixmap_height as f32 / tree_size.height();
     let transform = tiny_skia::Transform::from_scale(scale_x, scale_y);
 
-    // Render the SVG to the pixmap with high quality settings
     resvg::render(&tree, transform, &mut pixmap.as_mut());
 
-    // Convert pixmap to PNG bytes with high quality settings
-    let png_data = pixmap.encode_png()
+    Ok(pixmap)
+}
+
+#[napi]
+pub fn convert_svg_to_png(svg_content: String, width: Option<u32>, height: Option<u32>) -> Result<Buffer> {
+    use resvg::tiny_skia;
+
+    // PNG supports alpha, so render onto a transparent background.
+    let pixmap = render_svg_to_pixmap(&svg_content, width, height, tiny_skia::Color::TRANSPARENT)?;
+
+    let png_data = pixmap
+        .encode_png()
         .map_err(|e| Error::from_reason(format!("Failed to encode PNG: {}", e)))?;
 
     Ok(png_data.into())
@@ -446,49 +405,21 @@ pub fn convert_svg_to_png(svg_content: String, width: Option<u32>, height: Optio
 
 #[napi]
 pub fn convert_svg_to_jpeg(svg_content: String, width: Option<u32>, height: Option<u32>, quality: Option<u8>) -> Result<Buffer> {
-    use resvg::usvg;
     use resvg::tiny_skia;
     use std::io::Cursor;
 
-    // Parse the SVG content into uSVG tree with medium-quality options
-    let mut options = usvg::Options::default();
-    options.shape_rendering = usvg::ShapeRendering::CrispEdges;
-    options.text_rendering = usvg::TextRendering::OptimizeSpeed;
-    options.image_rendering = usvg::ImageRendering::OptimizeQuality;
-    options.default_size = usvg::Size::from_wh(200.0, 200.0).unwrap(); // Medium default resolution
+    // JPEG has no alpha channel, so render onto an opaque white background.
+    let pixmap = render_svg_to_pixmap(&svg_content, width, height, tiny_skia::Color::WHITE)?;
+    let pixmap_width = pixmap.width();
+    let pixmap_height = pixmap.height();
 
-    let tree = usvg::Tree::from_str(&svg_content, &options)
-        .map_err(|e| Error::from_reason(format!("Failed to parse SVG: {}", e)))?;
-
-    // Get the tree size or use provided dimensions with medium scaling
-    let tree_size = tree.size();
-    let scale_factor = if width.is_none() && height.is_none() { 2.0 } else { 2.0 }; // 2x supersampling for medium quality
-
-    let pixmap_width = width.unwrap_or((tree_size.width() * scale_factor) as u32);
-    let pixmap_height = height.unwrap_or((tree_size.height() * scale_factor) as u32);
-
-    // Create a pixmap buffer with white background (JPEG doesn't support transparency)
-    let mut pixmap = tiny_skia::Pixmap::new(pixmap_width, pixmap_height)
-        .ok_or_else(|| Error::from_reason("Failed to create pixmap"))?;
-
-    // Clear with white background (JPEG doesn't support transparency)
-    pixmap.fill(tiny_skia::Color::WHITE);
-
-    // Calculate the transform to scale the SVG to fit the pixmap with high quality scaling
-    let scale_x = pixmap_width as f32 / tree_size.width();
-    let scale_y = pixmap_height as f32 / tree_size.height();
-    let transform = tiny_skia::Transform::from_scale(scale_x, scale_y);
-
-    // Render the SVG to the pixmap with high quality settings
-    resvg::render(&tree, transform, &mut pixmap.as_mut());
-
-    // Convert pixmap to RGB image (JPEG doesn't support alpha channel)
+    // Convert pixmap to RGB image (drop the alpha channel)
     let rgb_image = image::RgbImage::from_raw(
         pixmap_width,
         pixmap_height,
         pixmap.data()
             .chunks_exact(4)
-            .flat_map(|rgba| [rgba[0], rgba[1], rgba[2]]) // Drop alpha channel
+            .flat_map(|rgba| [rgba[0], rgba[1], rgba[2]])
             .collect::<Vec<u8>>()
     ).ok_or_else(|| Error::from_reason("Failed to create RGB image"))?;
 
@@ -510,41 +441,13 @@ pub fn convert_svg_to_jpeg(svg_content: String, width: Option<u32>, height: Opti
 
 #[napi]
 pub fn convert_svg_to_webp(svg_content: String, width: Option<u32>, height: Option<u32>, _quality: Option<u8>) -> Result<Buffer> {
-    use resvg::usvg;
     use resvg::tiny_skia;
     use std::io::Cursor;
 
-    // Parse the SVG content into uSVG tree with medium-quality options
-    let mut options = usvg::Options::default();
-    options.shape_rendering = usvg::ShapeRendering::CrispEdges;
-    options.text_rendering = usvg::TextRendering::OptimizeSpeed;
-    options.image_rendering = usvg::ImageRendering::OptimizeQuality;
-    options.default_size = usvg::Size::from_wh(200.0, 200.0).unwrap();
-
-    let tree = usvg::Tree::from_str(&svg_content, &options)
-        .map_err(|e| Error::from_reason(format!("Failed to parse SVG: {}", e)))?;
-
-    // Get the tree size or use provided dimensions with medium scaling
-    let tree_size = tree.size();
-    let scale_factor = if width.is_none() && height.is_none() { 2.0 } else { 2.0 };
-
-    let pixmap_width = width.unwrap_or((tree_size.width() * scale_factor) as u32);
-    let pixmap_height = height.unwrap_or((tree_size.height() * scale_factor) as u32);
-
-    // Create a pixmap buffer with transparent background (WebP supports transparency)
-    let mut pixmap = tiny_skia::Pixmap::new(pixmap_width, pixmap_height)
-        .ok_or_else(|| Error::from_reason("Failed to create pixmap"))?;
-
-    // Clear with transparent background (WebP supports alpha channel)
-    pixmap.fill(tiny_skia::Color::TRANSPARENT);
-
-    // Calculate the transform to scale the SVG to fit the pixmap
-    let scale_x = pixmap_width as f32 / tree_size.width();
-    let scale_y = pixmap_height as f32 / tree_size.height();
-    let transform = tiny_skia::Transform::from_scale(scale_x, scale_y);
-
-    // Render the SVG to the pixmap
-    resvg::render(&tree, transform, &mut pixmap.as_mut());
+    // WebP supports alpha, so render onto a transparent background.
+    let pixmap = render_svg_to_pixmap(&svg_content, width, height, tiny_skia::Color::TRANSPARENT)?;
+    let pixmap_width = pixmap.width();
+    let pixmap_height = pixmap.height();
 
     // Keep RGBA data (WebP supports alpha channel)
     let rgba_image = image::RgbaImage::from_raw(
