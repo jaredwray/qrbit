@@ -10,7 +10,7 @@ import {QRCodeCanvas} from '@loskir/styled-qr-code-node';
 const bench = new Bench({ name: "QR Codes SVG (No Logo)", iterations: 100 });
 
 const qrbitVersion = cleanVersion(pkg.version);
-const qrcodeVersion = cleanVersion(pkg.dependencies.qrcode);
+const qrcodeVersion = cleanVersion(pkg.devDependencies.qrcode);
 const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled-qr-code-node"]);
 
 const qr = new QrBit({ text: faker.internet.url() });
@@ -18,11 +18,6 @@ const qr = new QrBit({ text: faker.internet.url() });
 bench.add(`QrBit toSvg (Native) (v${qrbitVersion})`, async () => {
 	qr.text = faker.internet.url();
 	await qr.toSvg();
-});
-
-bench.add(`QrBit toSvg (Rust) (v${qrbitVersion})`, async () => {
-	qr.text = faker.internet.url();
-	await qr.toSvgNapi();
 });
 
 bench.add(`QRCode toString (v${qrcodeVersion})`, async () => {
