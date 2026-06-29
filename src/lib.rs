@@ -122,6 +122,7 @@ impl QrGenerator {
     ) -> String {
         use svg::node::element::{Image as SvgImage, Path, Rectangle};
         use svg::Document;
+        use std::fmt::Write as _;
 
         let qr_width = self.matrix.size;
         let module_size = self.size as f64 / qr_width as f64;
@@ -153,7 +154,7 @@ impl QrGenerator {
             self.foreground_color[2]
         );
 
-        let mut d = String::new();
+        let mut d = String::with_capacity(qr_width * qr_width);
         for row in 0..qr_width {
             let mut col = 0;
             while col < qr_width {
@@ -166,7 +167,9 @@ impl QrGenerator {
                     let x = self.margin as f64 + run_start as f64 * module_size;
                     let y = self.margin as f64 + row as f64 * module_size;
                     let w = run_len * module_size;
-                    d.push_str(&format!("M{} {}h{}v{}h{}z", x, y, w, module_size, -w));
+                    // Format directly into the buffer to avoid a temporary
+                    // String allocation per run (write to String is infallible).
+                    let _ = write!(&mut d, "M{} {}h{}v{}h{}z", x, y, w, module_size, -w);
                 } else {
                     col += 1;
                 }
