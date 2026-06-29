@@ -109,8 +109,10 @@ impl QrGenerator {
 
     /// Shared SVG builder for the logo-capable rendering path. `logo_data_url`
     /// is the already-resolved `href` for the embedded logo image, or `None` to
-    /// render the QR without a logo. The output is byte-for-byte unchanged from
-    /// the previous two duplicated implementations.
+    /// render the QR without a logo. QR modules are emitted as a single `<path>`
+    /// (one subpath per horizontal run of dark modules) instead of one `<rect>`
+    /// per module — visually identical, but far fewer nodes and much smaller
+    /// output.
     fn build_svg(
         &self,
         logo_data_url: Option<String>,
@@ -118,8 +120,9 @@ impl QrGenerator {
         logo_background_color: Option<[u8; 4]>,
         logo_padding_ratio: f64,
     ) -> String {
-        use svg::node::element::{Rectangle, Image as SvgImage};
+        use svg::node::element::{Image as SvgImage, Path, Rectangle};
         use svg::Document;
+        use std::fmt::Write as _;
 
         let qr_width = self.matrix.size;
         let module_size = self.size as f64 / qr_width as f64;
@@ -142,29 +145,40 @@ impl QrGenerator {
             .set("fill", bg_color);
         document = document.add(background);
 
-        // QR modules
+        // QR modules — a single <path> with one subpath per horizontal run of
+        // dark modules, in the same pixel coordinate space as the old per-rect
+        // rendering (visually identical output).
         let fg_color = format!("rgb({},{},{})",
             self.foreground_color[0],
             self.foreground_color[1],
             self.foreground_color[2]
         );
 
+        let mut d = String::with_capacity(qr_width * qr_width);
         for row in 0..qr_width {
-            for col in 0..qr_width {
+            let mut col = 0;
+            while col < qr_width {
                 if self.matrix.get(row, col) != 0 {
-                    let start_x = self.margin as f64 + col as f64 * module_size;
-                    let start_y = self.margin as f64 + row as f64 * module_size;
-
-                    let rect = Rectangle::new()
-                        .set("x", start_x)
-                        .set("y", start_y)
-                        .set("width", module_size)
-                        .set("height", module_size)
-                        .set("fill", fg_color.as_str());
-
-                    document = document.add(rect);
+                    let run_start = col;
+                    while col < qr_width && self.matrix.get(row, col) != 0 {
+                        col += 1;
+                    }
+                    let run_len = (col - run_start) as f64;
+                    let x = self.margin as f64 + run_start as f64 * module_size;
+                    let y = self.margin as f64 + row as f64 * module_size;
+                    let w = run_len * module_size;
+                    // Format directly into the buffer to avoid a temporary
+                    // String allocation per run (write to String is infallible).
+                    let _ = write!(&mut d, "M{} {}h{}v{}h{}z", x, y, w, module_size, -w);
+                } else {
+                    col += 1;
                 }
             }
+        }
+
+        if !d.is_empty() {
+            let modules = Path::new().set("fill", fg_color).set("d", d);
+            document = document.add(modules);
         }
 
         // Add logo if provided
