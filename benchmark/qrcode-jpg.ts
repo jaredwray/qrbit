@@ -10,7 +10,7 @@ import {QRCodeCanvas} from '@loskir/styled-qr-code-node';
 const bench = new Bench({ name: "QR Codes JPG (No Logo)", iterations: 100 });
 
 const qrbitVersion = cleanVersion(pkg.version);
-const qrcodeVersion = cleanVersion(pkg.dependencies.qrcode);
+const qrcodeVersion = cleanVersion(pkg.devDependencies.qrcode);
 const styledQrCodeNodeVersion = cleanVersion(pkg.devDependencies["@loskir/styled-qr-code-node"]);
 
 const qr = new QrBit({ text: faker.internet.url() });

@@ -594,10 +594,9 @@ const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 ## QR Codes SVG (No Logo)
 |                  name                   |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
 |-----------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QRCode toString (v1.5.4)               |    🥇     |       5K  |    191µs  |  ±0.43%  |       5K  |
-|  QrBit toSvg (Native) (v2.1.0)          |   -34%    |       4K  |    297µs  |  ±0.43%  |       3K  |
-|  QrBit toSvg (Rust) (v2.1.0)            |   -89%    |     600   |      2ms  |  ±0.99%  |     592   |
-|  styled-qr-code-node toBuffer (v2.0.0)  |   -90%    |     552   |      2ms  |  ±0.92%  |     544   |
+|  QrBit toSvg (Native) (v3.0.0)          |    🥇     |       7K  |    150µs  |  ±0.28%  |       7K  |
+|  QRCode toString (v1.5.4)               |   -20%    |       5K  |    189µs  |  ±0.45%  |       5K  |
+|  styled-qr-code-node toBuffer (v2.0.0)  |   -92%    |     561   |      2ms  |  ±0.81%  |     554   |
 <!-- BENCHMARK:svg:END -->
 
 `Rust` is there for performance and when doing heavy image processing without needing node `canvas` installed. If you do not add a logo then the `Native` version is what you will get for SVG.
@@ -606,27 +605,27 @@ const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 ## QR Codes PNG (No Logo)
 |                  name                   |  summary  |  ops/sec  |  time/op  |  margin   |  samples  |
 |-----------------------------------------|:---------:|----------:|----------:|:---------:|----------:|
-|  QrBit toPng (v2.1.0) Cached            |    🥇     |       3K  |      2ms  |  ±21.51%  |     554   |
-|  QrBit toPng (v2.1.0)                   |   -53%    |       1K  |      2ms  |  ±25.73%  |     524   |
-|  QRCode toBuffer (v1.5.4)               |   -74%    |     712   |      1ms  |  ±1.12%   |     690   |
-|  styled-qr-code-node toBuffer (v2.0.0)  |   -93%    |     198   |      5ms  |  ±0.74%   |     198   |
+|  QrBit toPng (v3.0.0) Cached            |    🥇     |       4K  |      2ms  |  ±17.95%  |     648   |
+|  QrBit toPng (v3.0.0)                   |   -43%    |       2K  |      2ms  |  ±21.34%  |     606   |
+|  QRCode toBuffer (v1.5.4)               |   -81%    |     731   |      1ms  |  ±1.06%   |     711   |
+|  styled-qr-code-node toBuffer (v2.0.0)  |   -95%    |     202   |      5ms  |  ±0.83%   |     202   |
 <!-- BENCHMARK:png:END -->
 
 <!-- BENCHMARK:jpg:START -->
 ## QR Codes JPG (No Logo)
 |                  name                   |  summary  |  ops/sec  |  time/op  |  margin   |  samples  |
 |-----------------------------------------|:---------:|----------:|----------:|:---------:|----------:|
-|  QrBit toJpg (v2.1.0) Cached            |    🥇     |       2K  |      2ms  |  ±24.98%  |     461   |
-|  QrBit toJpg (v2.1.0)                   |   -54%    |     898   |      2ms  |  ±26.96%  |     438   |
-|  styled-qr-code-node toBuffer (v2.0.0)  |   -86%    |     279   |      4ms  |  ±0.89%   |     278   |
+|  QrBit toJpg (v3.0.0) Cached            |    🥇     |       3K  |      2ms  |  ±20.72%  |     526   |
+|  QrBit toJpg (v3.0.0)                   |   -56%    |       1K  |      2ms  |  ±26.17%  |     480   |
+|  styled-qr-code-node toBuffer (v2.0.0)  |   -90%    |     282   |      4ms  |  ±1.04%   |     280   |
 <!-- BENCHMARK:jpg:END -->
 
 <!-- BENCHMARK:webp:START -->
 ## QR Codes WebP (No Logo)
-|              name              |  summary  |  ops/sec  |  time/op  |  margin   |  samples  |
-|--------------------------------|:---------:|----------:|----------:|:---------:|----------:|
-|  QrBit toWebp Cached (v2.1.0)  |    🥇     |       7K  |    720µs  |  ±9.04%   |       1K  |
-|  QrBit toWebp (v2.1.0)         |   -47%    |       4K  |    846µs  |  ±12.71%  |       1K  |
+|              name              |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
+|--------------------------------|:---------:|----------:|----------:|:--------:|----------:|
+|  QrBit toWebp Cached (v3.0.0)  |    🥇     |      10K  |    551µs  |  ±6.81%  |       2K  |
+|  QrBit toWebp (v3.0.0)         |   -41%    |       6K  |    624µs  |  ±9.26%  |       2K  |
 <!-- BENCHMARK:webp:END -->
 
 `Rust` is used for `toPng()`, `toJpg()`, and `toWebp()` to optimize performance for image generation and heavy image processing without needing node `canvas` installed.
@@ -635,14 +634,14 @@ const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 ## QR Codes with Embedded Logos
 |                name                |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
 |------------------------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  QrBit SVG (Path) (v2.1.0)         |    🥇     |     579   |      2ms  |  ±0.96%  |     571   |
-|  QrBit SVG (Buffer) (v2.1.0)       |   -5.7%   |     546   |      2ms  |  ±0.97%  |     539   |
-|  QrBit WebP (Path) (v2.1.0)        |   -53%    |     274   |      4ms  |  ±1.08%  |     272   |
-|  QrBit WebP (Buffer) (v2.1.0)      |   -56%    |     256   |      4ms  |  ±1.01%  |     255   |
-|  styled-qr-code-node SVG (v2.0.0)  |   -61%    |     227   |      4ms  |  ±0.71%  |     227   |
-|  QrBit PNG (Path) (v2.1.0)         |   -67%    |     194   |      5ms  |  ±0.89%  |     193   |
-|  QrBit PNG (Buffer) (v2.1.0)       |   -69%    |     181   |      6ms  |  ±1.08%  |     180   |
-|  styled-qr-code-node PNG (v2.0.0)  |   -70%    |     172   |      6ms  |  ±1.02%  |     171   |
+|  QrBit SVG (Path) (v3.0.0)         |    🥇     |     867   |      1ms  |  ±0.84%  |     852   |
+|  QrBit SVG (Buffer) (v3.0.0)       |   -5.4%   |     821   |      1ms  |  ±0.80%  |     808   |
+|  QrBit WebP (Path) (v3.0.0)        |   -62%    |     332   |      3ms  |  ±0.87%  |     330   |
+|  QrBit WebP (Buffer) (v3.0.0)      |   -65%    |     306   |      3ms  |  ±0.85%  |     305   |
+|  QrBit PNG (Path) (v3.0.0)         |   -74%    |     226   |      4ms  |  ±0.75%  |     226   |
+|  styled-qr-code-node SVG (v2.0.0)  |   -75%    |     218   |      5ms  |  ±0.99%  |     217   |
+|  QrBit PNG (Buffer) (v3.0.0)       |   -75%    |     213   |      5ms  |  ±0.89%  |     212   |
+|  styled-qr-code-node PNG (v2.0.0)  |   -80%    |     172   |      6ms  |  ±0.95%  |     172   |
 <!-- BENCHMARK:logo:END -->
 
 `Buffer` is much slower as we have to push the stream across to the rust module. For fastest performance provide the path of the image.
