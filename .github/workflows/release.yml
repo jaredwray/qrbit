@@ -40,7 +40,7 @@ jobs:
       # Setup Node - Skip for Alpine (already in container)
       - name: Use Node.js
         if: matrix.build_env != 'alpine'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -103,7 +103,7 @@ jobs:
 
       # Setup Node
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
