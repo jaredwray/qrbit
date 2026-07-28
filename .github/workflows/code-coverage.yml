@@ -25,7 +25,7 @@ jobs:
 
       # Setup Node
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
