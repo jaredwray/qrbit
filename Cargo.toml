@@ -16,12 +16,12 @@ svg = "0.18"
 base64 = "0.22"
 resvg = "0.47"
 tiny-skia = "0.12"
-napi = "3.9.4"
-napi-derive = "3.5.7"
+napi = "3.12.0"
+napi-derive = "3.6.1"
 quircs = "0.10"
 
 [build-dependencies]
-napi-build = "2"
+napi-build = "2.4.0"
 
 [profile.release]
 opt-level = 3
