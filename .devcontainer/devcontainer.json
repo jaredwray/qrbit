@@ -1,0 +1,8 @@
+{
+	"name": "Node.js + Rust",
+	"image": "mcr.microsoft.com/devcontainers/javascript-node:latest",
+	"features": {
+		"ghcr.io/devcontainers/features/rust:1": {}
+	},
+	"postCreateCommand": "bash ./scripts/setup-cloud-environment.sh"
+}

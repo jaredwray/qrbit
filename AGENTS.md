@@ -40,3 +40,11 @@ QrBit is a fast QR code generator with logo embedding support, built with Rust (
 - Caching is built-in via `cacheable` for performance optimization
 - Support multiple platforms: Windows, macOS (Intel/ARM), Linux
 - Logo can be provided as a file path (faster) or Buffer
+
+## Safe Chain
+
+Package installs in this environment go through Aikido Safe Chain shims. Never bypass them:
+
+- Keep `~/.safe-chain/shims` first on `PATH`.
+- Do not call unshimmed `npm`, `pnpm`, `npx`, or `pnpx`.
+- Do not install packages with `curl | sh` or by pointing at a package manager outside the shim directory.
