@@ -1,4 +1,8 @@
-minimumReleaseAge: 2880
-allowBuilds:
-  esbuild: true
-  skia-canvas: true
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+blockExoticSubdeps: true
+strictDepBuilds: true
+dangerouslyAllowAllBuilds: false
+trustPolicy: no-downgrade
+allowBuilds: {}
