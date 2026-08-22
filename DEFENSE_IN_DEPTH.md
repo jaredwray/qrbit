@@ -5,31 +5,31 @@ Tracking against https://github.com/jaredwray/agentic/blob/main/skills/security/
 Profile: npm library · public
 
 ## 1. Security docs
-- [ ] `SECURITY.md` present — contact info + "How this repository is secured" summary (PR #132 pending)
-- [ ] `DEFENSE_IN_DEPTH.md` present (this file) (PR #132 pending)
+- [x] `SECURITY.md` present — contact info + "How this repository is secured" summary — PR #132
+- [x] `DEFENSE_IN_DEPTH.md` present (this file) — PR #132
 
 ## 2. CODEOWNERS and cloud bootstrap
-- [ ] `.github/CODEOWNERS` covers `/.github/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names (PR #132 pending)
-- [ ] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) (PR #132 pending)
+- [x] `.github/CODEOWNERS` covers `/.github/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names — PR #132
+- [x] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) — PR #132
 
 ## 3. Dependencies (pnpm)
 - [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified main (`pnpm@11.17.0`)
-- [ ] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` (PR #132 pending)
-- [ ] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` (PR #132 pending)
-- [ ] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline (reviewed exceptions: `esbuild`, `skia-canvas`) (PR #132 pending)
-- [ ] `blockExoticSubdeps: true` (PR #132 pending)
-- [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` (PR #132 pending)
+- [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` — PR #132
+- [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — PR #132
+- [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline (reviewed exceptions: `esbuild`, `skia-canvas`) — PR #132
+- [x] `blockExoticSubdeps: true` — PR #132
+- [x] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` — PR #132
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified main
 
 ## 4. GitHub Actions
-- [ ] `permissions: contents: read` (or `{}` + per-job grants) on every workflow
+- [ ] `permissions: contents: read` (or `{}` + per-job grants) on every workflow (PR pending)
 - [x] No `contents: write` except jobs whose purpose is mutating the repo (GitHub Release, Changesets version PR); generated output is a workflow artifact, never committed back from CI — verified main
-- [ ] Every action pinned to a full commit SHA (`npx actions-up`)
-- [ ] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install`
-- [ ] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR
-- [ ] `persist-credentials: false` on checkouts that don't push
+- [ ] Every action pinned to a full commit SHA (`npx actions-up`) (PR pending)
+- [ ] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install` (PR pending)
+- [ ] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR (PR pending)
+- [ ] `persist-credentials: false` on checkouts that don't push (PR pending)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified main
-- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning
+- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning (PR pending)
 - [x] No npm tokens (or other registry credentials) in Actions secrets — verified main (OIDC trusted publishing; no `NPM_TOKEN`)
 
 ## 5. npm publishing — npm libraries only
