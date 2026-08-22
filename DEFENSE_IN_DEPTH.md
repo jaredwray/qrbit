@@ -33,19 +33,19 @@ Profile: npm library · public
 - [x] No npm tokens (or other registry credentials) in Actions secrets — verified main (OIDC trusted publishing; no `NPM_TOKEN`)
 
 ## 5. npm publishing — npm libraries only
-- [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
-- [ ] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` (PR #134 pending)
-- [ ] Maintainer promotes staged versions with 2FA (manual)
-- [ ] Drydock connected — staged releases reviewed before promotion (manual)
-- [ ] No direct publish rights: package requires 2FA and disallows tokens (manual)
+- [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual) — verified maintainer
+- [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #134
+- [x] Maintainer promotes staged versions with 2FA (manual) — verified maintainer
+- [x] Drydock connected — staged releases reviewed before promotion (manual) — verified maintainer
+- [x] No direct publish rights: package requires 2FA and disallows tokens (manual) — verified maintainer
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified main
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — verified main (Aikido GitHub app check on PRs)
-- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (PR #134 pending)
+- [x] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` — PR #134
 - [x] Socket reviews every PR that changes dependencies — verified main (Socket GitHub app check on PRs)
 
 ## 7. Repository lockdown
-- [ ] `lockdown-repo.sh` applied; `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos))
-- [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
-- [ ] Recovery codes stored offline in a password manager (manual)
+- [ ] `lockdown-repo.sh` applied; `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos)) (PR #135 pending)
+- [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual) — verified maintainer
+- [x] Recovery codes stored offline in a password manager (manual) — verified maintainer
