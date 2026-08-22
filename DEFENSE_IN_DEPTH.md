@@ -22,14 +22,14 @@ Profile: npm library · public
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified main
 
 ## 4. GitHub Actions
-- [ ] `permissions: contents: read` (or `{}` + per-job grants) on every workflow (PR pending)
+- [ ] `permissions: contents: read` (or `{}` + per-job grants) on every workflow (PR #133 pending)
 - [x] No `contents: write` except jobs whose purpose is mutating the repo (GitHub Release, Changesets version PR); generated output is a workflow artifact, never committed back from CI — verified main
-- [ ] Every action pinned to a full commit SHA (`npx actions-up`) (PR pending)
-- [ ] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install` (PR pending)
-- [ ] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR (PR pending)
-- [ ] `persist-credentials: false` on checkouts that don't push (PR pending)
+- [ ] Every action pinned to a full commit SHA (`npx actions-up`) (PR #133 pending)
+- [ ] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install` (PR #133 pending)
+- [ ] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR (PR #133 pending)
+- [ ] `persist-credentials: false` on checkouts that don't push (PR #133 pending)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified main
-- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning (PR pending)
+- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning (PR #133 pending)
 - [x] No npm tokens (or other registry credentials) in Actions secrets — verified main (OIDC trusted publishing; no `NPM_TOKEN`)
 
 ## 5. npm publishing — npm libraries only
