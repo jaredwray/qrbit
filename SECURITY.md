@@ -24,5 +24,6 @@ This repository follows the [defense-in-depth](https://github.com/jaredwray/agen
 hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_DEPTH.md). Measures currently in place:
 
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
-- Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`. The lockfile is committed and CI installs with `--frozen-lockfile`.
+- Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`. The lockfile is committed and CI installs with `--frozen-lockfile`. Socket reviews every dependency change; Aikido scans every build.
 - CI runs with read-only permissions (only jobs whose purpose is mutating the repo get `contents: write`); generated output is an artifact, never committed back; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install` / `npm install`; workflows are security-linted with zizmor on every PR.
+- npm releases are packed and staged from CI via OIDC (`pnpm stage publish`); a maintainer must promote the staged version. There are no npm tokens.

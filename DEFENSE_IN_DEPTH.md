@@ -22,28 +22,28 @@ Profile: npm library · public
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified main
 
 ## 4. GitHub Actions
-- [ ] `permissions: contents: read` (or `{}` + per-job grants) on every workflow (PR #133 pending)
+- [x] `permissions: contents: read` (or `{}` + per-job grants) on every workflow — PR #133
 - [x] No `contents: write` except jobs whose purpose is mutating the repo (GitHub Release, Changesets version PR); generated output is a workflow artifact, never committed back from CI — verified main
-- [ ] Every action pinned to a full commit SHA (`npx actions-up`) (PR #133 pending)
-- [ ] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install` (PR #133 pending)
-- [ ] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR (PR #133 pending)
-- [ ] `persist-credentials: false` on checkouts that don't push (PR #133 pending)
+- [x] Every action pinned to a full commit SHA (`npx actions-up`) — PR #133
+- [x] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install` — PR #133
+- [x] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR — PR #133
+- [x] `persist-credentials: false` on checkouts that don't push — PR #133
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified main
-- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning (PR #133 pending)
+- [x] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning — PR #133
 - [x] No npm tokens (or other registry credentials) in Actions secrets — verified main (OIDC trusted publishing; no `NPM_TOKEN`)
 
 ## 5. npm publishing — npm libraries only
 - [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
-- [ ] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks`
+- [ ] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` (PR #134 pending)
 - [ ] Maintainer promotes staged versions with 2FA (manual)
 - [ ] Drydock connected — staged releases reviewed before promotion (manual)
 - [ ] No direct publish rights: package requires 2FA and disallows tokens (manual)
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified main
 
 ## 6. Security tooling
-- [ ] Aikido runs on every build
-- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release`
-- [ ] Socket reviews every PR that changes dependencies
+- [x] Aikido runs on every build — verified main (Aikido GitHub app check on PRs)
+- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (PR #134 pending)
+- [x] Socket reviews every PR that changes dependencies — verified main (Socket GitHub app check on PRs)
 
 ## 7. Repository lockdown
 - [ ] `lockdown-repo.sh` applied; `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos))
