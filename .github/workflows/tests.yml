@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build-test-winmac:
-    name: tests
+    name: tests-${{ matrix.os }}-${{ matrix.node }}
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
@@ -60,7 +60,7 @@ jobs:
         run: pnpm test:ci
 
   build-test-nodejs:
-    name: tests
+    name: tests-${{ matrix.os }}-${{ matrix.node }}
     strategy:
       matrix:
         os: [ubuntu-latest]
