@@ -31,7 +31,7 @@ jobs:
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-          firewall-version: "1.15.0"
+          firewall-version: "1.15.1"
 
       # Setup pnpm (version is read from the packageManager field in package.json)
       - name: Install pnpm
@@ -79,7 +79,7 @@ jobs:
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-          firewall-version: "1.15.0"
+          firewall-version: "1.15.1"
 
       # Setup pnpm (version is read from the packageManager field in package.json)
       - name: Install pnpm
