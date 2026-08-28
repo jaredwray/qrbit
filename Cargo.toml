@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 image = { version = "0.25.10", features = ["png", "jpeg", "webp"] }
 svg = "0.18"
 base64 = "0.23.1"
-resvg = "0.47"
+resvg = "0.48.1"
 tiny-skia = "0.12"
 napi = "3.12.2"
 napi-derive = "3.6.3"
