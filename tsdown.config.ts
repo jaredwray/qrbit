@@ -1,7 +1,7 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-	entry: ["src/qrbit.ts"],
+	entry: ["src/qrbit.ts", "src/native.ts"],
 	format: ["cjs", "esm"],
 	dts: true,
 	sourcemap: true,

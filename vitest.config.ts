@@ -6,11 +6,10 @@ export default defineConfig({
 		environment: "node",
 		coverage: {
 			reporter: ["text", "json", "lcov"],
-			include: ["src/qrbit.ts"],
+			include: ["src/qrbit.ts", "src/native.ts"],
 			exclude: [
 				"node_modules/",
-				"src/native.js",
-				"src/index.d.ts", 
+				"src/index.d.ts",
 				"src/lib.rs",
 				"src/qrbit.*.node",
 				"dist/",

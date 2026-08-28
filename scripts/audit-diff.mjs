@@ -5,7 +5,7 @@
 // Usage: node scripts/audit-diff.mjs <category> <count> <seed>
 //   category: url|name|numeric|alpha|mixed|unicode|ascii|boundary|allopts
 import QRCode from "qrcode";
-import { generateQrCodeSvg } from "../src/native.js";
+import { generateQrCodeSvg } from "../dist/native.js";
 
 const category = process.argv[2] || "mixed";
 const count = Number(process.argv[3] || 5000);

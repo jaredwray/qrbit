@@ -154,6 +154,8 @@ src/native.js
 src/native.cjs
 src/native.d.ts
 src/native.d.cts
+src/generated-napi.d.ts
+src/index.d.ts
 src/browser.js
 src/*wasi*js
 
