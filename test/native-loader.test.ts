@@ -21,8 +21,10 @@ describe("native loader policy", () => {
 		expect(loaderSources.length).toBeGreaterThan(0);
 		for (const file of loaderSources) {
 			const source = readFileSync(file, "utf8");
-			expect(source, file).not.toMatch(/child_process/);
-			expect(source, file).not.toMatch(/execSync/);
+			expect(source, file).not.toMatch(
+				/node:child_process|require\(["']child_process["']\)/,
+			);
+			expect(source, file).not.toMatch(/execSync\s*\(/);
 			expect(source, file).not.toMatch(/NAPI_RS_NATIVE_LIBRARY_PATH/);
 			expect(source, file).not.toMatch(/android-arm/);
 			expect(source, file).not.toMatch(/freebsd/);

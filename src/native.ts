@@ -2,10 +2,10 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
 /**
- * Hand-written napi-rs loader. Stock `@napi-rs/cli` bindings call
- * `child_process.execSync("ldd --version")` and try optional packages for
- * triples this package does not ship. This file loads only the five published
- * `.node` artifacts and detects musl via `/usr/bin/ldd` and `process.report`.
+ * Hand-written napi-rs loader. Stock `@napi-rs/cli` bindings spawn `ldd` and
+ * try optional packages for triples this package does not ship. This file
+ * loads only the five published `.node` artifacts and detects musl via
+ * `/usr/bin/ldd` and `process.report`.
  */
 export const SUPPORTED_NATIVE_BINDINGS = [
 	"qrbit.darwin-arm64.node",
