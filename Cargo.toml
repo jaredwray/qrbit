@@ -21,7 +21,7 @@ napi-derive = "3.6.1"
 quircs = "0.10"
 
 [build-dependencies]
-napi-build = "2.4.0"
+napi-build = "2.4.1"
 
 [profile.release]
 opt-level = 3
