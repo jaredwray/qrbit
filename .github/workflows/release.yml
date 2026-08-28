@@ -84,13 +84,35 @@ jobs:
             llvm \
             build-base \
             bash \
-            curl
+            curl \
+            libstdc++ \
+            libgcc
 
+      # SocketDev/action keys the binary off process.platform/arch only, so in
+      # this Alpine container it installs glibc sfw-free-linux-x86_64. Exec then
+      # fails as `sfw: not found` because ld-linux is missing. Install the musl
+      # build of the same pinned version instead.
       - name: Install Socket Firewall
+        if: matrix.build_env != 'alpine'
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
           firewall-version: "1.15.1"
+
+      - name: Install Socket Firewall (musl)
+        if: matrix.build_env == 'alpine'
+        env:
+          SFW_VERSION: "1.15.1"
+          SFW_MUSL_SHA256: 28b6dc864d6bbc8bbd41f85a0e894f91f4ab41f2fc1c304c0c08e29da63ccf69
+        # zizmor: ignore[unpinned-downloads] pinned sfw-free v1.15.1 musl binary with sha256
+        run: |
+          url="https://github.com/SocketDev/sfw-free/releases/download/v${SFW_VERSION}/sfw-free-musl-linux-x86_64"
+          tmp="$(mktemp)"
+          curl -fsSL -o "$tmp" "$url"
+          echo "${SFW_MUSL_SHA256}  ${tmp}" | sha256sum -c -
+          install -m 0755 "$tmp" /usr/local/bin/sfw
+          rm -f "$tmp"
+          command -v sfw
 
       # Setup pnpm (version is read from the packageManager field in package.json)
       - name: Install pnpm
