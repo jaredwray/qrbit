@@ -13,7 +13,7 @@ Profile: npm library · public
 - [x] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) — PR #132
 
 ## 3. Dependencies (pnpm)
-- [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified main (`pnpm@11.17.0`)
+- [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified main (`pnpm@11.17.0+sha512…`)
 - [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` — PR #132
 - [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — PR #132
 - [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline (reviewed exceptions: `esbuild`, `skia-canvas`) — PR #132
