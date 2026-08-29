@@ -118,8 +118,8 @@ npm install qrbit
 
 # Requirements
 
-- Node.js >= 18
-- Supported platforms: Windows (x86, x64), macOS (Arm, Intel), Linux (x64)
+- Node.js 22, 24, and 26
+- Supported platforms: Windows x64, macOS (Apple Silicon and Intel), Linux x64 (glibc and musl)
 
 # Usage
 

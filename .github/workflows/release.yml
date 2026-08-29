@@ -51,17 +51,30 @@ jobs:
           - os: ubuntu-latest
             arch: x64
             target: x86_64-unknown-linux-gnu
+            triple: linux-x64-gnu
+            test: true
           - os: ubuntu-latest
             arch: x64
             target: x86_64-unknown-linux-musl
+            triple: linux-x64-musl
             container: node:22.23.2-alpine3.24@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
             build_env: alpine
+            test: true
           - os: windows-latest
             arch: x64
             target: x86_64-pc-windows-msvc
+            triple: win32-x64-msvc
+            test: true
           - os: macos-latest
             arch: x64
             target: x86_64-apple-darwin
+            triple: darwin-x64
+            test: false
+          - os: macos-latest
+            arch: arm64
+            target: aarch64-apple-darwin
+            triple: darwin-arm64
+            test: true
 
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
@@ -136,20 +149,21 @@ jobs:
 
       - name: Rust
         run: |
-          rustup target add ${{matrix.target}}
-          pnpm napi build --platform --release --output-dir src --target ${{ matrix.target }}
+          rustup target add ${{ matrix.target }}
+          pnpm napi build --platform --release --output-dir src --no-js --dts generated-napi.d.ts --target ${{ matrix.target }}
 
       - name: Build
-        run: pnpm build:release
+        run: pnpm build:ts && pnpm build:copy
 
       - name: Run Tests
+        if: ${{ matrix.test }}
         run: pnpm test:ci
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qa-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.target }}
-          path: dist/*.node
+          path: dist/qrbit.${{ matrix.triple }}.node
 
   build-release:
     name: build-release
@@ -189,7 +203,7 @@ jobs:
         run: sfw pnpm install --frozen-lockfile
 
       - name: Build Typescript Project
-        run: pnpm build:release
+        run: pnpm build:ts
 
       - name: Download Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
