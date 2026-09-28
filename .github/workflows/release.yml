@@ -19,7 +19,7 @@ jobs:
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-          firewall-version: "1.15.1"
+          firewall-version: "1.15.2"
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -110,14 +110,14 @@ jobs:
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-          firewall-version: "1.15.1"
+          firewall-version: "1.15.2"
 
       - name: Install Socket Firewall (musl)
         if: matrix.build_env == 'alpine'
         env:
-          SFW_VERSION: "1.15.1"
-          SFW_MUSL_SHA256: 28b6dc864d6bbc8bbd41f85a0e894f91f4ab41f2fc1c304c0c08e29da63ccf69
-        # zizmor: ignore[unpinned-downloads] pinned sfw-free v1.15.1 musl binary with sha256
+          SFW_VERSION: "1.15.2"
+          SFW_MUSL_SHA256: 007a9769b95235d38811822e599ff5e822d9c46868d263b82b42a31f03b0052c
+        # zizmor: ignore[unpinned-downloads] pinned sfw-free v1.15.2 musl binary with sha256
         run: |
           url="https://github.com/SocketDev/sfw-free/releases/download/v${SFW_VERSION}/sfw-free-musl-linux-x86_64"
           tmp="$(mktemp)"
@@ -129,7 +129,7 @@ jobs:
 
       # Setup pnpm (version is read from the packageManager field in package.json)
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       # Setup Node - Skip for Alpine (already in container)
       - name: Use Node.js
@@ -140,7 +140,7 @@ jobs:
           package-manager-cache: false
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
+        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: stable
 
@@ -186,11 +186,11 @@ jobs:
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-          firewall-version: "1.15.1"
+          firewall-version: "1.15.2"
 
       # Setup pnpm (version is read from the packageManager field in package.json)
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       # Setup Node
       - name: Use Node.js
