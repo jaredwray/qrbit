@@ -1,6 +1,6 @@
 {
 	"name": "Node.js + Rust",
-	"image": "mcr.microsoft.com/devcontainers/javascript-node:5.0.2-24-trixie@sha256:1f13af93fc9b845a4ee55c84d6e6c6ad2c6419b0fdeef4a6c13ad5a3f561d034",
+	"image": "mcr.microsoft.com/devcontainers/javascript-node:5.2.1-24-trixie@sha256:7a81958053c4e3b5b20fa122f7a422d32dd0eebe87a6726f7b14483585ea60fd",
 	"features": {
 		"ghcr.io/devcontainers/features/rust:1": {}
 	},
