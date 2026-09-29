@@ -6,6 +6,7 @@
 [![tests](https://github.com/jaredwray/qrbit/actions/workflows/tests.yml/badge.svg)](https://github.com/jaredwray/qrbit/actions/workflows/tests.yml)
 [![npm](https://img.shields.io/npm/v/qrbit)](https://www.npmjs.com/package/qrbit)
 [![npm](https://img.shields.io/npm/dm/qrbit)](https://www.npmjs.com/package/qrbit)
+[![Drydock review](https://img.shields.io/endpoint?url=https%3A%2F%2Fdrydock.org%2Fpublic%2Fbadge%2Fnpm%2Fqrbit)](https://drydock.org/diff/qrbit)
 [![license](https://img.shields.io/github/license/jaredwray/qrbit)](https://github.com/jaredwray/qrbit/blob/main/LICENSE)
 
 A fast QR code generator with logo embedding support, built with Rust as a native Node.js addon for best performance while avoiding additional modules (example: canvas).
