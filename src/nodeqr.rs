@@ -379,7 +379,7 @@ fn alignment_row_col_coords(version: usize) -> Vec<usize> {
     positions.into_iter().map(|p| p as usize).collect()
 }
 
-fn alignment_positions(version: usize) -> Vec<[usize; 2]> {
+pub(crate) fn alignment_positions(version: usize) -> Vec<[usize; 2]> {
     let mut coords = Vec::new();
     let pos = alignment_row_col_coords(version);
     let pos_len = pos.len();

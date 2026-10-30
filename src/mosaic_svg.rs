@@ -8,7 +8,7 @@
 //! plain squares inside it, so that anti-aliasing leaves no light line
 //! between two shapes of different colors.
 
-use crate::nodeqr::BitMatrix;
+use crate::nodeqr::{self, BitMatrix};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
@@ -19,7 +19,7 @@ pub enum Style {
     /// with round outer corners and round inner corners.
     Rounded,
     /// Each dark module is a separate square with round corners. The
-    /// function patterns are solid, as in the rounded style.
+    /// finder and alignment patterns are solid, as in the rounded style.
     Dots,
     /// Each dark module is a square.
     Square,
@@ -162,6 +162,9 @@ struct Renderer<'a> {
     matrix: &'a BitMatrix,
     colors: &'a [[u8; 3]],
     style: Style,
+    /// True for each module that is drawn as a shape that joins its
+    /// neighbors, in row-major order.
+    joined: Vec<bool>,
     /// Path data of the dark shapes, by color.
     shapes: BTreeMap<[u8; 3], String>,
     /// Path data of plain squares that cover the shapes, by color. A mosaic
@@ -189,20 +192,45 @@ impl Renderer<'_> {
             && self.matrix.get(row as usize, col as usize) != 0
     }
 
-    fn light(&self, row: isize, col: isize) -> bool {
-        !self.dark(row, col)
-    }
-
     fn color(&self, row: usize, col: usize) -> [u8; 3] {
         self.colors[row * self.size() + col]
     }
 
-    /// True if the module is drawn as a shape that joins its neighbors. In
-    /// the dots style, only the function patterns (finder, alignment and
-    /// timing patterns, and the format and version information) join, so
-    /// that decoders find them.
+    /// The modules that are drawn as shapes that join their neighbors. In
+    /// the dots style, only the finder and alignment patterns join, so that
+    /// decoders find them. Timing, format and version modules are dots.
+    fn joined_modules(matrix: &BitMatrix, style: Style) -> Vec<bool> {
+        let size = matrix.size;
+        if style != Style::Dots {
+            return vec![true; size * size];
+        }
+        let mut joined = vec![false; size * size];
+        let mut fill = |top: usize, left: usize, side: usize| {
+            for row in top..top + side {
+                for col in left..left + side {
+                    joined[row * size + col] = true;
+                }
+            }
+        };
+        let finder = FINDER_SIZE as usize;
+        for (top, left) in [(0, 0), (0, size - finder), (size - finder, 0)] {
+            fill(top, left, finder);
+        }
+        for [row, col] in nodeqr::alignment_positions((size - 17) / 4) {
+            fill(row - 2, col - 2, 5);
+        }
+        joined
+    }
+
+    /// True if the module is drawn as a shape that joins its neighbors.
     fn joined(&self, row: usize, col: usize) -> bool {
-        self.style != Style::Dots || self.matrix.is_reserved(row, col)
+        self.joined[row * self.size() + col]
+    }
+
+    /// True if the module is dark and joins its neighbors. Modules outside
+    /// the symbol are not solid.
+    fn solid(&self, row: isize, col: isize) -> bool {
+        self.dark(row, col) && self.joined(row as usize, col as usize)
     }
 
     /// The corner radius of the dark shapes.
@@ -261,7 +289,9 @@ impl Renderer<'_> {
                 let color = self.color(row, col);
                 let start = col;
                 col += 1;
-                while col < size && self.matrix.get(row, col) != 0 && self.color(row, col) == color
+                while col < size
+                    && self.solid(row as isize, col as isize)
+                    && self.color(row, col) == color
                 {
                     col += 1;
                 }
@@ -275,14 +305,14 @@ impl Renderer<'_> {
     }
 
     /// The corner radii of the run from `first` to `last` in `row`. A corner
-    /// is round if the modules on both sides of it are light, and it is not
-    /// an outer corner of a finder pattern.
+    /// is round if the modules on both sides of it are not solid, and it is
+    /// not an outer corner of a finder pattern.
     fn radii(&self, row: usize, first: usize, last: usize) -> [f64; 4] {
         let radius = self.radius();
         let (r, f, l) = (row as isize, first as isize, last as isize);
         let round = |col: isize, dy: isize, dx: isize| {
-            if self.light(r + dy, col)
-                && self.light(r, col + dx)
+            if !self.solid(r + dy, col)
+                && !self.solid(r, col + dx)
                 && !self.finder_corner(r, col, dy, dx)
             {
                 radius
@@ -299,8 +329,7 @@ impl Renderer<'_> {
     }
 
     /// Append a fill at each inner corner: a corner of a light module whose
-    /// two neighbors at that corner and the module between them are dark
-    /// and joined.
+    /// two neighbors at that corner and the module between them are solid.
     fn fillets(&mut self) {
         let size = self.size();
         let radius = self.radius();
@@ -311,7 +340,8 @@ impl Renderer<'_> {
                 }
                 let (r, c) = (row as isize, col as isize);
                 for (sy, sx) in [(-1isize, -1isize), (-1, 1), (1, 1), (1, -1)] {
-                    if self.dark(r + sy, c) && self.dark(r, c + sx) && self.dark(r + sy, c + sx) {
+                    if self.solid(r + sy, c) && self.solid(r, c + sx) && self.solid(r + sy, c + sx)
+                    {
                         let color = self.color((r + sy) as usize, (c + sx) as usize);
                         let x = col as f64 + if sx > 0 { 1.0 } else { 0.0 };
                         let y = row as f64 + if sy > 0 { 1.0 } else { 0.0 };
@@ -361,6 +391,7 @@ pub fn render(
         matrix,
         colors,
         style,
+        joined: Renderer::joined_modules(matrix, style),
         shapes: BTreeMap::new(),
         squares: BTreeMap::new(),
         counts: BTreeMap::new(),

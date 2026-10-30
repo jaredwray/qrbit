@@ -24,13 +24,12 @@ const modules = 17 + 4 * version;
 const size = modules * 10;
 
 /**
- * Read the module grid back from a mosaic SVG. The coordinates of the SVG
- * are in modules. A dark module is inside a subpath of a `<path>`: a run of
- * modules. In the dots style, each dark module is a `<use>` of the shared
- * shape. The fills of inner corners are smaller than a module, so they do
- * not count.
+ * Read the modules that the `<path>` elements of a mosaic SVG cover. The
+ * coordinates of the SVG are in modules. A dark module is inside a subpath
+ * of a `<path>`: a run of modules. The fills of inner corners are smaller
+ * than a module, so they do not count.
  */
-function moduleGrid(svg: string): boolean[][] {
+function pathGrid(svg: string): boolean[][] {
 	const grid = Array.from({ length: modules }, () =>
 		Array<boolean>(modules).fill(false),
 	);
@@ -44,10 +43,6 @@ function moduleGrid(svg: string): boolean[][] {
 			}
 		}
 	};
-
-	for (const [, x, y] of svg.matchAll(/<use [^>]*x="(\d+)" y="(\d+)"/g)) {
-		mark([Number(x), Number(y), Number(x) + 1, Number(y) + 1]);
-	}
 
 	for (const [, attributes, d] of svg.matchAll(/<path([^>]*) d="([^"]*)"/g)) {
 		if (attributes.includes(" id=")) continue;
@@ -91,6 +86,26 @@ function moduleGrid(svg: string): boolean[][] {
 					throw new Error(`Unexpected path token ${tokens[i]}`);
 			}
 		}
+	}
+	return grid;
+}
+
+/** The `[row, col]` of each module that is a `<use>` of the shared shape. */
+function usePositions(svg: string): number[][] {
+	return [...svg.matchAll(/<use [^>]*x="(\d+)" y="(\d+)"/g)].map(([, x, y]) => [
+		Number(y),
+		Number(x),
+	]);
+}
+
+/**
+ * Read the module grid back from a mosaic SVG: the modules that the paths
+ * cover, and in the dots style each `<use>` of the shared shape.
+ */
+function moduleGrid(svg: string): boolean[][] {
+	const grid = pathGrid(svg);
+	for (const [row, col] of usePositions(svg)) {
+		grid[row][col] = true;
 	}
 	return grid;
 }
@@ -171,9 +186,10 @@ describe("Mosaic QR codes", () => {
 		const svg = await qr.toSvg();
 		expect((await decodeSvg(svg)).data).toBe(text);
 		// Each style has its own shapes: shared dots, or rectangles with
-		// round corners (arcs) or without.
+		// round corners (arcs in the path data) or without.
 		expect(svg.includes("<use ")).toBe(style === "dots");
-		expect(/a[\d.]/.test(svg)).toBe(style !== "square");
+		const pathData = [...svg.matchAll(/ d="([^"]*)"/g)].map((m) => m[1]);
+		expect(/a[\d.]/.test(pathData.join(" "))).toBe(style !== "square");
 	});
 
 	it("uses version 14 and error correction L by default", async () => {
@@ -252,6 +268,34 @@ describe("Mosaic QR codes", () => {
 			expect(darkRatio(grid, 2, 5)).toBe(1);
 		},
 	);
+
+	it("draws only the finder and alignment patterns as joined shapes in the dots style", async () => {
+		const qr = new QrBit({
+			text,
+			size,
+			mosaic: { image: svgImage(""), version, style: "dots" },
+		});
+		const svg = await qr.toSvg();
+		const paths = pathGrid(svg);
+		const uses = usePositions(svg);
+		const dots = new Set(uses.map(([row, col]) => `${row},${col}`));
+		// The timing pattern at (6, 8) and the dark module at (57, 8) in the
+		// format area are always dark. They are dots.
+		expect(dots.has("6,8")).toBe(true);
+		expect(dots.has("57,8")).toBe(true);
+		// The finder pattern and the alignment pattern at (32, 32) are dark
+		// shapes, not dots.
+		for (const [row, col] of [
+			[3, 3],
+			[30, 30],
+			[32, 32],
+		]) {
+			expect(paths[row][col]).toBe(true);
+			expect(dots.has(`${row},${col}`)).toBe(false);
+		}
+		// A shape does not extend over a dot next to it.
+		expect(uses.filter(([row, col]) => paths[row][col])).toEqual([]);
+	});
 
 	it("draws a GIF image", async () => {
 		// A 1 by 1 GIF with one opaque white pixel. A transparent or failed
@@ -388,6 +432,26 @@ describe("Mosaic QR codes", () => {
 		// 40 to 48.
 		expect(darkRatio(grid, 18, 47, 17, 32)).toBeGreaterThan(0.9);
 		expect(darkRatio(grid, 18, 47, 40, 48)).toBeGreaterThan(0.9);
+		expect((await decodeSvg(svg)).data).toBe(text);
+	});
+
+	it("gives a module at the border of two colors the color of the larger part", async () => {
+		// The border between red and blue is inside a column of modules. A
+		// mean color would make a third color there.
+		const qr = new QrBit({
+			text,
+			mosaic: {
+				image: svgImage(
+					`<rect width="6" height="10" fill="#E53935"/><rect x="6" width="4" height="10" fill="#1E78C8"/>`,
+				),
+			},
+		});
+		const svg = await qr.toSvg();
+		expect(fillColors(svg).sort()).toEqual([
+			"rgb(229,57,53)",
+			"rgb(255,255,255)",
+			"rgb(30,120,200)",
+		]);
 		expect((await decodeSvg(svg)).data).toBe(text);
 	});
 

@@ -246,32 +246,50 @@ fn luminance(color: [u8; 3]) -> f32 {
     0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-/// The most common dark color of the cells, weighted by coverage. Colors
-/// are grouped in bins of 8 levels per channel. The result is the average
-/// color of the largest bin.
-fn dominant_color(cells: &[Option<Cell>]) -> Option<[u8; 3]> {
-    let mut bins: BTreeMap<[u8; 3], (f32, [f32; 3])> = BTreeMap::new();
-    for cell in cells.iter().flatten().filter(|cell| cell.dark) {
-        let bin = bins
-            .entry(cell.color.map(|c| c >> 3))
-            .or_insert((0.0, [0.0; 3]));
-        bin.0 += cell.coverage;
-        for (sum, &c) in bin.1.iter_mut().zip(&cell.color) {
-            *sum += c as f32 * cell.coverage;
+/// Whiteness of a color with channels from 0 to 1: the smallest channel.
+fn whiteness(color: [f32; 3]) -> f32 {
+    color[0].min(color[1]).min(color[2])
+}
+
+/// Weighted colors in bins of 8 levels per channel. Each bin holds the total
+/// weight and the weighted sum of its colors, with channels from 0 to 255.
+#[derive(Default)]
+struct ColorBins(BTreeMap<[u8; 3], (f32, [f32; 3])>);
+
+impl ColorBins {
+    fn add(&mut self, color: [f32; 3], weight: f32) {
+        let key = color.map(|c| (c.round() as u8) >> 3);
+        let bin = self.0.entry(key).or_insert((0.0, [0.0; 3]));
+        bin.0 += weight;
+        for (sum, c) in bin.1.iter_mut().zip(color) {
+            *sum += c * weight;
         }
     }
 
-    // The first bin in key order wins a tie, so the result is deterministic.
-    let (weight, sum) = bins
-        .values()
-        .fold(None, |best: Option<&(f32, [f32; 3])>, bin| {
-            if best.is_none_or(|b| bin.0 > b.0) {
-                Some(bin)
-            } else {
-                best
-            }
-        })?;
-    Some(sum.map(|s| (s / weight).round() as u8))
+    /// The average color of the bin with the largest weight. The first bin
+    /// in key order wins a tie, so the result is deterministic.
+    fn largest(&self) -> Option<[u8; 3]> {
+        let (weight, sum) = self
+            .0
+            .values()
+            .fold(None, |best: Option<&(f32, [f32; 3])>, bin| {
+                if best.is_none_or(|b| bin.0 > b.0) {
+                    Some(bin)
+                } else {
+                    best
+                }
+            })?;
+        Some(sum.map(|s| (s / weight).round() as u8))
+    }
+}
+
+/// The most common dark color of the cells, weighted by coverage.
+fn dominant_color(cells: &[Option<Cell>]) -> Option<[u8; 3]> {
+    let mut bins = ColorBins::default();
+    for cell in cells.iter().flatten().filter(|cell| cell.dark) {
+        bins.add(cell.color.map(|c| c as f32), cell.coverage);
+    }
+    bins.largest()
 }
 
 /// Change the luminance of `color` to `target`, from 0 to 1. A darker
@@ -370,22 +388,35 @@ fn sample_targets(
     for my in 0..area {
         for mx in 0..area {
             let mut sum = [0.0f32; 4];
+            let mut dark_bins = ColorBins::default();
             for sy in 0..SAMPLES {
                 for sx in 0..SAMPLES {
                     let y = my as u32 * SAMPLES + sy;
                     let x = mx as u32 * SAMPLES + sx;
-                    for (s, v) in sum.iter_mut().zip(&samples[(y * px + x) as usize]) {
+                    let [alpha, r, g, b] = samples[(y * px + x) as usize];
+                    for (s, v) in sum.iter_mut().zip([alpha, r, g, b]) {
                         *s += v;
+                    }
+                    if alpha > 0.0 {
+                        let color = [r, g, b].map(|c| c / alpha);
+                        if (whiteness(color) as f64) < threshold {
+                            dark_bins.add(color.map(|c| c * 255.0), alpha);
+                        }
                     }
                 }
             }
             let total = (SAMPLES * SAMPLES) as f32;
             if sum[0] >= total / 2.0 {
-                let rgb = [sum[1], sum[2], sum[3]].map(|c| c / sum[0]);
-                let whiteness = rgb[0].min(rgb[1]).min(rgb[2]);
+                let mean = [sum[1], sum[2], sum[3]].map(|c| c / sum[0]);
+                let dark = (whiteness(mean) as f64) < threshold;
+                // A module at the border of two colors gets the color of the
+                // largest part, not a mix. The whiteness of the mean is at
+                // least the mean of the sample whitenesses, so a dark module
+                // has a dark sample.
+                let color = if dark { dark_bins.largest() } else { None };
                 cells[my * area + mx] = Some(Cell {
-                    dark: (whiteness as f64) < threshold,
-                    color: rgb.map(|c| (c * 255.0).round() as u8),
+                    dark,
+                    color: color.unwrap_or(mean.map(|c| (c * 255.0).round() as u8)),
                     coverage: sum[0] / total,
                 });
             }
