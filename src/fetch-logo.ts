@@ -21,6 +21,33 @@ type Download = { url: URL; body: Buffer };
 // Only the start of an HTML page is searched for icon links.
 const htmlSearchLimit = 1024 * 1024;
 
+const namedReferences: Record<string, string> = {
+	amp: "&",
+	apos: "'",
+	gt: ">",
+	lt: "<",
+	quot: '"',
+};
+
+/**
+ * Decode the HTML character references that can occur in a URL attribute.
+ * The digit limits keep each numeric reference in the Unicode range.
+ */
+function decodeReferences(value: string): string {
+	return value.replace(
+		/&(?:#x([\da-f]{1,4})|#(\d{1,5})|(amp|apos|gt|lt|quot));/gi,
+		(_, hex?: string, decimal?: string, name?: string) => {
+			if (hex) {
+				return String.fromCodePoint(Number.parseInt(hex, 16));
+			}
+			if (decimal) {
+				return String.fromCodePoint(Number(decimal));
+			}
+			return namedReferences[(name as string).toLowerCase()];
+		},
+	);
+}
+
 const svgPattern =
 	/^﻿?\s*(<\?xml[\s\S]*?\?>\s*)?(<!--[\s\S]*?-->\s*)*(<!doctype svg[^>]*>\s*)?<svg[\s>]/i;
 
@@ -56,7 +83,7 @@ function findIcons(html: string, base: URL): URL[] {
 		)) {
 			attributes.set(
 				match[1].toLowerCase(),
-				match[2] ?? match[3] ?? match[4],
+				decodeReferences(match[2] ?? match[3] ?? match[4]),
 			);
 		}
 
@@ -160,12 +187,14 @@ export async function fetchLogo(
 		return page.body;
 	}
 
+	// After a redirect, the site at the final address gives the icons.
+	const site = page?.url ?? target;
 	const candidates = page
-		? findIcons(page.body.toString("utf8", 0, htmlSearchLimit), page.url)
+		? findIcons(page.body.toString("utf8", 0, htmlSearchLimit), site)
 		: [];
 	candidates.push(
-		new URL("/apple-touch-icon.png", target),
-		new URL("/favicon.ico", target),
+		new URL("/apple-touch-icon.png", site),
+		new URL("/favicon.ico", site),
 	);
 
 	for (const candidate of candidates) {

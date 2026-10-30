@@ -26,14 +26,18 @@ const svg = Buffer.from(
 	'<?xml version="1.0"?>\n<!-- logo -->\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>',
 );
 
+// Routes are keyed by path, or by host and path for one server only.
 let routes: Record<string, Route> = {};
 let hits: Record<string, number> = {};
+let requests: string[] = [];
 let base = "";
+let other = "";
 
-const server = http.createServer((request, response) => {
+const handle: http.RequestListener = (request, response) => {
 	const path = new URL(request.url ?? "/", "http://localhost").pathname;
 	hits[path] = (hits[path] ?? 0) + 1;
-	const route = routes[path];
+	requests.push(`${request.headers.host}${request.url}`);
+	const route = routes[`${request.headers.host}${path}`] ?? routes[path];
 	const send = () => {
 		if (!route) {
 			response.writeHead(404).end("not found");
@@ -48,24 +52,35 @@ const server = http.createServer((request, response) => {
 	} else {
 		send();
 	}
-});
+};
+
+const server = http.createServer(handle);
+const otherServer = http.createServer(handle);
+
+async function listen(target: http.Server): Promise<string> {
+	await new Promise<void>((resolve) => target.listen(0, "127.0.0.1", resolve));
+	return `http://127.0.0.1:${(target.address() as AddressInfo).port}`;
+}
 
 const html = (head: string) =>
 	`<!doctype html><html><head>${head}</head></html>`;
 
 beforeAll(async () => {
-	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-	base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+	base = await listen(server);
+	other = await listen(otherServer);
 });
 
 afterAll(() => {
-	server.closeAllConnections();
-	server.close();
+	for (const target of [server, otherServer]) {
+		target.closeAllConnections();
+		target.close();
+	}
 });
 
 beforeEach(() => {
 	routes = {};
 	hits = {};
+	requests = [];
 });
 
 describe("QrBit.fetchLogo", () => {
@@ -175,6 +190,34 @@ describe("QrBit.fetchLogo", () => {
 		routes["/home/"] = { body: html('<link rel="icon" href="icon.png">') };
 		routes["/home/icon.png"] = { body: png };
 		expect(await QrBit.fetchLogo(base)).toEqual(png);
+	});
+
+	it("decodes character references in icon links", async () => {
+		routes["/"] = {
+			body: html(`
+				<link rel="icon" sizes="64x64" href="/named?a=1&amp;b=2">
+				<link rel="icon" sizes="48x48" href="/decimal?c=3&#38;d=4">
+				<link rel="icon" sizes="32x32" href="/hex?e=5&#x26;f=6">
+			`),
+		};
+		routes["/hex"] = { body: png };
+		expect(await QrBit.fetchLogo(base)).toEqual(png);
+		const host = new URL(base).host;
+		expect(requests).toEqual([
+			`${host}/`,
+			`${host}/named?a=1&b=2`,
+			`${host}/decimal?c=3&d=4`,
+			`${host}/hex?e=5&f=6`,
+		]);
+	});
+
+	it("uses the site after a redirect to another host for the fallback icons", async () => {
+		const otherHost = new URL(other).host;
+		routes["/"] = { redirect: `${other}/` };
+		routes[`${otherHost}/`] = { body: html("") };
+		routes[`${otherHost}/favicon.ico`] = { body: ico };
+		expect(await QrBit.fetchLogo(base)).toEqual(ico);
+		expect(requests).toContain(`${otherHost}/favicon.ico`);
 	});
 
 	it("falls back to /apple-touch-icon.png and then /favicon.ico", async () => {
