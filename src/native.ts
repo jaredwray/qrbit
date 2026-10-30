@@ -60,6 +60,28 @@ export type NativeQrCodeSvgOptions = {
 	lightColor?: string;
 };
 
+export type NativeMosaicSvgOptions = {
+	text: string;
+	image: Buffer;
+	size?: number;
+	margin?: number;
+	sizeRatio?: number;
+	threshold?: number;
+	version?: number;
+	errorCorrection?: string;
+	style?: string;
+	color?: string;
+	backgroundColor?: string;
+	foregroundColor?: string;
+};
+
+export type NativeMosaicSvgResult = {
+	svg: string;
+	version: number;
+	targetModules: number;
+	matchedModules: number;
+};
+
 export type NativeDecodeResult = {
 	valid: boolean;
 	data?: string;
@@ -89,6 +111,7 @@ export type NativeBinding = {
 	) => Buffer;
 	decode: (input: Buffer) => string | null;
 	decodeDetailed: (input: Buffer) => NativeDecodeResult;
+	generateMosaicSvg: (options: NativeMosaicSvgOptions) => NativeMosaicSvgResult;
 	generateQrCodeSvg: (options: NativeQrCodeSvgOptions) => string;
 	generateQrSvg: (options: NativeQrOptions) => string;
 	generateQrSvgWithBuffer: (options: NativeQrOptionsWithBuffer) => string;
@@ -198,6 +221,7 @@ export const convertSvgToPng = nativeBinding.convertSvgToPng;
 export const convertSvgToWebp = nativeBinding.convertSvgToWebp;
 export const decode = nativeBinding.decode;
 export const decodeDetailed = nativeBinding.decodeDetailed;
+export const generateMosaicSvg = nativeBinding.generateMosaicSvg;
 export const generateQrCodeSvg = nativeBinding.generateQrCodeSvg;
 export const generateQrSvg = nativeBinding.generateQrSvg;
 export const generateQrSvgWithBuffer = nativeBinding.generateQrSvgWithBuffer;
