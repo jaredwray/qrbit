@@ -51,6 +51,27 @@ const mosaicLowMatchMessage = (matched: number, target: number) =>
 // detailed for the QR version.
 const mosaicMatchWarningRatio = 0.9;
 
+/**
+ * The shape of the dark modules of a mosaic.
+ * - `"rounded"`: dark modules join their horizontal and vertical neighbors
+ *   into shapes with round corners.
+ * - `"dots"`: each dark module is a separate square with round corners.
+ *   The finder and alignment patterns are solid.
+ * - `"square"`: each dark module is a square.
+ */
+export type MosaicStyle = "rounded" | "dots" | "square";
+
+/**
+ * The source of the colors of the dark modules of a mosaic.
+ * - `"image"`: each module in the image gets the color of the image there.
+ *   The other modules get the most common dark color of the image. qrbit
+ *   makes a color darker if it is too near to the background color, and
+ *   keeps all colors in a small luminance range, so that decoders read
+ *   the modules as dark.
+ * - `"foreground"`: all dark modules get `foregroundColor`.
+ */
+export type MosaicColor = "image" | "foreground";
+
 export type MosaicOptions = {
 	/**
 	 * The image to draw with the data modules: a file path, the image bytes,
@@ -67,8 +88,10 @@ export type MosaicOptions = {
 	 */
 	sizeRatio?: number;
 	/**
-	 * The luminance, from 0 (black) to 1 (white), below which a part of the
-	 * image becomes a dark module.
+	 * The whiteness, from 0 to 1, below which a part of the image becomes a
+	 * dark module. The whiteness of a color is the smallest of its red,
+	 * green and blue values, so black and strong colors are dark, and white
+	 * and light grey are light.
 	 * @type {number}
 	 * @default 0.5
 	 */
@@ -78,7 +101,7 @@ export type MosaicOptions = {
 	 * modules, so the image has more detail. If the text needs a higher
 	 * version, qrbit uses that version.
 	 * @type {number}
-	 * @default 12
+	 * @default 14
 	 */
 	version?: number;
 	/**
@@ -89,6 +112,20 @@ export type MosaicOptions = {
 	 * @default "L"
 	 */
 	errorCorrection?: ECLevel;
+	/**
+	 * The shape of the dark modules.
+	 * @type {MosaicStyle}
+	 * @default "rounded"
+	 */
+	style?: MosaicStyle;
+	/**
+	 * The source of the colors of the dark modules. With `"image"`, the
+	 * modules get the colors of the image. With `"foreground"`, the modules
+	 * get `foregroundColor`.
+	 * @type {MosaicColor}
+	 * @default "image"
+	 */
+	color?: MosaicColor;
 };
 
 export type QrOptions = {
@@ -584,6 +621,8 @@ export class QrBit extends Hookified {
 			threshold: mosaic.threshold,
 			version: mosaic.version,
 			errorCorrection: mosaic.errorCorrection,
+			style: mosaic.style,
+			color: mosaic.color,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
 		});

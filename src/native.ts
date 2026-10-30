@@ -69,6 +69,8 @@ export type NativeMosaicSvgOptions = {
 	threshold?: number;
 	version?: number;
 	errorCorrection?: string;
+	style?: string;
+	color?: string;
 	backgroundColor?: string;
 	foregroundColor?: string;
 };

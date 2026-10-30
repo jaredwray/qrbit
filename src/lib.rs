@@ -3,6 +3,7 @@ use napi_derive::napi;
 use quircs::Quirc;
 
 mod mosaic;
+mod mosaic_svg;
 mod nodeqr;
 use nodeqr::{BitMatrix, EcLevel};
 
@@ -62,17 +63,6 @@ impl QrGenerator {
             background_color: [255, 255, 255, 255], // white
             foreground_color: [0, 0, 0, 255],       // black
         })
-    }
-
-    /// Wrap a matrix that is already assembled, for example a mosaic.
-    pub fn from_matrix(matrix: BitMatrix, size: u32, margin: u32) -> Self {
-        Self {
-            matrix,
-            size,
-            margin,
-            background_color: [255, 255, 255, 255], // white
-            foreground_color: [0, 0, 0, 255],       // black
-        }
     }
 
     pub fn set_colors(&mut self, bg: [u8; 4], fg: [u8; 4]) {
@@ -357,12 +347,19 @@ pub struct MosaicSvgOptions {
     pub margin: Option<u32>,
     /// Width of the image as a fraction of the symbol width (default 0.7).
     pub size_ratio: Option<f64>,
-    /// Luminance from 0 to 1 below which a sample is dark (default 0.5).
+    /// Whiteness (smallest RGB channel) from 0 to 1 below which a sample is
+    /// dark (default 0.5).
     pub threshold: Option<f64>,
-    /// Lowest QR version to use (default 12).
+    /// Lowest QR version to use (default 14).
     pub version: Option<u32>,
     /// Error correction level (default "L").
     pub error_correction: Option<String>,
+    /// Shape of the dark modules: "rounded", "dots" or "square" (default
+    /// "rounded").
+    pub style: Option<String>,
+    /// Source of the module colors: "image" or "foreground" (default
+    /// "image").
+    pub color: Option<String>,
     pub background_color: Option<String>,
     pub foreground_color: Option<String>,
 }
@@ -382,29 +379,49 @@ pub struct MosaicSvgResult {
 pub fn generate_mosaic_svg(options: MosaicSvgOptions) -> Result<MosaicSvgResult> {
     let size = options.size.unwrap_or(200);
     let ec_level = parse_ec_level(Some(options.error_correction.as_deref().unwrap_or("L")));
+    let failed = |e: String| Error::from_reason(format!("Mosaic generation failed: {}", e));
+    let style =
+        mosaic_svg::Style::parse(options.style.as_deref().unwrap_or("rounded")).map_err(failed)?;
+    let color_mode = match options.color.as_deref().unwrap_or("image") {
+        "image" => mosaic::ColorMode::Image,
+        "foreground" => mosaic::ColorMode::Foreground,
+        other => {
+            return Err(failed(format!(
+                "color must be \"image\" or \"foreground\", got \"{}\"",
+                other
+            )))
+        }
+    };
+    let background =
+        parse_optional_color(options.background_color.as_deref())?.unwrap_or([255, 255, 255, 255]);
+    let foreground =
+        parse_optional_color(options.foreground_color.as_deref())?.unwrap_or([0, 0, 0, 255]);
 
     let output = mosaic::create(
         &options.text,
         ec_level,
-        options.version.unwrap_or(12) as usize,
+        options.version.unwrap_or(14) as usize,
         &options.image,
         options.size_ratio.unwrap_or(0.7),
         options.threshold.unwrap_or(0.5),
     )
-    .map_err(|e| Error::from_reason(format!("Mosaic generation failed: {}", e)))?;
+    .map_err(failed)?;
 
     let margin = options
         .margin
         .unwrap_or_else(|| (4.0 * size as f64 / output.matrix.size as f64).round() as u32);
-    let mut generator = QrGenerator::from_matrix(output.matrix, size, margin);
-    apply_colors(
-        &mut generator,
-        options.background_color.as_deref(),
-        options.foreground_color.as_deref(),
-    )?;
+    let rgb = |c: [u8; 4]| [c[0], c[1], c[2]];
+    let colors = mosaic::module_colors(&output, color_mode, rgb(foreground), rgb(background));
 
     Ok(MosaicSvgResult {
-        svg: generator.build_svg(None, 0.0, None, 0.0),
+        svg: mosaic_svg::render(
+            &output.matrix,
+            &colors,
+            size,
+            margin,
+            rgb(background),
+            style,
+        ),
         version: output.version as u32,
         target_modules: output.target_modules,
         matched_modules: output.matched_modules,
