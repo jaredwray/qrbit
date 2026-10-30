@@ -151,15 +151,15 @@ describe("Mosaic QR codes", () => {
 		}
 	});
 
-	it("decodes as PNG, JPEG and WebP output", async () => {
+	// One format in each test, because each conversion of a round mosaic
+	// takes up to one second in a debug build.
+	it.each([
+		["PNG", (qr: QrBit) => qr.toPng()],
+		["JPEG", (qr: QrBit) => qr.toJpg()],
+		["WebP", (qr: QrBit) => qr.toWebp()],
+	])("decodes as %s output", async (_, render) => {
 		const qr = new QrBit({ text, size: 400, mosaic: { image: testLogoPath } });
-		for (const buffer of [
-			await qr.toPng(),
-			await qr.toJpg(),
-			await qr.toWebp(),
-		]) {
-			expect((await QrBit.decodeDetailed(buffer)).data).toBe(text);
-		}
+		expect((await QrBit.decodeDetailed(await render(qr))).data).toBe(text);
 	});
 
 	it.each(styles)("decodes with the %s style", async (style) => {
@@ -353,10 +353,11 @@ describe("Mosaic QR codes", () => {
 		// Red covers more of the image than blue, so the modules outside the
 		// image are red. The transparent gap between the two areas keeps the
 		// colors apart in the modules. The two colors have a near luminance,
-		// so they do not change.
+		// so they do not change. The SVG is in module units, so a small size
+		// keeps the decode fast.
 		const qr = new QrBit({
 			text,
-			size,
+			size: 400,
 			mosaic: {
 				image: svgImage(
 					`<rect width="5" height="10" fill="#E53935"/><rect x="7" width="3" height="10" fill="#1E78C8"/>`,
