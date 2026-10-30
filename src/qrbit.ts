@@ -3,17 +3,21 @@ import fs from "node:fs";
 import path from "node:path";
 import { Cacheable } from "cacheable";
 import { Hookified, type HookifiedOptions } from "hookified";
+import { type FetchLogoOptions, fetchLogo } from "./fetch-logo.js";
 import {
 	convertSvgToJpeg as nativeConvertSvgToJpeg,
 	convertSvgToPng as nativeConvertSvgToPng,
 	convertSvgToWebp as nativeConvertSvgToWebp,
 	decode as nativeDecode,
 	decodeDetailed as nativeDecodeDetailed,
+	generateMosaicSvg as nativeGenerateMosaicSvg,
 	generateQrCodeSvg as nativeGenerateQrCodeSvg,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 	validateQr as nativeValidateQr,
 } from "./native.js";
+
+export type { FetchLogoOptions } from "./fetch-logo.js";
 
 export enum QrBitEvents {
 	warn = "warn",
@@ -33,6 +37,59 @@ export type ECLevel =
 
 const logoFileDoesNotExistMessage = (logo: string) =>
 	`Logo file not found: ${logo}. Proceeding without logo.`;
+
+const mosaicImageErrorMessage = (reason: string) =>
+	`Mosaic image could not be loaded: ${reason}. Proceeding without mosaic.`;
+
+const mosaicIgnoresLogoMessage =
+	"The mosaic option ignores the logo option, because a logo covers data modules.";
+
+const mosaicLowMatchMessage = (matched: number, target: number) =>
+	`The mosaic image matched only ${matched} of ${target} modules. Use a higher version or a smaller sizeRatio.`;
+
+// Below this fraction of matched modules, the image is too large or too
+// detailed for the QR version.
+const mosaicMatchWarningRatio = 0.9;
+
+export type MosaicOptions = {
+	/**
+	 * The image to draw with the data modules: a file path, the image bytes,
+	 * or a URL. For a URL, qrbit gets the logo of that site, or the image at
+	 * that URL (see `QrBit.fetchLogo`). PNG, JPEG, WebP, GIF, ICO and SVG are
+	 * supported. Transparent areas of the image stay free for the QR data.
+	 * @type {string | Buffer | URL}
+	 */
+	image: string | Buffer | URL;
+	/**
+	 * The width of the image as a fraction of the QR code width.
+	 * @type {number}
+	 * @default 0.7
+	 */
+	sizeRatio?: number;
+	/**
+	 * The luminance, from 0 (black) to 1 (white), below which a part of the
+	 * image becomes a dark module.
+	 * @type {number}
+	 * @default 0.5
+	 */
+	threshold?: number;
+	/**
+	 * The lowest QR version (1 to 40) to use. A higher version has more
+	 * modules, so the image has more detail. If the text needs a higher
+	 * version, qrbit uses that version.
+	 * @type {number}
+	 * @default 12
+	 */
+	version?: number;
+	/**
+	 * The error correction level of the mosaic. A lower level gives more
+	 * modules to the image. This value replaces `errorCorrection` for
+	 * mosaic output.
+	 * @type {ECLevel}
+	 * @default "L"
+	 */
+	errorCorrection?: ECLevel;
+};
 
 export type QrOptions = {
 	/**
@@ -98,6 +155,13 @@ export type QrOptions = {
 	 */
 	errorCorrection?: ECLevel;
 	/**
+	 * Draw an image with the data modules of the QR code. The QR code stays
+	 * valid with no errors, because qrbit selects the unused data bits so
+	 * that the modules show the image.
+	 * @type {MosaicOptions}
+	 */
+	mosaic?: MosaicOptions;
+	/**
 	 * Caching is enabled by default. You can disable it by setting this option to false. You can also pass
 	 * a custom Cacheable instance.
 	 * @type {Cacheable | boolean}
@@ -151,6 +215,7 @@ export class QrBit extends Hookified {
 	private _backgroundColor: string;
 	private _foregroundColor: string;
 	private _errorCorrection: ECLevel;
+	private _mosaic: MosaicOptions | undefined;
 	private _cache: Cacheable | undefined;
 	private _napi = {
 		convertSvgToJpeg: nativeConvertSvgToJpeg,
@@ -158,6 +223,7 @@ export class QrBit extends Hookified {
 		convertSvgToWebp: nativeConvertSvgToWebp,
 		decode: nativeDecode,
 		decodeDetailed: nativeDecodeDetailed,
+		generateMosaicSvg: nativeGenerateMosaicSvg,
 		generateQrCodeSvg: nativeGenerateQrCodeSvg,
 		generateQrSvg: nativeGenerateQrSvg,
 		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
@@ -183,6 +249,7 @@ export class QrBit extends Hookified {
 				: (options.logoBackgroundColor ?? this._backgroundColor);
 		this._logoPaddingRatio = options.logoPaddingRatio ?? 0.1;
 		this._errorCorrection = options.errorCorrection ?? "H";
+		this._mosaic = options.mosaic;
 		if (options.cache !== undefined) {
 			// if it is boolean and true then create a new cacheable instance
 			if (options.cache === true) {
@@ -368,6 +435,22 @@ export class QrBit extends Hookified {
 	}
 
 	/**
+	 * Get the mosaic options.
+	 * @returns {MosaicOptions | undefined} The mosaic options or undefined if not set
+	 */
+	public get mosaic(): MosaicOptions | undefined {
+		return this._mosaic;
+	}
+
+	/**
+	 * Set the mosaic options.
+	 * @param value - The mosaic options or undefined to render a standard QR code
+	 */
+	public set mosaic(value: MosaicOptions | undefined) {
+		this._mosaic = value;
+	}
+
+	/**
 	 * Get the cache instance.
 	 * @returns {Cacheable | undefined} The cache instance or undefined if caching is disabled
 	 */
@@ -391,11 +474,28 @@ export class QrBit extends Hookified {
 	 * @returns {Promise<string>} The SVG string
 	 */
 	public async toSvg(options?: toOptions): Promise<string> {
+		return (await this.renderSvg(options)).svg;
+	}
+
+	/**
+	 * Generate the SVG and tell if the result can go in the cache. The
+	 * standard QR code that replaces a failed mosaic cannot, because the
+	 * image can be available on the next call.
+	 * @param {toOptions} options - Generation options
+	 * @returns {Promise<{ svg: string; cacheable: boolean }>} The SVG string and if it can be cached
+	 */
+	private async renderSvg(
+		options?: toOptions,
+	): Promise<{ svg: string; cacheable: boolean }> {
 		let result = "";
 		let renderKey = `native-svg`;
 
 		if (this._logo) {
 			renderKey = `napi-svg`;
+		}
+
+		if (this._mosaic) {
+			renderKey = `napi-mosaic-svg`;
 		}
 
 		// set all the options
@@ -416,11 +516,17 @@ export class QrBit extends Hookified {
 			cacheKey = await this.generateCacheKey(renderKey);
 			const cached = await cache.get<string>(cacheKey);
 			if (cached) {
-				return cached;
+				return { svg: cached, cacheable: true };
 			}
 		}
 
-		if (!this._logo) {
+		const mosaicSvg = this._mosaic
+			? await this.toSvgMosaic(this._mosaic, cache)
+			: undefined;
+
+		if (mosaicSvg !== undefined) {
+			result = mosaicSvg;
+		} else if (!this._logo) {
 			// Native Rust port of node-qrcode that produces byte-for-byte
 			// identical SVG output (path-based, crisp-edges, margin of 4 modules).
 			result = this._napi.generateQrCodeSvg({
@@ -435,11 +541,93 @@ export class QrBit extends Hookified {
 			result = await this.toSvgNapi();
 		}
 
-		if (cache && cacheKey) {
+		const cacheable = mosaicSvg !== undefined || !this._mosaic;
+		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
 
-		return result;
+		return { svg: result, cacheable };
+	}
+
+	/**
+	 * Generate the SVG of a mosaic QR code. Emits an error event and returns
+	 * undefined if the image cannot be loaded.
+	 * @param mosaic - The mosaic options
+	 * @param cache - The cache for downloaded images, or undefined
+	 * @returns {Promise<string | undefined>} The SVG string, or undefined
+	 */
+	private async toSvgMosaic(
+		mosaic: MosaicOptions,
+		cache: Cacheable | undefined,
+	): Promise<string | undefined> {
+		if (this._logo) {
+			this.emit(QrBitEvents.warn, mosaicIgnoresLogoMessage);
+		}
+
+		let image: Buffer;
+		try {
+			image = await this.resolveMosaicImage(mosaic.image, cache);
+		} catch (error) {
+			this.emit(
+				QrBitEvents.error,
+				mosaicImageErrorMessage((error as Error).message),
+			);
+			return undefined;
+		}
+
+		const result = this._napi.generateMosaicSvg({
+			text: this._text,
+			image,
+			size: this._size,
+			margin: this._margin,
+			sizeRatio: mosaic.sizeRatio,
+			threshold: mosaic.threshold,
+			version: mosaic.version,
+			errorCorrection: mosaic.errorCorrection,
+			backgroundColor: this._backgroundColor,
+			foregroundColor: this._foregroundColor,
+		});
+
+		if (
+			result.matchedModules <
+			result.targetModules * mosaicMatchWarningRatio
+		) {
+			this.emit(
+				QrBitEvents.warn,
+				mosaicLowMatchMessage(result.matchedModules, result.targetModules),
+			);
+		}
+
+		return result.svg;
+	}
+
+	/**
+	 * Load the bytes of a mosaic image. A downloaded image is kept in the cache.
+	 * @param image - A file path, the image bytes, or a URL
+	 * @param cache - The cache for downloaded images, or undefined
+	 * @returns {Promise<Buffer>} The image bytes
+	 */
+	private async resolveMosaicImage(
+		image: string | Buffer | URL,
+		cache: Cacheable | undefined,
+	): Promise<Buffer> {
+		if (Buffer.isBuffer(image)) {
+			return image;
+		}
+
+		if (typeof image === "string") {
+			return fs.promises.readFile(image);
+		}
+
+		const cacheKey = `fetch-logo:${image.href}`;
+		const cached = await cache?.get<Buffer>(cacheKey);
+		if (cached) {
+			return Buffer.from(cached);
+		}
+
+		const logo = await fetchLogo(image);
+		await cache?.set(cacheKey, logo);
+		return logo;
 	}
 
 	/**
@@ -515,10 +703,10 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg(options);
+		const { svg, cacheable } = await this.renderSvg(options);
 		result = QrBit.convertSvgToPng(svg);
 
-		if (cache && cacheKey) {
+		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
 
@@ -568,10 +756,10 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg(options);
+		const { svg, cacheable } = await this.renderSvg(options);
 		result = QrBit.convertSvgToJpeg(svg, undefined, undefined, quality);
 
-		if (cache && cacheKey) {
+		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
 
@@ -623,10 +811,10 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg(options);
+		const { svg, cacheable } = await this.renderSvg(options);
 		result = QrBit.convertSvgToWebp(svg);
 
-		if (cache && cacheKey) {
+		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
 
@@ -878,6 +1066,24 @@ export class QrBit extends Hookified {
 	}
 
 	/**
+	 * Get the logo of a website, or the image at a URL. Use the result as
+	 * `logo` or as `mosaic.image`. The function reads the icon links of the
+	 * page, then tries `/apple-touch-icon.png` and `/favicon.ico`. It does
+	 * not use a third-party favicon service. Only `http:` and `https:` URLs
+	 * are accepted. Validate URLs from untrusted sources before you call it.
+	 * @param url - The website or image URL
+	 * @param options - Time and size limits for each request
+	 * @returns {Promise<Buffer>} The image bytes
+	 * @throws {Error} If the URL is not http or https, or if no image is found
+	 */
+	public static async fetchLogo(
+		url: string | URL,
+		options?: FetchLogoOptions,
+	): Promise<Buffer> {
+		return fetchLogo(url, options);
+	}
+
+	/**
 	 * Generate a cache key based on the current QR code options.
 	 * @param {string} renderKey the format that you are rendering in such as `napi-png`, `native-svg`, `napi-svg`
 	 * @returns {Promise<string>} The cache key
@@ -894,6 +1100,13 @@ export class QrBit extends Hookified {
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
 			errorCorrection: this._errorCorrection,
+			mosaic: this._mosaic && {
+				...this._mosaic,
+				image:
+					this._mosaic.image instanceof URL
+						? this._mosaic.image.href
+						: this._mosaic.image,
+			},
 			renderKey,
 		};
 

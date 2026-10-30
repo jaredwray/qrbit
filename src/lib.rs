@@ -2,6 +2,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use quircs::Quirc;
 
+mod mosaic;
 mod nodeqr;
 use nodeqr::{BitMatrix, EcLevel};
 
@@ -61,6 +62,17 @@ impl QrGenerator {
             background_color: [255, 255, 255, 255], // white
             foreground_color: [0, 0, 0, 255],       // black
         })
+    }
+
+    /// Wrap a matrix that is already assembled, for example a mosaic.
+    pub fn from_matrix(matrix: BitMatrix, size: u32, margin: u32) -> Self {
+        Self {
+            matrix,
+            size,
+            margin,
+            background_color: [255, 255, 255, 255], // white
+            foreground_color: [0, 0, 0, 255],       // black
+        }
     }
 
     pub fn set_colors(&mut self, bg: [u8; 4], fg: [u8; 4]) {
@@ -333,6 +345,70 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
         logo_background_color,
         logo_padding_ratio,
     )
+}
+
+#[napi(object)]
+pub struct MosaicSvgOptions {
+    pub text: String,
+    /// Image to draw with the data modules (PNG, JPEG, WebP, GIF, ICO or SVG).
+    pub image: Buffer,
+    pub size: Option<u32>,
+    /// Margin in pixels. The default is a quiet zone of 4 modules.
+    pub margin: Option<u32>,
+    /// Width of the image as a fraction of the symbol width (default 0.7).
+    pub size_ratio: Option<f64>,
+    /// Luminance from 0 to 1 below which a sample is dark (default 0.5).
+    pub threshold: Option<f64>,
+    /// Lowest QR version to use (default 12).
+    pub version: Option<u32>,
+    /// Error correction level (default "L").
+    pub error_correction: Option<String>,
+    pub background_color: Option<String>,
+    pub foreground_color: Option<String>,
+}
+
+#[napi(object)]
+pub struct MosaicSvgResult {
+    pub svg: String,
+    pub version: u32,
+    /// Non-function modules that the image gives a value to.
+    pub target_modules: u32,
+    /// Target modules that have the value of the image.
+    pub matched_modules: u32,
+}
+
+/// Generate a QR code SVG whose data modules draw an image.
+#[napi]
+pub fn generate_mosaic_svg(options: MosaicSvgOptions) -> Result<MosaicSvgResult> {
+    let size = options.size.unwrap_or(200);
+    let ec_level = parse_ec_level(Some(options.error_correction.as_deref().unwrap_or("L")));
+
+    let output = mosaic::create(
+        &options.text,
+        ec_level,
+        options.version.unwrap_or(12) as usize,
+        &options.image,
+        options.size_ratio.unwrap_or(0.7),
+        options.threshold.unwrap_or(0.5),
+    )
+    .map_err(|e| Error::from_reason(format!("Mosaic generation failed: {}", e)))?;
+
+    let margin = options
+        .margin
+        .unwrap_or_else(|| (4.0 * size as f64 / output.matrix.size as f64).round() as u32);
+    let mut generator = QrGenerator::from_matrix(output.matrix, size, margin);
+    apply_colors(
+        &mut generator,
+        options.background_color.as_deref(),
+        options.foreground_color.as_deref(),
+    )?;
+
+    Ok(MosaicSvgResult {
+        svg: generator.build_svg(None, 0.0, None, 0.0),
+        version: output.version as u32,
+        target_modules: output.target_modules,
+        matched_modules: output.matched_modules,
+    })
 }
 
 #[napi(object)]

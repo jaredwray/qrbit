@@ -116,7 +116,7 @@ fn get_symbol_size(version: usize) -> usize {
     version * 4 + 17
 }
 
-fn get_symbol_total_codewords(version: usize) -> usize {
+pub(crate) fn get_symbol_total_codewords(version: usize) -> usize {
     CODEWORDS_COUNT[version]
 }
 
@@ -161,7 +161,7 @@ fn get_blocks_count(version: usize, ecl: EcLevel) -> usize {
     EC_BLOCKS_TABLE[(version - 1) * 4 + ecl.table_index()]
 }
 
-fn get_total_codewords_count(version: usize, ecl: EcLevel) -> usize {
+pub(crate) fn get_total_codewords_count(version: usize, ecl: EcLevel) -> usize {
     EC_CODEWORDS_TABLE[(version - 1) * 4 + ecl.table_index()]
 }
 
@@ -199,7 +199,7 @@ fn gf_exp(n: usize) -> u8 {
     gf().exp[n]
 }
 
-fn gf_mul(x: u8, y: u8) -> u8 {
+pub(crate) fn gf_mul(x: u8, y: u8) -> u8 {
     if x == 0 || y == 0 {
         return 0;
     }
@@ -240,7 +240,7 @@ fn poly_mod(divident: &[u8], divisor: &[u8]) -> Vec<u8> {
     result
 }
 
-fn generate_ec_polynomial(degree: usize) -> Vec<u8> {
+pub(crate) fn generate_ec_polynomial(degree: usize) -> Vec<u8> {
     let mut poly = vec![1u8];
     for i in 0..degree {
         poly = poly_mul(&poly, &[1, gf_exp(i)]);
@@ -311,6 +311,7 @@ impl BitBuffer {
 // bit-matrix.js
 // ---------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct BitMatrix {
     pub size: usize,
     pub data: Vec<u8>,
@@ -326,7 +327,7 @@ impl BitMatrix {
         }
     }
 
-    fn set(&mut self, row: usize, col: usize, value: bool, reserved: bool) {
+    pub(crate) fn set(&mut self, row: usize, col: usize, value: bool, reserved: bool) {
         let index = row * self.size + col;
         self.data[index] = value as u8;
         if reserved {
@@ -342,7 +343,7 @@ impl BitMatrix {
         self.data[row * self.size + col] ^= value as u8;
     }
 
-    fn is_reserved(&self, row: usize, col: usize) -> bool {
+    pub(crate) fn is_reserved(&self, row: usize, col: usize) -> bool {
         self.reserved[row * self.size + col] != 0
     }
 }
@@ -939,7 +940,7 @@ fn setup_version_info(matrix: &mut BitMatrix, version: usize) {
     }
 }
 
-fn setup_format_info(matrix: &mut BitMatrix, ecl: EcLevel, mask_pattern: u32) {
+pub(crate) fn setup_format_info(matrix: &mut BitMatrix, ecl: EcLevel, mask_pattern: u32) {
     let size = matrix.size;
     let bits = format_get_encoded_bits(ecl, mask_pattern);
 
@@ -969,12 +970,14 @@ fn setup_format_info(matrix: &mut BitMatrix, ecl: EcLevel, mask_pattern: u32) {
     matrix.set(size - 8, 8, true, true);
 }
 
-fn setup_data(matrix: &mut BitMatrix, data: &[u8]) {
+/// Module coordinates of the data area in the zigzag order that QR codewords
+/// are placed in (two columns at a time, from the bottom-right corner). Every
+/// non-reserved module is listed, including the trailing remainder bits.
+pub(crate) fn data_positions(matrix: &BitMatrix) -> Vec<(usize, usize)> {
     let size = matrix.size as isize;
+    let mut positions = Vec::with_capacity(matrix.size * matrix.size);
     let mut inc: isize = -1;
     let mut row: isize = size - 1;
-    let mut bit_index: isize = 7;
-    let mut byte_index: usize = 0;
 
     let mut col: isize = size - 1;
     while col > 0 {
@@ -985,17 +988,7 @@ fn setup_data(matrix: &mut BitMatrix, data: &[u8]) {
         loop {
             for c in 0..2isize {
                 if !matrix.is_reserved(row as usize, (col - c) as usize) {
-                    let mut dark = false;
-                    if byte_index < data.len() {
-                        dark = ((data[byte_index] >> bit_index) & 1) == 1;
-                    }
-                    matrix.set(row as usize, (col - c) as usize, dark, false);
-                    bit_index -= 1;
-
-                    if bit_index == -1 {
-                        byte_index += 1;
-                        bit_index = 7;
-                    }
+                    positions.push((row as usize, (col - c) as usize));
                 }
             }
 
@@ -1010,13 +1003,26 @@ fn setup_data(matrix: &mut BitMatrix, data: &[u8]) {
 
         col -= 2;
     }
+
+    positions
+}
+
+fn setup_data(matrix: &mut BitMatrix, data: &[u8]) {
+    for (index, (row, col)) in data_positions(matrix).into_iter().enumerate() {
+        let byte_index = index / 8;
+        let mut dark = false;
+        if byte_index < data.len() {
+            dark = ((data[byte_index] >> (7 - index % 8)) & 1) == 1;
+        }
+        matrix.set(row, col, dark, false);
+    }
 }
 
 // ---------------------------------------------------------------------------
 // mask-pattern.js
 // ---------------------------------------------------------------------------
 
-fn get_mask_at(mask_pattern: u32, i: usize, j: usize) -> bool {
+pub(crate) fn get_mask_at(mask_pattern: u32, i: usize, j: usize) -> bool {
     match mask_pattern {
         0 => (i + j) % 2 == 0,
         1 => i % 2 == 0,
@@ -1030,7 +1036,7 @@ fn get_mask_at(mask_pattern: u32, i: usize, j: usize) -> bool {
     }
 }
 
-fn apply_mask(pattern: u32, data: &mut BitMatrix) {
+pub(crate) fn apply_mask(pattern: u32, data: &mut BitMatrix) {
     let size = data.size;
     for col in 0..size {
         for row in 0..size {
@@ -1149,6 +1155,11 @@ fn get_penalty_n4(data: &BitMatrix) -> i64 {
     k * N4
 }
 
+/// Sum of the four mask penalty rules for a fully assembled matrix.
+pub(crate) fn get_penalty(data: &BitMatrix) -> i64 {
+    get_penalty_n1(data) + get_penalty_n2(data) + get_penalty_n3(data) + get_penalty_n4(data)
+}
+
 fn get_best_mask(data: &mut BitMatrix, ecl: EcLevel) -> u32 {
     let mut best_pattern = 0u32;
     let mut lower_penalty = i64::MAX;
@@ -1157,8 +1168,7 @@ fn get_best_mask(data: &mut BitMatrix, ecl: EcLevel) -> u32 {
         setup_format_info(data, ecl, p);
         apply_mask(p, data);
 
-        let penalty =
-            get_penalty_n1(data) + get_penalty_n2(data) + get_penalty_n3(data) + get_penalty_n4(data);
+        let penalty = get_penalty(data);
 
         apply_mask(p, data); // undo
 
@@ -1175,7 +1185,9 @@ fn get_best_mask(data: &mut BitMatrix, ecl: EcLevel) -> u32 {
 // qrcode.js — createData / createCodewords / createSymbol
 // ---------------------------------------------------------------------------
 
-fn create_data(version: usize, ecl: EcLevel, segments: &[Segment]) -> Vec<u8> {
+/// Mode indicators, character counts, segment data and the terminator,
+/// padded with zero bits to a byte boundary. The pad codewords are not added.
+fn encode_payload(version: usize, ecl: EcLevel, segments: &[Segment]) -> BitBuffer {
     let mut buffer = BitBuffer::new();
 
     for data in segments {
@@ -1196,6 +1208,16 @@ fn create_data(version: usize, ecl: EcLevel, segments: &[Segment]) -> Vec<u8> {
         buffer.put_bit(false);
     }
 
+    buffer
+}
+
+fn create_data(version: usize, ecl: EcLevel, segments: &[Segment]) -> Vec<u8> {
+    let mut buffer = encode_payload(version, ecl, segments);
+
+    let total_codewords = get_symbol_total_codewords(version);
+    let ec_total = get_total_codewords_count(version, ecl);
+    let data_total_bits = (total_codewords - ec_total) * 8;
+
     let remaining_bytes = (data_total_bits - buffer.get_length_in_bits()) / 8;
     for i in 0..remaining_bytes {
         buffer.put(if i % 2 != 0 { 0x11 } else { 0xEC }, 8);
@@ -1204,88 +1226,95 @@ fn create_data(version: usize, ecl: EcLevel, segments: &[Segment]) -> Vec<u8> {
     create_codewords(&buffer, version, ecl)
 }
 
+/// How the codewords of a symbol split into Reed-Solomon blocks.
+pub(crate) struct BlockLayout {
+    /// Data codewords in each block, in block order.
+    pub data_sizes: Vec<usize>,
+    /// EC codewords in each block (the same for all blocks).
+    pub ec_count: usize,
+}
+
+impl BlockLayout {
+    pub(crate) fn new(version: usize, ecl: EcLevel) -> Self {
+        let total_codewords = get_symbol_total_codewords(version);
+        let ec_total = get_total_codewords_count(version, ecl);
+        let data_total = total_codewords - ec_total;
+        let ec_total_blocks = get_blocks_count(version, ecl);
+
+        let blocks_in_group2 = total_codewords % ec_total_blocks;
+        let blocks_in_group1 = ec_total_blocks - blocks_in_group2;
+
+        let total_in_group1 = total_codewords / ec_total_blocks;
+        let data_in_group1 = data_total / ec_total_blocks;
+
+        let data_sizes = (0..ec_total_blocks)
+            .map(|b| {
+                if b < blocks_in_group1 {
+                    data_in_group1
+                } else {
+                    data_in_group1 + 1
+                }
+            })
+            .collect();
+
+        BlockLayout {
+            data_sizes,
+            ec_count: total_in_group1 - data_in_group1,
+        }
+    }
+
+    /// `(block, index)` for each codeword of the symbol, in interleaved
+    /// order. An index at or above the block's data size is an EC codeword.
+    pub(crate) fn interleave_order(&self) -> Vec<(usize, usize)> {
+        let max_data_size = self.data_sizes.iter().copied().max().unwrap_or(0);
+        let mut order = Vec::new();
+
+        for i in 0..max_data_size {
+            for (r, &data_size) in self.data_sizes.iter().enumerate() {
+                if i < data_size {
+                    order.push((r, i));
+                }
+            }
+        }
+
+        for i in 0..self.ec_count {
+            for (r, &data_size) in self.data_sizes.iter().enumerate() {
+                order.push((r, data_size + i));
+            }
+        }
+
+        order
+    }
+}
+
 fn create_codewords(bit_buffer: &BitBuffer, version: usize, ecl: EcLevel) -> Vec<u8> {
-    let total_codewords = get_symbol_total_codewords(version);
-    let ec_total = get_total_codewords_count(version, ecl);
-    let data_total = total_codewords - ec_total;
-    let ec_total_blocks = get_blocks_count(version, ecl);
-
-    let blocks_in_group2 = total_codewords % ec_total_blocks;
-    let blocks_in_group1 = ec_total_blocks - blocks_in_group2;
-
-    let total_in_group1 = total_codewords / ec_total_blocks;
-    let data_in_group1 = data_total / ec_total_blocks;
-
-    let ec_count = total_in_group1 - data_in_group1;
-
-    let gen_poly = generate_ec_polynomial(ec_count);
-
-    let mut offset = 0usize;
-    let mut dc_data: Vec<Vec<u8>> = vec![Vec::new(); ec_total_blocks];
-    let mut ec_data: Vec<Vec<u8>> = vec![Vec::new(); ec_total_blocks];
-    let mut max_data_size = 0usize;
+    let layout = BlockLayout::new(version, ecl);
+    let gen_poly = generate_ec_polynomial(layout.ec_count);
 
     // bit_buffer.buffer is exactly `data_total` bytes long here.
     let buffer = &bit_buffer.buffer;
 
-    for b in 0..ec_total_blocks {
-        let data_size = if b < blocks_in_group1 {
-            data_in_group1
-        } else {
-            data_in_group1 + 1
-        };
-
-        dc_data[b] = buffer[offset..offset + data_size].to_vec();
-        ec_data[b] = rs_encode(&dc_data[b], ec_count, &gen_poly);
-
+    let mut offset = 0usize;
+    let mut blocks: Vec<Vec<u8>> = Vec::with_capacity(layout.data_sizes.len());
+    for &data_size in &layout.data_sizes {
+        let mut block = buffer[offset..offset + data_size].to_vec();
+        let ec = rs_encode(&block, layout.ec_count, &gen_poly);
+        block.extend_from_slice(&ec);
+        blocks.push(block);
         offset += data_size;
-        max_data_size = max_data_size.max(data_size);
     }
 
-    let mut result = vec![0u8; total_codewords];
-    let mut index = 0usize;
-
-    for i in 0..max_data_size {
-        for r in 0..ec_total_blocks {
-            if i < dc_data[r].len() {
-                result[index] = dc_data[r][i];
-                index += 1;
-            }
-        }
-    }
-
-    for i in 0..ec_count {
-        for r in 0..ec_total_blocks {
-            result[index] = ec_data[r][i];
-            index += 1;
-        }
-    }
-
-    result
+    layout
+        .interleave_order()
+        .into_iter()
+        .map(|(r, i)| blocks[r][i])
+        .collect()
 }
 
-/// Equivalent of `QRCode.create(data, { errorCorrectionLevel })` (no explicit
-/// version or mask). Returns the assembled module matrix.
-pub fn create(data: &str, ecl: EcLevel) -> Result<BitMatrix, String> {
-    if data.is_empty() {
-        return Err("No input text".to_string());
-    }
-
-    // Estimate version from the raw (non-optimized) segments.
-    let raw_segments = raw_split(data);
-    let estimated_version = get_best_version_for_data(&raw_segments, ecl);
-
-    let segments = segments_from_string(data, estimated_version.unwrap_or(40));
-
-    let best_version = match get_best_version_for_data(&segments, ecl) {
-        Some(v) => v,
-        None => return Err("The amount of data is too big to be stored in a QR Code".to_string()),
-    };
-
-    let version = best_version;
-
-    let data_bits = create_data(version, ecl, &segments);
-
+/// A matrix with only the function patterns set: finder, timing and
+/// alignment patterns, placeholder format information and (for version 7 and
+/// up) version information. All of these modules are marked reserved.
+pub(crate) fn function_matrix(version: usize, ecl: EcLevel) -> BitMatrix {
     let module_count = get_symbol_size(version);
     let mut modules = BitMatrix::new(module_count);
 
@@ -1299,6 +1328,66 @@ pub fn create(data: &str, ecl: EcLevel) -> Result<BitMatrix, String> {
     if version >= 7 {
         setup_version_info(&mut modules, version);
     }
+
+    modules
+}
+
+/// Pick the smallest version that holds `data` and select its segments,
+/// with the same steps as `QRCode.create`.
+fn select_version(data: &str, ecl: EcLevel) -> Result<(usize, Vec<Segment>), String> {
+    if data.is_empty() {
+        return Err("No input text".to_string());
+    }
+
+    // Estimate version from the raw (non-optimized) segments.
+    let raw_segments = raw_split(data);
+    let estimated_version = get_best_version_for_data(&raw_segments, ecl);
+
+    let segments = segments_from_string(data, estimated_version.unwrap_or(40));
+
+    match get_best_version_for_data(&segments, ecl) {
+        Some(v) => Ok((v, segments)),
+        None => Err("The amount of data is too big to be stored in a QR Code".to_string()),
+    }
+}
+
+/// Encode `data` for a version of at least `min_version`. Returns the
+/// version and the byte-aligned payload (segments and terminator, without
+/// pad codewords). Decoders stop at the terminator, so the caller can set
+/// the bytes after the payload to any value.
+pub(crate) fn encode_payload_for_version(
+    data: &str,
+    ecl: EcLevel,
+    min_version: usize,
+) -> Result<(usize, Vec<u8>), String> {
+    let (best_version, segments) = select_version(data, ecl)?;
+    if best_version >= min_version {
+        return Ok((
+            best_version,
+            encode_payload(best_version, ecl, &segments).buffer,
+        ));
+    }
+
+    // A larger version can need more character count bits, so select the
+    // segments again for the requested version and confirm that they fit.
+    for version in min_version..=40 {
+        let segments = segments_from_string(data, version);
+        if get_total_bits_from_data_array(&segments, version) <= get_capacity(version, ecl, None) {
+            return Ok((version, encode_payload(version, ecl, &segments).buffer));
+        }
+    }
+
+    Err("The amount of data is too big to be stored in a QR Code".to_string())
+}
+
+/// Equivalent of `QRCode.create(data, { errorCorrectionLevel })` (no explicit
+/// version or mask). Returns the assembled module matrix.
+pub fn create(data: &str, ecl: EcLevel) -> Result<BitMatrix, String> {
+    let (version, segments) = select_version(data, ecl)?;
+
+    let data_bits = create_data(version, ecl, &segments);
+
+    let mut modules = function_matrix(version, ecl);
 
     setup_data(&mut modules, &data_bits);
 

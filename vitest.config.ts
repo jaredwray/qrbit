@@ -6,7 +6,7 @@ export default defineConfig({
 		environment: "node",
 		coverage: {
 			reporter: ["text", "json", "lcov"],
-			include: ["src/qrbit.ts", "src/native.ts"],
+			include: ["src/qrbit.ts", "src/native.ts", "src/fetch-logo.ts"],
 			exclude: [
 				"node_modules/",
 				"src/index.d.ts",

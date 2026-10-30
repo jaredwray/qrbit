@@ -14,6 +14,8 @@ export type ExampleSpec = {
 
 export const LOGO_PATH = "./test/fixtures/test_logo_large.png";
 
+export const MOSAIC_PATH = "./test/fixtures/mosaic_bolt.svg";
+
 export function buildOptions(spec: ExampleSpec): QrOptions {
 	const { logo, ...rest } = spec.options;
 	if (!logo) return rest;
@@ -207,6 +209,25 @@ export const examples: ExampleSpec[] = [
 			errorCorrection: "High",
 			backgroundColor: "#1e3a5f",
 			foregroundColor: "#FFFFFF",
+		},
+	},
+	{
+		name: "21_mosaic_svg_logo",
+		format: "png",
+		options: {
+			text: "https://github.com/jaredwray/qrbit",
+			size: 600,
+			mosaic: { image: MOSAIC_PATH },
+		},
+	},
+	{
+		name: "22_mosaic_png_logo_blue",
+		format: "svg",
+		options: {
+			text: "https://github.com/jaredwray/qrbit",
+			size: 600,
+			foregroundColor: "#1e3a5f",
+			mosaic: { image: LOGO_PATH, version: 10, sizeRatio: 0.6 },
 		},
 	},
 ];

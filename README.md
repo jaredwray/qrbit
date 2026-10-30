@@ -17,6 +17,7 @@ A fast QR code generator with logo embedding support, built with Rust as a nativ
 - **Fast SVG**: High-performance SVG rendering from a self-contained Rust QR engine — no JS QR library or node `canvas` required
 - **Cross-platform**: Works on iOS, Windows, Linux, and macOS
 - **Logo embedding**: Add custom logos to your QR codes with no need for node canvas!
+- **Mosaic QR codes**: Draw a logo with the data modules. The QR code stays valid with no errors.
 - **Error correction**: Configurable error correction levels (L, M, Q, H)
 - **Customizable**: Custom colors, sizes, and margins
 - **Multiple formats**: Generate SVG, PNG, JPEG, and WebP outputs
@@ -27,6 +28,7 @@ A fast QR code generator with logo embedding support, built with Rust as a nativ
 # Table of Contents
 - [Installation](#installation)
 - [Requirements](#requirements)
+- [Mosaic QR Codes](#mosaic-qr-codes)
 - [API](#api)
   - [Constructor](#constructoroptions-qroptions)
   - [Properties](#properties)
@@ -40,6 +42,7 @@ A fast QR code generator with logo embedding support, built with Rust as a nativ
     - [backgroundColor](#backgroundcolor)
     - [foregroundColor](#foregroundcolor)
     - [errorCorrection](#errorcorrection)
+    - [mosaic](#mosaic)
     - [cache](#cache)
   - [Methods](#methods)
     - [.toSvg()](#tosvgoptions-tooptions)
@@ -149,6 +152,49 @@ const qr = new QrBit({
 const png = await qr.toPng(); // buffer of the png!
 ```
 
+# Mosaic QR Codes
+
+A mosaic QR code draws an image with its data modules. The image is not put on top of the code. The code stays a valid QR code with no errors, so it does not use up error correction.
+
+```javascript
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit",
+  size: 600,
+  mosaic: { image: "./logo.svg" },
+});
+await qr.toPngFile("mosaic.png");
+```
+
+![Mosaic QR Code](examples/21_mosaic_svg_logo.png)
+
+qrbit uses the QArt method by Russ Cox. Decoders stop at the end of the text, so the data bits after the text are free. Reed-Solomon codes are linear, so qrbit can select these free bits to put a wanted value in a module. Elimination over GF(2) selects the free bits in order of priority. The outline of the image comes first, then the modules nearer to the center.
+
+The rules for the image are:
+
+- Opaque dark areas become dark modules. Opaque light areas become light modules. The `threshold` option sets the limit.
+- Transparent areas stay free for the QR data, so they show as QR noise.
+- Transparent modules next to a dark area become light, so that the shape stands out.
+- Function patterns (finder, timing and alignment patterns) do not change. The modules that hold the text do not change.
+
+To get a good result:
+
+- Use a logo with a transparent background and a simple shape.
+- Use a higher `version` for more detail. Each version adds 4 modules to each side.
+- Use a smaller `sizeRatio` if qrbit emits a `warn` event about matched modules.
+- Use a large `size` for print. The default margin is a quiet zone of 4 modules.
+
+You can also get the logo of a website. qrbit reads the icon links of the page, then tries `/apple-touch-icon.png` and `/favicon.ico`. It does not use a third-party favicon service. Downloaded images are kept in the cache.
+
+```javascript
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit",
+  size: 600,
+  mosaic: { image: new URL("https://github.com") },
+});
+```
+
+> **Note:** The request goes from your server. Do not pass a URL from an untrusted source without validation. Only `http:` and `https:` URLs are accepted.
+
 # API
 
 ## constructor(options: QrOptions)
@@ -170,7 +216,16 @@ interface QrOptions {
   backgroundColor?: string;        // Background color (default: "#FFFFFF")
   foregroundColor?: string;        // Foreground color (default: "#000000")
   errorCorrection?: ECLevel;       // "L"|"M"|"Q"|"H"|"Low"|"Medium"|"Quartile"|"High" (default: "M")
+  mosaic?: MosaicOptions;          // Draw an image with the data modules (default: undefined)
   cache?: Cacheable | boolean;     // Caching configuration (default: true)
+}
+
+interface MosaicOptions {
+  image: string | Buffer | URL;    // File path, image bytes, or a website or image URL
+  sizeRatio?: number;              // Image width as a fraction of the QR code width (default: 0.7)
+  threshold?: number;              // Luminance from 0 to 1 below which a module is dark (default: 0.5)
+  version?: number;                // Lowest QR version, 1 to 40 (default: 12)
+  errorCorrection?: ECLevel;       // Error correction of the mosaic (default: "L")
 }
 
 interface toOptions {
@@ -292,6 +347,22 @@ Accepts initials or full names:
 const qr = new QrBit({ text: "Hello World" });
 qr.errorCorrection = "H";
 qr.errorCorrection = "High"; // equivalent
+```
+
+### mosaic
+Get or set the mosaic options. A mosaic draws an image with the data modules. See [Mosaic QR Codes](#mosaic-qr-codes).
+
+- `image` — a file path, the image bytes, or a URL. PNG, JPEG, WebP, GIF, ICO and SVG are supported.
+- `sizeRatio` — the image width as a fraction of the QR code width (default: 0.7).
+- `threshold` — the luminance from 0 (black) to 1 (white) below which a module is dark (default: 0.5).
+- `version` — the lowest QR version (1 to 40). If the text needs a higher version, qrbit uses it (default: 12).
+- `errorCorrection` — the error correction level of the mosaic. It replaces `errorCorrection` for mosaic output (default: "L").
+
+The mosaic option ignores the `logo` option and emits a `warn` event, because a logo covers data modules. If the image cannot be loaded, qrbit emits an `error` event and renders a standard QR code. If an invalid option is given or the image cannot be decoded, `toSvg()` rejects.
+
+```javascript
+const qr = new QrBit({ text: "Hello World" });
+qr.mosaic = { image: "./logo.png", version: 14, sizeRatio: 0.6 };
 ```
 
 ### cache
@@ -586,6 +657,29 @@ Convert SVG content to WebP buffer using the native Rust implementation with los
 const svg = '<svg>...</svg>';
 const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 ```
+
+#### QrBit.fetchLogo(url: string | URL, options?: FetchLogoOptions)
+
+Get the logo of a website, or the image at a URL. Use the result as `logo` or as `mosaic.image`.
+
+1. Download the URL. If the body is an image, return it.
+2. Otherwise, read the icon links of the page. SVG icons come first, then the largest icon.
+3. Then try `/apple-touch-icon.png` and `/favicon.ico` at the site root.
+4. Return the first of these that is an image.
+
+**Parameters:**
+- `url: string | URL` - The website or image URL. Only `http:` and `https:` are accepted.
+- `options.timeout?: number` - The time limit for each request in milliseconds (default: 5000)
+- `options.maxBytes?: number` - The largest response body to accept, in bytes (default: 5242880)
+
+**Returns:** Promise<Buffer> - The image bytes. The promise rejects if no image is found.
+
+```javascript
+const logo = await QrBit.fetchLogo("https://github.com");
+const qr = new QrBit({ text: "https://github.com", logo });
+```
+
+> **Note:** The request goes from your server. Do not pass a URL from an untrusted source without validation.
 
 # Benchmarks
 
@@ -906,6 +1000,31 @@ const qr = new QrBit({
 await qr.toPngFile("20_ec_high.png");
 ```
 ![High Error Correction QR Code](examples/20_ec_high.png)
+
+## 21. Mosaic with an SVG Logo
+QR code whose data modules draw a lightning bolt. The code stays valid with no errors.
+```javascript
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit",
+  size: 600,
+  mosaic: { image: "./test/fixtures/mosaic_bolt.svg" }
+});
+await qr.toPngFile("21_mosaic_svg_logo.png");
+```
+![Mosaic with an SVG Logo](examples/21_mosaic_svg_logo.png)
+
+## 22. Mosaic with a PNG Logo and Blue Theme
+Mosaic QR code with a PNG logo, version 10, and a smaller image area. The transparent center of the logo shows as QR data.
+```javascript
+const qr = new QrBit({
+  text: "https://github.com/jaredwray/qrbit",
+  size: 600,
+  foregroundColor: "#1e3a5f",
+  mosaic: { image: "./test/fixtures/test_logo_large.png", version: 10, sizeRatio: 0.6 }
+});
+await qr.toSvgFile("22_mosaic_png_logo_blue.svg");
+```
+![Mosaic with a PNG Logo](examples/22_mosaic_png_logo_blue.svg)
 
 These examples demonstrate the versatility and capabilities of QrBit for generating QR codes with various customizations, from simple text encoding to complex styled codes with embedded logos, supporting SVG, PNG, JPEG, and WebP formats.
 
