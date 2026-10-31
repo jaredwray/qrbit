@@ -233,7 +233,7 @@ export const examples: ExampleSpec[] = [
 				image: LOGO_PATH,
 				version: 10,
 				sizeRatio: 0.6,
-				style: "dots",
+				style: "rounded",
 				color: "foreground",
 			},
 		},

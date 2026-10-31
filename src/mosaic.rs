@@ -31,6 +31,15 @@ const CONTRAST: f32 = 0.55;
 /// light. The range of 0.08 is 20 levels.
 const LUMINANCE_RANGE: f32 = 0.08;
 
+/// With the texture, one module in this number of modules deep inside a
+/// dark area gets no target. The random fill makes about half of them
+/// light, so the area shows a dot texture with light specks.
+const TEXTURE_RATE: u32 = 6;
+
+/// Distance in modules from the edge of a dark area at which the texture
+/// starts. The edge of the area stays exact.
+const TEXTURE_DEPTH: isize = 2;
+
 pub struct MosaicOutput {
     pub matrix: BitMatrix,
     pub version: usize,
@@ -283,6 +292,18 @@ impl ColorBins {
     }
 }
 
+/// True for one module in `TEXTURE_RATE`, from a fixed hash of the module
+/// position, so that the same input gives the same texture.
+fn textured(row: usize, col: usize) -> bool {
+    let mut hash = (row as u32)
+        .wrapping_mul(0x9E37_79B1)
+        .wrapping_add((col as u32).wrapping_mul(0x85EB_CA77));
+    hash ^= hash >> 16;
+    hash = hash.wrapping_mul(0x7FEB_352D);
+    hash ^= hash >> 15;
+    hash.is_multiple_of(TEXTURE_RATE)
+}
+
 /// The most common dark color of the cells, weighted by coverage.
 fn dominant_color(cells: &[Option<Cell>]) -> Option<[u8; 3]> {
     let mut bins = ColorBins::default();
@@ -377,6 +398,7 @@ fn sample_targets(
     skeleton: &BitMatrix,
     size_ratio: f64,
     threshold: f64,
+    texture: bool,
 ) -> Result<Sampled, String> {
     let size = skeleton.size;
     let area = ((size as f64 * size_ratio).round() as usize).clamp(1, size);
@@ -468,6 +490,19 @@ fn sample_targets(
                 continue;
             }
 
+            // With the texture, some modules deep inside a dark area get no
+            // target. The random fill makes about half of them light.
+            let depth = -TEXTURE_DEPTH..=TEXTURE_DEPTH;
+            let deep = value
+                && depth.clone().all(|oy| {
+                    depth
+                        .clone()
+                        .all(|ox| neighbor(&cells, my, mx, oy, ox) == Some(true))
+                });
+            if texture && deep && textured(row, col) {
+                continue;
+            }
+
             let edge = [(0, 1), (0, -1), (1, 0), (-1, 0)]
                 .iter()
                 .any(|&(oy, ox)| neighbor(&wanted, my, mx, oy, ox) == Some(!value));
@@ -498,7 +533,9 @@ fn sample_targets(
 ///
 /// The version is at least `min_version`. The image fills a centered square
 /// of `size_ratio` times the symbol width. Image samples with a whiteness
-/// below `threshold` (0 to 1) become dark modules.
+/// below `threshold` (0 to 1) become dark modules. With `texture`, some
+/// modules deep inside a dark area stay free, so that the area shows a dot
+/// texture with light specks.
 pub fn create(
     text: &str,
     ecl: EcLevel,
@@ -506,6 +543,7 @@ pub fn create(
     image_bytes: &[u8],
     size_ratio: f64,
     threshold: f64,
+    texture: bool,
 ) -> Result<MosaicOutput, String> {
     if !(1..=40).contains(&min_version) {
         return Err(format!("version must be from 1 to 40, got {}", min_version));
@@ -523,7 +561,7 @@ pub fn create(
         targets,
         colors,
         dominant,
-    } = sample_targets(image_bytes, &skeleton, size_ratio, threshold)?;
+    } = sample_targets(image_bytes, &skeleton, size_ratio, threshold, texture)?;
 
     // Location (block, bit) of each data module, in placement order.
     let layout = BlockLayout::new(version, ecl);

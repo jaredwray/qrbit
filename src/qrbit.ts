@@ -53,13 +53,15 @@ const mosaicMatchWarningRatio = 0.9;
 
 /**
  * The shape of the dark modules of a mosaic.
+ * - `"dots"`: each dark module is a round dot with space around it. The
+ *   finder and alignment patterns are rings with a round hole and a round
+ *   center. A dark area of the image gets a dot texture with some light
+ *   modules.
  * - `"rounded"`: dark modules join their horizontal and vertical neighbors
  *   into shapes with round corners.
- * - `"dots"`: each dark module is a separate square with round corners.
- *   The finder and alignment patterns are solid.
  * - `"square"`: each dark module is a square.
  */
-export type MosaicStyle = "rounded" | "dots" | "square";
+export type MosaicStyle = "dots" | "rounded" | "square";
 
 /**
  * The source of the colors of the dark modules of a mosaic.
@@ -115,7 +117,7 @@ export type MosaicOptions = {
 	/**
 	 * The shape of the dark modules.
 	 * @type {MosaicStyle}
-	 * @default "rounded"
+	 * @default "dots"
 	 */
 	style?: MosaicStyle;
 	/**

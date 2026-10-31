@@ -17,7 +17,7 @@ A fast QR code generator with logo embedding support, built with Rust as a nativ
 - **Fast SVG**: High-performance SVG rendering from a self-contained Rust QR engine — no JS QR library or node `canvas` required
 - **Cross-platform**: Works on iOS, Windows, Linux, and macOS
 - **Logo embedding**: Add custom logos to your QR codes with no need for node canvas!
-- **Mosaic QR codes**: Draw a logo with the data modules, in the colors of the logo and with round modules. The QR code stays valid with no errors.
+- **Mosaic QR codes**: Draw a logo with the data modules, as round dots in the colors of the logo. The QR code stays valid with no errors.
 - **Error correction**: Configurable error correction levels (L, M, Q, H)
 - **Customizable**: Custom colors, sizes, and margins
 - **Multiple formats**: Generate SVG, PNG, JPEG, and WebP outputs
@@ -180,8 +180,8 @@ The dark modules get the colors of the image. A module in the image gets the col
 
 The `style` option sets the shape of the dark modules:
 
-- `"rounded"` (default): dark modules join their horizontal and vertical neighbors into shapes with round corners.
-- `"dots"`: each dark module is a separate square with round corners. The finder and alignment patterns are solid, so that decoders find them.
+- `"dots"` (default): each dark module is a round dot with space around it. The finder and alignment patterns are rings with a round hole and a round center. A dark area of the image gets a dot texture with some light modules, like a halftone print.
+- `"rounded"`: dark modules join their horizontal and vertical neighbors into shapes with round corners.
 - `"square"`: each dark module is a square.
 
 ```javascript
@@ -189,7 +189,7 @@ const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
   foregroundColor: "#1e3a5f",
-  mosaic: { image: "./logo.png", style: "dots", color: "foreground" },
+  mosaic: { image: "./logo.png", style: "rounded", color: "foreground" },
 });
 ```
 
@@ -243,7 +243,7 @@ interface MosaicOptions {
   threshold?: number;              // Whiteness from 0 to 1 below which a module is dark (default: 0.5)
   version?: number;                // Lowest QR version, 1 to 40 (default: 14)
   errorCorrection?: ECLevel;       // Error correction of the mosaic (default: "L")
-  style?: "rounded" | "dots" | "square"; // Shape of the dark modules (default: "rounded")
+  style?: "dots" | "rounded" | "square"; // Shape of the dark modules (default: "dots")
   color?: "image" | "foreground";  // Source of the module colors (default: "image")
 }
 
@@ -376,14 +376,14 @@ Get or set the mosaic options. A mosaic draws an image with the data modules. Se
 - `threshold` — the whiteness from 0 to 1 below which a module is dark. The whiteness of a color is the smallest of its red, green and blue values, so black and strong colors are dark, and white and light grey are light (default: 0.5).
 - `version` — the lowest QR version (1 to 40). If the text needs a higher version, qrbit uses it (default: 14).
 - `errorCorrection` — the error correction level of the mosaic. It replaces `errorCorrection` for mosaic output (default: "L").
-- `style` — the shape of the dark modules: `"rounded"`, `"dots"` or `"square"` (default: `"rounded"`).
+- `style` — the shape of the dark modules: `"dots"`, `"rounded"` or `"square"` (default: `"dots"`).
 - `color` — the source of the module colors. With `"image"`, the modules get the colors of the image. With `"foreground"`, all dark modules get `foregroundColor` (default: `"image"`).
 
 The mosaic option ignores the `logo` option and emits a `warn` event, because a logo covers data modules. If the image cannot be loaded, qrbit emits an `error` event and renders a standard QR code. If an invalid option is given or the image cannot be decoded, `toSvg()` rejects.
 
 ```javascript
 const qr = new QrBit({ text: "Hello World" });
-qr.mosaic = { image: "./logo.png", version: 16, sizeRatio: 0.6, style: "dots" };
+qr.mosaic = { image: "./logo.png", version: 16, sizeRatio: 0.6, style: "rounded" };
 ```
 
 ### cache
@@ -1023,7 +1023,7 @@ await qr.toPngFile("20_ec_high.png");
 ![High Error Correction QR Code](examples/20_ec_high.png)
 
 ## 21. Mosaic with an SVG Logo
-QR code whose data modules draw a red lightning bolt. The modules get the color of the logo and round corners. The code stays valid with no errors.
+QR code whose data modules draw a red lightning bolt. The modules are round dots in the color of the logo. The code stays valid with no errors.
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
@@ -1034,21 +1034,21 @@ await qr.toPngFile("21_mosaic_svg_logo.png");
 ```
 ![Mosaic with an SVG Logo](examples/21_mosaic_svg_logo.png)
 
-## 22. Mosaic with a PNG Logo, Dots and a Blue Theme
-Mosaic QR code with a PNG logo, version 10, and a smaller image area. The `dots` style draws each module as a separate round square, and `color: "foreground"` draws all modules in blue. The transparent center of the logo shows as QR data.
+## 22. Mosaic with a PNG Logo, Joined Modules and a Blue Theme
+Mosaic QR code with a PNG logo, version 10, and a smaller image area. The `rounded` style joins the dark modules into shapes with round corners, and `color: "foreground"` draws all modules in blue. The transparent center of the logo shows as QR data.
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
   foregroundColor: "#1e3a5f",
-  mosaic: { image: "./test/fixtures/test_logo_large.png", version: 10, sizeRatio: 0.6, style: "dots", color: "foreground" }
+  mosaic: { image: "./test/fixtures/test_logo_large.png", version: 10, sizeRatio: 0.6, style: "rounded", color: "foreground" }
 });
 await qr.toSvgFile("22_mosaic_png_logo_blue.svg");
 ```
 ![Mosaic with a PNG Logo](examples/22_mosaic_png_logo_blue.svg)
 
 ## 23. Mosaic with a Logo in Many Colors
-Mosaic QR code with a logo in four colors. Each module gets the color of the logo at that point. The other modules get the most common color of the logo.
+Mosaic QR code with a logo in four colors. Each dot gets the color of the logo at that point. The other dots get the most common color of the logo.
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",

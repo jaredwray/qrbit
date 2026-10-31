@@ -26,26 +26,30 @@ const size = modules * 10;
 /**
  * Read the modules that the `<path>` elements of a mosaic SVG cover. The
  * coordinates of the SVG are in modules. A dark module is inside a subpath
- * of a `<path>`: a run of modules. The fills of inner corners are smaller
- * than a module, so they do not count.
+ * of a `<path>`: a run of modules or a ring. Inside one path, a subpath in
+ * a subpath is a hole, so each subpath toggles its modules. The fills of
+ * inner corners are smaller than a module, so they do not count.
  */
 function pathGrid(svg: string): boolean[][] {
 	const grid = Array.from({ length: modules }, () =>
 		Array<boolean>(modules).fill(false),
 	);
-	const mark = (box: number[]) => {
-		// A fill of an inner corner is less than half a module wide. Skip it.
-		if (box[2] - box[0] < 0.9 || box[3] - box[1] < 0.9) return;
-		const [x0, y0, x1, y1] = box.map(Math.round);
-		for (let row = y0; row < y1; row++) {
-			for (let col = x0; col < x1; col++) {
-				grid[row][col] = true;
-			}
-		}
-	};
 
 	for (const [, attributes, d] of svg.matchAll(/<path([^>]*) d="([^"]*)"/g)) {
 		if (attributes.includes(" id=")) continue;
+		const covered = Array.from({ length: modules }, () =>
+			Array<boolean>(modules).fill(false),
+		);
+		const mark = (box: number[]) => {
+			// A fill of an inner corner is less than half a module wide. Skip it.
+			if (box[2] - box[0] < 0.9 || box[3] - box[1] < 0.9) return;
+			const [x0, y0, x1, y1] = box.map(Math.round);
+			for (let row = y0; row < y1; row++) {
+				for (let col = x0; col < x1; col++) {
+					covered[row][col] = !covered[row][col];
+				}
+			}
+		};
 		const tokens = d.match(/[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)/g) ?? [];
 		let [x, y] = [0, 0];
 		let box = [0, 0, 0, 0];
@@ -84,6 +88,11 @@ function pathGrid(svg: string): boolean[][] {
 					break;
 				default:
 					throw new Error(`Unexpected path token ${tokens[i]}`);
+			}
+		}
+		for (let row = 0; row < modules; row++) {
+			for (let col = 0; col < modules; col++) {
+				grid[row][col] ||= covered[row][col];
 			}
 		}
 	}
@@ -153,18 +162,28 @@ function luminance(color: string): number {
 }
 
 describe("Mosaic QR codes", () => {
-	it.each([
+	// One decode in each test, because each conversion of a dots mosaic
+	// takes up to one second in a debug build.
+	const sources: [string, string | Buffer][] = [
 		["SVG bytes", square("#000")],
 		["a PNG file path", testLogoPath],
 		["PNG bytes", fs.readFileSync(testLogoPath)],
-	])("decodes to the exact text with an image from %s", async (_, image) => {
-		for (const value of [text, "HELLO WORLD 123", "0123456789"]) {
+	];
+	it.each(
+		sources.flatMap(([source, image]) =>
+			[text, "HELLO WORLD 123", "0123456789"].map(
+				(value) => [source, value, image] as const,
+			),
+		),
+	)(
+		"decodes to the exact text with an image from %s (%s)",
+		async (_, value, image) => {
 			const qr = new QrBit({ text: value, mosaic: { image } });
 			const result = await decodeSvg(await qr.toSvg());
 			expect(result.valid).toBe(true);
 			expect(result.data).toBe(value);
-		}
-	});
+		},
+	);
 
 	// One format in each test, because each conversion of a round mosaic
 	// takes up to one second in a debug build.
@@ -192,11 +211,13 @@ describe("Mosaic QR codes", () => {
 		expect(/a[\d.]/.test(pathData.join(" "))).toBe(style !== "square");
 	});
 
-	it("uses version 14 and error correction L by default", async () => {
+	it("uses version 14, error correction L and the dots style by default", async () => {
 		const qr = new QrBit({ text, mosaic: { image: square("#000") } });
-		const result = await decodeSvg(await qr.toSvg());
+		const svg = await qr.toSvg();
+		const result = await decodeSvg(svg);
 		expect(result.version).toBe(14);
 		expect(result.ecl).toBe("L");
+		expect(svg).toContain("<use ");
 	});
 
 	it("uses the version and error correction from the mosaic options", async () => {
@@ -215,7 +236,7 @@ describe("Mosaic QR codes", () => {
 		const long = `${text}?q=${"x".repeat(300)}`;
 		const qr = new QrBit({
 			text: long,
-			size: 600,
+			size: 400,
 			mosaic: { image: square("#000"), version: 1 },
 		});
 		const result = await decodeSvg(await qr.toSvg());
@@ -258,7 +279,17 @@ describe("Mosaic QR codes", () => {
 				sizeRatio: 0.5,
 				style,
 			});
-			expect(darkRatio(grid, 16, 49)).toBeGreaterThan(0.9);
+			// The dots style leaves one module in six deep inside the area
+			// free, so that the area gets a dot texture with light specks. The
+			// other styles only miss the few modules that the free bits cannot
+			// reach (about 2 in 100).
+			if (style === "dots") {
+				expect(darkRatio(grid, 16, 49)).toBeGreaterThan(0.85);
+				expect(darkRatio(grid, 18, 47)).toBeLessThan(0.93);
+			} else {
+				expect(darkRatio(grid, 16, 49)).toBeGreaterThan(0.9);
+				expect(darkRatio(grid, 18, 47)).toBeGreaterThan(0.97);
+			}
 			// Outside the area, the modules are QR data noise.
 			expect(darkRatio(grid, 9, 15)).toBeGreaterThan(0.2);
 			expect(darkRatio(grid, 9, 15)).toBeLessThan(0.8);
@@ -269,7 +300,7 @@ describe("Mosaic QR codes", () => {
 		},
 	);
 
-	it("draws only the finder and alignment patterns as joined shapes in the dots style", async () => {
+	it("draws the finder and alignment patterns as rings in the dots style", async () => {
 		const qr = new QrBit({
 			text,
 			size,
@@ -281,11 +312,13 @@ describe("Mosaic QR codes", () => {
 		const dots = new Set(uses.map(([row, col]) => `${row},${col}`));
 		// The timing pattern at (6, 8) and the dark module at (57, 8) in the
 		// format area are always dark. They are dots.
-		expect(dots.has("6,8")).toBe(true);
-		expect(dots.has("57,8")).toBe(true);
-		// The finder pattern and the alignment pattern at (32, 32) are dark
-		// shapes, not dots.
+		for (const key of ["6,8", "57,8"]) {
+			expect(dots.has(key)).toBe(true);
+		}
+		// The finder pattern and the alignment pattern at (32, 32) are rings
+		// with a light hole and a center, not dots.
 		for (const [row, col] of [
+			[0, 0],
 			[3, 3],
 			[30, 30],
 			[32, 32],
@@ -293,7 +326,9 @@ describe("Mosaic QR codes", () => {
 			expect(paths[row][col]).toBe(true);
 			expect(dots.has(`${row},${col}`)).toBe(false);
 		}
-		// A shape does not extend over a dot next to it.
+		expect(paths[1][1]).toBe(false);
+		expect(paths[31][31]).toBe(false);
+		// A shape does not cover a dot.
 		expect(uses.filter(([row, col]) => paths[row][col])).toEqual([]);
 	});
 
@@ -398,7 +433,8 @@ describe("Mosaic QR codes", () => {
 		// image are red. The transparent gap between the two areas keeps the
 		// colors apart in the modules. The two colors have a near luminance,
 		// so they do not change. The SVG is in module units, so a small size
-		// keeps the decode fast.
+		// keeps the decode fast. The rounded style has no texture, so the
+		// areas are solid.
 		const qr = new QrBit({
 			text,
 			size: 400,
@@ -408,6 +444,7 @@ describe("Mosaic QR codes", () => {
 				),
 				version,
 				sizeRatio: 0.5,
+				style: "rounded",
 			},
 		});
 		const svg = await qr.toSvg();

@@ -354,8 +354,8 @@ pub struct MosaicSvgOptions {
     pub version: Option<u32>,
     /// Error correction level (default "L").
     pub error_correction: Option<String>,
-    /// Shape of the dark modules: "rounded", "dots" or "square" (default
-    /// "rounded").
+    /// Shape of the dark modules: "dots", "rounded" or "square" (default
+    /// "dots").
     pub style: Option<String>,
     /// Source of the module colors: "image" or "foreground" (default
     /// "image").
@@ -381,7 +381,7 @@ pub fn generate_mosaic_svg(options: MosaicSvgOptions) -> Result<MosaicSvgResult>
     let ec_level = parse_ec_level(Some(options.error_correction.as_deref().unwrap_or("L")));
     let failed = |e: String| Error::from_reason(format!("Mosaic generation failed: {}", e));
     let style =
-        mosaic_svg::Style::parse(options.style.as_deref().unwrap_or("rounded")).map_err(failed)?;
+        mosaic_svg::Style::parse(options.style.as_deref().unwrap_or("dots")).map_err(failed)?;
     let color_mode = match options.color.as_deref().unwrap_or("image") {
         "image" => mosaic::ColorMode::Image,
         "foreground" => mosaic::ColorMode::Foreground,
@@ -404,6 +404,7 @@ pub fn generate_mosaic_svg(options: MosaicSvgOptions) -> Result<MosaicSvgResult>
         &options.image,
         options.size_ratio.unwrap_or(0.7),
         options.threshold.unwrap_or(0.5),
+        style == mosaic_svg::Style::Dots,
     )
     .map_err(failed)?;
 
