@@ -1,19 +1,24 @@
 import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Cacheable } from "cacheable";
 import { Hookified, type HookifiedOptions } from "hookified";
+import { type FetchLogoOptions, fetchLogo } from "./fetch-logo.js";
 import {
 	convertSvgToJpeg as nativeConvertSvgToJpeg,
 	convertSvgToPng as nativeConvertSvgToPng,
 	convertSvgToWebp as nativeConvertSvgToWebp,
 	decode as nativeDecode,
 	decodeDetailed as nativeDecodeDetailed,
+	generateQartSvg as nativeGenerateQartSvg,
 	generateQrCodeSvg as nativeGenerateQrCodeSvg,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
 	validateQr as nativeValidateQr,
 } from "./native.js";
+
+export type { FetchLogoOptions } from "./fetch-logo.js";
 
 export enum QrBitEvents {
 	warn = "warn",
@@ -33,6 +38,125 @@ export type ECLevel =
 
 const logoFileDoesNotExistMessage = (logo: string) =>
 	`Logo file not found: ${logo}. Proceeding without logo.`;
+
+const qartImageErrorMessage = (reason: string) =>
+	`QArt image could not be loaded: ${reason}. Proceeding without QArt.`;
+
+const qartIgnoresLogoMessage =
+	"The qart option ignores the logo option, because a logo covers data modules.";
+
+const qartLowMatchMessage = (matched: number, target: number) =>
+	`The QArt image matched only ${matched} of ${target} modules. Use a higher version or a smaller sizeRatio.`;
+
+// Below this fraction of matched modules, the image is too large or too
+// detailed for the QR version.
+const qartMatchWarningRatio = 0.9;
+
+// A cache key for each address rule of a download, so that a logo that one
+// rule downloads is never used for a different rule. The default rule has a
+// fixed key. Each custom rule function gets a random key in this process.
+const addressRuleKeys = new WeakMap<object, string>();
+
+function addressRuleKey(options: FetchLogoOptions | undefined): string {
+	const rule = options?.allowAddress;
+	if (!rule) {
+		return "public";
+	}
+	let key = addressRuleKeys.get(rule);
+	if (!key) {
+		key = randomUUID();
+		addressRuleKeys.set(rule, key);
+	}
+	return key;
+}
+
+/**
+ * The shape of the dark modules of a QArt code.
+ * - `"dots"`: each dark module is a round dot with space around it. The
+ *   finder and alignment patterns are rings with a round hole and a round
+ *   center. A dark area of the image gets a dot texture with some light
+ *   modules.
+ * - `"rounded"`: dark modules join their horizontal and vertical neighbors
+ *   into shapes with round corners.
+ * - `"square"`: each dark module is a square.
+ */
+export type QArtStyle = "dots" | "rounded" | "square";
+
+/**
+ * The source of the colors of the dark modules of a QArt code.
+ * - `"image"`: each module in the image gets the color of the image there.
+ *   The other modules get the most common dark color of the image. qrbit
+ *   makes a color darker if it is too near to the background color, and
+ *   keeps all colors in a small luminance range, so that decoders read
+ *   the modules as dark.
+ * - `"foreground"`: all dark modules get `foregroundColor`.
+ */
+export type QArtColor = "image" | "foreground";
+
+export type QArtOptions = {
+	/**
+	 * The image to draw with the data modules: a file path, the image bytes,
+	 * or a URL. A URL is a `URL` object, or a string that starts with
+	 * `http://` or `https://`. Other strings are file paths. For a URL, qrbit
+	 * gets the logo of that site, or the image at that URL (see
+	 * `QrBit.fetchLogo`). PNG, JPEG, WebP, GIF, ICO and SVG are
+	 * supported. The background of the image stays free for the QR data.
+	 * @type {string | Buffer | URL}
+	 */
+	image: string | Buffer | URL;
+	/**
+	 * The width of the image as a fraction of the QR code width.
+	 * @type {number}
+	 * @default 0.7
+	 */
+	sizeRatio?: number;
+	/**
+	 * The whiteness, from 0 to 1, below which a part of the image becomes a
+	 * dark module. The whiteness of a color is the smallest of its red,
+	 * green and blue values, so black and strong colors are dark, and white
+	 * and light grey are light.
+	 * @type {number}
+	 * @default 0.5
+	 */
+	threshold?: number;
+	/**
+	 * The lowest QR version (1 to 40) to use. A higher version has more
+	 * modules, so the image has more detail. If the text needs a higher
+	 * version, qrbit uses that version.
+	 * @type {number}
+	 * @default 14
+	 */
+	version?: number;
+	/**
+	 * The error correction level of the QArt code. A lower level gives more
+	 * modules to the image. This value replaces `errorCorrection` for
+	 * QArt output.
+	 * @type {ECLevel}
+	 * @default "L"
+	 */
+	errorCorrection?: ECLevel;
+	/**
+	 * The shape of the dark modules.
+	 * @type {QArtStyle}
+	 * @default "dots"
+	 */
+	style?: QArtStyle;
+	/**
+	 * The source of the colors of the dark modules. With `"image"`, the
+	 * modules get the colors of the image. With `"foreground"`, the modules
+	 * get `foregroundColor`.
+	 * @type {QArtColor}
+	 * @default "image"
+	 */
+	color?: QArtColor;
+	/**
+	 * The options of the download when `image` is a URL: the time limit, the
+	 * size limit and the address rule (see `QrBit.fetchLogo`). By default,
+	 * qrbit requests only public addresses.
+	 * @type {FetchLogoOptions}
+	 */
+	fetchOptions?: FetchLogoOptions;
+};
 
 export type QrOptions = {
 	/**
@@ -98,6 +222,13 @@ export type QrOptions = {
 	 */
 	errorCorrection?: ECLevel;
 	/**
+	 * Draw an image with the data modules of the QR code. The QR code stays
+	 * valid with no errors, because qrbit selects the unused data bits so
+	 * that the modules show the image.
+	 * @type {QArtOptions}
+	 */
+	qart?: QArtOptions;
+	/**
 	 * Caching is enabled by default. You can disable it by setting this option to false. You can also pass
 	 * a custom Cacheable instance.
 	 * @type {Cacheable | boolean}
@@ -151,6 +282,7 @@ export class QrBit extends Hookified {
 	private _backgroundColor: string;
 	private _foregroundColor: string;
 	private _errorCorrection: ECLevel;
+	private _qart: QArtOptions | undefined;
 	private _cache: Cacheable | undefined;
 	private _napi = {
 		convertSvgToJpeg: nativeConvertSvgToJpeg,
@@ -158,6 +290,7 @@ export class QrBit extends Hookified {
 		convertSvgToWebp: nativeConvertSvgToWebp,
 		decode: nativeDecode,
 		decodeDetailed: nativeDecodeDetailed,
+		generateQartSvg: nativeGenerateQartSvg,
 		generateQrCodeSvg: nativeGenerateQrCodeSvg,
 		generateQrSvg: nativeGenerateQrSvg,
 		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
@@ -183,6 +316,7 @@ export class QrBit extends Hookified {
 				: (options.logoBackgroundColor ?? this._backgroundColor);
 		this._logoPaddingRatio = options.logoPaddingRatio ?? 0.1;
 		this._errorCorrection = options.errorCorrection ?? "H";
+		this._qart = options.qart;
 		if (options.cache !== undefined) {
 			// if it is boolean and true then create a new cacheable instance
 			if (options.cache === true) {
@@ -368,6 +502,22 @@ export class QrBit extends Hookified {
 	}
 
 	/**
+	 * Get the QArt options.
+	 * @returns {QArtOptions | undefined} The QArt options or undefined if not set
+	 */
+	public get qart(): QArtOptions | undefined {
+		return this._qart;
+	}
+
+	/**
+	 * Set the QArt options.
+	 * @param value - The QArt options or undefined to render a standard QR code
+	 */
+	public set qart(value: QArtOptions | undefined) {
+		this._qart = value;
+	}
+
+	/**
 	 * Get the cache instance.
 	 * @returns {Cacheable | undefined} The cache instance or undefined if caching is disabled
 	 */
@@ -391,11 +541,28 @@ export class QrBit extends Hookified {
 	 * @returns {Promise<string>} The SVG string
 	 */
 	public async toSvg(options?: toOptions): Promise<string> {
+		return (await this.renderSvg(options)).svg;
+	}
+
+	/**
+	 * Generate the SVG and tell if the result can go in the cache. The
+	 * standard QR code that replaces a failed QArt code cannot, because the
+	 * image can be available on the next call.
+	 * @param {toOptions} options - Generation options
+	 * @returns {Promise<{ svg: string; cacheable: boolean }>} The SVG string and if it can be cached
+	 */
+	private async renderSvg(
+		options?: toOptions,
+	): Promise<{ svg: string; cacheable: boolean }> {
 		let result = "";
 		let renderKey = `native-svg`;
 
 		if (this._logo) {
 			renderKey = `napi-svg`;
+		}
+
+		if (this._qart) {
+			renderKey = `napi-qart-svg`;
 		}
 
 		// set all the options
@@ -416,11 +583,17 @@ export class QrBit extends Hookified {
 			cacheKey = await this.generateCacheKey(renderKey);
 			const cached = await cache.get<string>(cacheKey);
 			if (cached) {
-				return cached;
+				return { svg: cached, cacheable: true };
 			}
 		}
 
-		if (!this._logo) {
+		const qartSvg = this._qart
+			? await this.toSvgQArt(this._qart, cache)
+			: undefined;
+
+		if (qartSvg !== undefined) {
+			result = qartSvg;
+		} else if (!this._logo) {
 			// Native Rust port of node-qrcode that produces byte-for-byte
 			// identical SVG output (path-based, crisp-edges, margin of 4 modules).
 			result = this._napi.generateQrCodeSvg({
@@ -435,11 +608,100 @@ export class QrBit extends Hookified {
 			result = await this.toSvgNapi();
 		}
 
-		if (cache && cacheKey) {
+		const cacheable = qartSvg !== undefined || !this._qart;
+		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
 
-		return result;
+		return { svg: result, cacheable };
+	}
+
+	/**
+	 * Generate the SVG of a QArt code. Emits an error event and returns
+	 * undefined if the image cannot be loaded.
+	 * @param qart - The QArt options
+	 * @param cache - The cache for downloaded images, or undefined
+	 * @returns {Promise<string | undefined>} The SVG string, or undefined
+	 */
+	private async toSvgQArt(
+		qart: QArtOptions,
+		cache: Cacheable | undefined,
+	): Promise<string | undefined> {
+		if (this._logo) {
+			this.emit(QrBitEvents.warn, qartIgnoresLogoMessage);
+		}
+
+		let image: Buffer;
+		try {
+			image = await this.resolveQArtImage(qart.image, cache, qart.fetchOptions);
+		} catch (error) {
+			this.emit(
+				QrBitEvents.error,
+				qartImageErrorMessage((error as Error).message),
+			);
+			return undefined;
+		}
+
+		const result = this._napi.generateQartSvg({
+			text: this._text,
+			image,
+			size: this._size,
+			margin: this._margin,
+			sizeRatio: qart.sizeRatio,
+			threshold: qart.threshold,
+			version: qart.version,
+			errorCorrection: qart.errorCorrection,
+			style: qart.style,
+			color: qart.color,
+			backgroundColor: this._backgroundColor,
+			foregroundColor: this._foregroundColor,
+		});
+
+		if (result.matchedModules < result.targetModules * qartMatchWarningRatio) {
+			this.emit(
+				QrBitEvents.warn,
+				qartLowMatchMessage(result.matchedModules, result.targetModules),
+			);
+		}
+
+		return result.svg;
+	}
+
+	/**
+	 * Load the bytes of a QArt image. A downloaded image is kept in the cache.
+	 * @param image - A file path, the image bytes, or a URL
+	 * @param cache - The cache for downloaded images, or undefined
+	 * @returns {Promise<Buffer>} The image bytes
+	 */
+	private async resolveQArtImage(
+		image: string | Buffer | URL,
+		cache: Cacheable | undefined,
+		fetchOptions: FetchLogoOptions | undefined,
+	): Promise<Buffer> {
+		if (Buffer.isBuffer(image)) {
+			return image;
+		}
+
+		if (typeof image === "string") {
+			// A string with an http or https scheme is a URL. Other strings are
+			// file paths.
+			if (!/^https?:\/\//i.test(image)) {
+				return fs.promises.readFile(image);
+			}
+			image = new URL(image);
+		}
+
+		// The address rule and the size limit decide which downloads are
+		// accepted, so they are part of the key.
+		const cacheKey = `fetch-logo:${addressRuleKey(fetchOptions)}:${fetchOptions?.maxBytes ?? "default"}:${image.href}`;
+		const cached = await cache?.get<Buffer>(cacheKey);
+		if (cached) {
+			return Buffer.from(cached);
+		}
+
+		const logo = await fetchLogo(image, fetchOptions);
+		await cache?.set(cacheKey, logo);
+		return logo;
 	}
 
 	/**
@@ -515,10 +777,10 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg(options);
+		const { svg, cacheable } = await this.renderSvg(options);
 		result = QrBit.convertSvgToPng(svg);
 
-		if (cache && cacheKey) {
+		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
 
@@ -568,10 +830,10 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg(options);
+		const { svg, cacheable } = await this.renderSvg(options);
 		result = QrBit.convertSvgToJpeg(svg, undefined, undefined, quality);
 
-		if (cache && cacheKey) {
+		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
 
@@ -623,10 +885,10 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const svg = await this.toSvg(options);
+		const { svg, cacheable } = await this.renderSvg(options);
 		result = QrBit.convertSvgToWebp(svg);
 
-		if (cache && cacheKey) {
+		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
 
@@ -878,6 +1140,25 @@ export class QrBit extends Hookified {
 	}
 
 	/**
+	 * Get the logo of a website, or the image at a URL. Use the result as
+	 * `logo` or as `qart.image`. The function reads the icon links of the
+	 * page, then tries `/apple-touch-icon.png` and `/favicon.ico`. It does
+	 * not use a third-party favicon service. Only `http:` and `https:` URLs
+	 * are accepted. Each request, redirect, icon link and fallback goes only
+	 * to public addresses, unless `options.allowAddress` allows others.
+	 * @param url - The website or image URL
+	 * @param options - Time and size limits, and the address rule
+	 * @returns {Promise<Buffer>} The image bytes
+	 * @throws {Error} If the URL is not http or https, or if no image is found
+	 */
+	public static async fetchLogo(
+		url: string | URL,
+		options?: FetchLogoOptions,
+	): Promise<Buffer> {
+		return fetchLogo(url, options);
+	}
+
+	/**
 	 * Generate a cache key based on the current QR code options.
 	 * @param {string} renderKey the format that you are rendering in such as `napi-png`, `native-svg`, `napi-svg`
 	 * @returns {Promise<string>} The cache key
@@ -894,6 +1175,17 @@ export class QrBit extends Hookified {
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
 			errorCorrection: this._errorCorrection,
+			qart: this._qart && {
+				...this._qart,
+				image:
+					this._qart.image instanceof URL
+						? this._qart.image.href
+						: this._qart.image,
+				fetchOptions: this._qart.fetchOptions && {
+					...this._qart.fetchOptions,
+					allowAddress: addressRuleKey(this._qart.fetchOptions),
+				},
+			},
 			renderKey,
 		};
 

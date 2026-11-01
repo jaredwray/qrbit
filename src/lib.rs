@@ -2,6 +2,8 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use quircs::Quirc;
 
+mod qart;
+mod qart_svg;
 mod nodeqr;
 use nodeqr::{BitMatrix, EcLevel};
 
@@ -333,6 +335,108 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
         logo_background_color,
         logo_padding_ratio,
     )
+}
+
+#[napi(object)]
+pub struct QArtSvgOptions {
+    pub text: String,
+    /// Image to draw with the data modules (PNG, JPEG, WebP, GIF, ICO or SVG).
+    pub image: Buffer,
+    pub size: Option<u32>,
+    /// Margin in pixels. The default is a quiet zone of 4 modules.
+    pub margin: Option<u32>,
+    /// Width of the image as a fraction of the symbol width (default 0.7).
+    pub size_ratio: Option<f64>,
+    /// Whiteness (smallest RGB channel) from 0 to 1 below which a sample is
+    /// dark (default 0.5).
+    pub threshold: Option<f64>,
+    /// Lowest QR version to use (default 14).
+    pub version: Option<u32>,
+    /// Error correction level (default "L").
+    pub error_correction: Option<String>,
+    /// Shape of the dark modules: "dots", "rounded" or "square" (default
+    /// "dots").
+    pub style: Option<String>,
+    /// Source of the module colors: "image" or "foreground" (default
+    /// "image").
+    pub color: Option<String>,
+    pub background_color: Option<String>,
+    pub foreground_color: Option<String>,
+}
+
+#[napi(object)]
+pub struct QArtSvgResult {
+    pub svg: String,
+    pub version: u32,
+    /// Non-function modules that the image gives a value to.
+    pub target_modules: u32,
+    /// Target modules that have the value of the image.
+    pub matched_modules: u32,
+}
+
+/// Generate a QR code SVG whose data modules draw an image.
+#[napi]
+pub fn generate_qart_svg(options: QArtSvgOptions) -> Result<QArtSvgResult> {
+    let size = options.size.unwrap_or(200);
+    let failed = |e: String| Error::from_reason(format!("QArt generation failed: {}", e));
+    let error_correction = options.error_correction.as_deref().unwrap_or("L");
+    if !matches!(
+        error_correction.to_uppercase().as_str(),
+        "L" | "LOW" | "M" | "MEDIUM" | "Q" | "QUARTILE" | "H" | "HIGH"
+    ) {
+        return Err(failed(format!(
+            "errorCorrection must be L, M, Q or H, got \"{}\"",
+            error_correction
+        )));
+    }
+    let ec_level = parse_ec_level(Some(error_correction));
+    let style =
+        qart_svg::Style::parse(options.style.as_deref().unwrap_or("dots")).map_err(failed)?;
+    let color_mode = match options.color.as_deref().unwrap_or("image") {
+        "image" => qart::ColorMode::Image,
+        "foreground" => qart::ColorMode::Foreground,
+        other => {
+            return Err(failed(format!(
+                "color must be \"image\" or \"foreground\", got \"{}\"",
+                other
+            )))
+        }
+    };
+    let background =
+        parse_optional_color(options.background_color.as_deref())?.unwrap_or([255, 255, 255, 255]);
+    let foreground =
+        parse_optional_color(options.foreground_color.as_deref())?.unwrap_or([0, 0, 0, 255]);
+
+    let output = qart::create(
+        &options.text,
+        ec_level,
+        options.version.unwrap_or(14) as usize,
+        &options.image,
+        options.size_ratio.unwrap_or(0.7),
+        options.threshold.unwrap_or(0.5),
+        style == qart_svg::Style::Dots,
+    )
+    .map_err(failed)?;
+
+    let margin = options
+        .margin
+        .unwrap_or_else(|| (4.0 * size as f64 / output.matrix.size as f64).round() as u32);
+    let rgb = |c: [u8; 4]| [c[0], c[1], c[2]];
+    let colors = qart::module_colors(&output, color_mode, rgb(foreground), rgb(background));
+
+    Ok(QArtSvgResult {
+        svg: qart_svg::render(
+            &output.matrix,
+            &colors,
+            size,
+            margin,
+            rgb(background),
+            style,
+        ),
+        version: output.version as u32,
+        target_modules: output.target_modules,
+        matched_modules: output.matched_modules,
+    })
 }
 
 #[napi(object)]

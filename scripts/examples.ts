@@ -14,6 +14,10 @@ export type ExampleSpec = {
 
 export const LOGO_PATH = "./test/fixtures/test_logo_large.png";
 
+export const QART_PATH = "./test/fixtures/qart_bolt.svg";
+
+export const QART_COLOR_PATH = "./test/fixtures/qart_petals.svg";
+
 export function buildOptions(spec: ExampleSpec): QrOptions {
 	const { logo, ...rest } = spec.options;
 	if (!logo) return rest;
@@ -207,6 +211,40 @@ export const examples: ExampleSpec[] = [
 			errorCorrection: "High",
 			backgroundColor: "#1e3a5f",
 			foregroundColor: "#FFFFFF",
+		},
+	},
+	{
+		name: "21_qart_svg_logo",
+		format: "png",
+		options: {
+			text: "https://github.com/jaredwray/qrbit",
+			size: 600,
+			qart: { image: QART_PATH },
+		},
+	},
+	{
+		name: "22_qart_png_logo_blue",
+		format: "svg",
+		options: {
+			text: "https://github.com/jaredwray/qrbit",
+			size: 600,
+			foregroundColor: "#1e3a5f",
+			qart: {
+				image: LOGO_PATH,
+				version: 10,
+				sizeRatio: 0.6,
+				style: "rounded",
+				color: "foreground",
+			},
+		},
+	},
+	{
+		name: "23_qart_color_logo",
+		format: "png",
+		options: {
+			text: "https://github.com/jaredwray/qrbit",
+			size: 600,
+			qart: { image: QART_COLOR_PATH },
 		},
 	},
 ];
