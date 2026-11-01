@@ -29,6 +29,9 @@ A fast QR code generator with logo embedding support, built with Rust as a nativ
 - [Installation](#installation)
 - [Requirements](#requirements)
 - [QArt Codes](#qart-codes)
+  - [Facebook](#facebook)
+  - [Apple](#apple)
+  - [Lightning](#lightning)
 - [API](#api)
   - [Constructor](#constructoroptions-qroptions)
   - [Properties](#properties)
@@ -156,16 +159,50 @@ const png = await qr.toPng(); // buffer of the png!
 
 A QArt code draws an image with its data modules. The image is not put on top of the code. The code stays a valid QR code with no errors, so it does not use up error correction.
 
+Pass a website as `qart.image` and qrbit reads the icon links of the page, then tries `/apple-touch-icon.png` and `/favicon.ico`. It does not use a third-party favicon service. Downloaded images are kept in the cache. A file path draws a local image.
+
+> **Note:** The requests for a website logo go from your server. qrbit requests only public IP addresses: it checks each request, redirect, icon link and fallback after the DNS lookup, and connects only to an address that it checked. So a page cannot make your server request a private network, a loopback address or a cloud metadata service. Only `http:` and `https:` URLs are accepted. To change the rule, set `fetchOptions.allowAddress`.
+
+### Facebook
+
+```javascript
+const qr = new QrBit({
+  text: "https://www.facebook.com",
+  size: 600,
+  qart: { image: new URL("https://www.facebook.com") },
+});
+await qr.toPngFile("qart-facebook.png");
+```
+
+![Facebook QArt code](examples/qart_facebook.png)
+
+### Apple
+
+```javascript
+const qr = new QrBit({
+  text: "https://www.apple.com",
+  size: 600,
+  qart: { image: new URL("https://www.apple.com") },
+});
+await qr.toPngFile("qart-apple.png");
+```
+
+![Apple QArt code](examples/qart_apple.png)
+
+### Lightning
+
+The data modules draw a red lightning bolt. Each dot takes the color of the SVG.
+
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
-  qart: { image: "./logo.svg" },
+  qart: { image: "./test/fixtures/qart_bolt.svg" },
 });
-await qr.toPngFile("qart.png");
+await qr.toPngFile("qart-lightning.png");
 ```
 
-![QArt Code](examples/21_qart_svg_logo.png)
+![Lightning QArt code](examples/21_qart_svg_logo.png)
 
 qrbit uses the QArt method by Russ Cox. Decoders stop at the end of the text, so the data bits after the text are free. Reed-Solomon codes are linear, so qrbit can select these free bits to put a wanted value in a module. Elimination over GF(2) selects the free bits in order of priority. The outline of the image comes first, then the modules nearer to the center.
 
@@ -200,18 +237,6 @@ To get a good result:
 - Use a higher `version` for more detail. Each version adds 4 modules to each side.
 - Use a smaller `sizeRatio` if qrbit emits a `warn` event about matched modules.
 - Use a large `size` for print. The default margin is a quiet zone of 4 modules.
-
-You can also get the logo of a website. qrbit reads the icon links of the page, then tries `/apple-touch-icon.png` and `/favicon.ico`. It does not use a third-party favicon service. Downloaded images are kept in the cache.
-
-```javascript
-const qr = new QrBit({
-  text: "https://github.com/jaredwray/qrbit",
-  size: 600,
-  qart: { image: new URL("https://github.com") },
-});
-```
-
-> **Note:** The requests go from your server. qrbit requests only public IP addresses: it checks each request, redirect, icon link and fallback after the DNS lookup, and connects only to an address that it checked. So a page cannot make your server request a private network, a loopback address or a cloud metadata service. Only `http:` and `https:` URLs are accepted. To change the rule, set `fetchOptions.allowAddress`.
 
 # API
 
