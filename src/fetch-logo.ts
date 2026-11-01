@@ -6,7 +6,9 @@ import net from "node:net";
 
 export type FetchLogoOptions = {
 	/**
-	 * The time limit for each request in milliseconds.
+	 * The time limit in milliseconds for the page download, and again for
+	 * all icon downloads together. A download includes its DNS lookups and
+	 * redirects.
 	 * @type {number}
 	 * @default 5000
 	 */
@@ -304,12 +306,17 @@ async function download(
 	}
 }
 
+/** The URLs without repeats, in their first order. */
+function distinct(urls: URL[]): URL[] {
+	return [...new Map(urls.map((url) => [url.href, url])).values()];
+}
+
 /**
  * Get the logo of a website, or the image at a URL.
  *
  * 1. Download the URL. If the body is an image, return it.
  * 2. Otherwise, read the icon links of the page (see `findIcons`), and
- *    keep the best `iconLimit` links.
+ *    keep the best `iconLimit` distinct http and https links.
  * 3. Then try `/apple-touch-icon.png` and `/favicon.ico` at the site root.
  * 4. Return the first of these that is an image.
  *
@@ -344,21 +351,29 @@ export async function fetchLogo(
 
 	// After a redirect, the site at the final address gives the icons.
 	const site = page?.url ?? target;
-	const candidates = page
-		? findIcons(page.body.toString("utf8", 0, htmlSearchLimit), site).slice(
-				0,
-				iconLimit,
+	const icons = page
+		? findIcons(page.body.toString("utf8", 0, htmlSearchLimit), site).filter(
+				(icon) => icon.protocol === "http:" || icon.protocol === "https:",
 			)
 		: [];
-	candidates.push(
+	// The best distinct icon links, then the fallbacks that are not in the
+	// list yet.
+	const candidates = distinct([
+		...distinct(icons).slice(0, iconLimit),
 		new URL("/apple-touch-icon.png", site),
 		new URL("/favicon.ico", site),
-	);
+	]);
 
+	// All icon downloads together have one time limit.
+	const deadline = Date.now() + timeout;
 	for (const candidate of candidates) {
+		const remaining = deadline - Date.now();
+		if (remaining <= 0) {
+			break;
+		}
 		const icon = await download(
 			candidate,
-			timeout,
+			remaining,
 			maxBytes,
 			allowAddress,
 		).catch(() => undefined);

@@ -687,13 +687,13 @@ const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 Get the logo of a website, or the image at a URL. Use the result as `logo` or as `qart.image`.
 
 1. Download the URL. If the body is an image, return it.
-2. Otherwise, read the icon links of the page. SVG icons come first, then the largest icon. qrbit tries at most 8 icon links.
+2. Otherwise, read the icon links of the page. SVG icons come first, then the largest icon. qrbit tries at most 8 distinct icon links.
 3. Then try `/apple-touch-icon.png` and `/favicon.ico` at the site root.
 4. Return the first of these that is an image.
 
 **Parameters:**
 - `url: string | URL` - The website or image URL. Only `http:` and `https:` are accepted.
-- `options.timeout?: number` - The time limit for each request in milliseconds (default: 5000)
+- `options.timeout?: number` - The time limit in milliseconds for the page download, and again for all icon downloads together (default: 5000)
 - `options.maxBytes?: number` - The largest response body to accept, in bytes (default: 5242880)
 - `options.allowAddress?: (address: string, url: URL) => boolean` - Return true to allow a request to an IP address. qrbit calls it for each request, redirect, icon link and fallback, with each address of the host name. The default allows only public addresses.
 

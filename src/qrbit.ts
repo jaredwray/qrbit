@@ -1147,7 +1147,7 @@ export class QrBit extends Hookified {
 	 * are accepted. Each request, redirect, icon link and fallback goes only
 	 * to public addresses, unless `options.allowAddress` allows others.
 	 * @param url - The website or image URL
-	 * @param options - Time and size limits for each request, and the address rule
+	 * @param options - Time and size limits, and the address rule
 	 * @returns {Promise<Buffer>} The image bytes
 	 * @throws {Error} If the URL is not http or https, or if no image is found
 	 */

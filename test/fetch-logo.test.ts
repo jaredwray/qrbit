@@ -295,6 +295,39 @@ describe("QrBit.fetchLogo", () => {
 		expect(hits["/icon9.png"]).toBeUndefined();
 	});
 
+	it("counts each icon link once for the icon limit", async () => {
+		// Eight copies of a link that fails, and links that are not http or
+		// https, do not hide the good link.
+		const broken = '<link rel="icon" sizes="64x64" href="/broken.png">';
+		const dataLink = '<link rel="icon" sizes="96x96" href="data:,x">';
+		routes["/"] = {
+			body: html(
+				`${dataLink.repeat(8)}${broken.repeat(8)}<link rel="icon" sizes="32x32" href="/good.png">`,
+			),
+		};
+		routes["/good.png"] = { body: png };
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(png);
+		expect(hits["/broken.png"]).toBe(1);
+	});
+
+	it("gives all icon downloads one time limit", async () => {
+		// The slow icon uses up the time limit, so the fast icon and the
+		// fallbacks are not tried.
+		routes["/"] = {
+			body: html(`
+				<link rel="icon" sizes="64x64" href="/slow.png">
+				<link rel="icon" sizes="32x32" href="/fast.png">
+			`),
+		};
+		routes["/slow.png"] = { body: png, delay: 500 };
+		routes["/fast.png"] = { body: png };
+		await expect(
+			QrBit.fetchLogo(base, { ...allowAll, timeout: 200 }),
+		).rejects.toThrow(`No logo found for ${base}/`);
+		expect(hits["/fast.png"]).toBeUndefined();
+		expect(hits["/favicon.ico"]).toBeUndefined();
+	});
+
 	it("ignores a redirect to a URL that is not http or https", async () => {
 		routes["/"] = { redirect: "file:///etc/passwd" };
 		routes["/favicon.ico"] = { body: ico };
