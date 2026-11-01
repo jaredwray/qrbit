@@ -43,10 +43,14 @@ const redirectLimit = 5;
 const iconLimit = 8;
 
 // Addresses that are not on the public internet: private, loopback,
-// link-local (cloud metadata), shared, benchmark, multicast and reserved
-// ranges. BlockList also applies the IPv4 ranges to IPv4-mapped IPv6
-// addresses.
+// link-local (cloud metadata), shared, documentation, benchmark, relay,
+// multicast and reserved ranges. BlockList also applies the IPv4 ranges to
+// IPv4-mapped IPv6 addresses. NAT64 (64:ff9b::/96) and 6to4 (2002::/16)
+// addresses contain an IPv4 address, so the same ranges in these forms are
+// blocked too.
 const blockedRanges = new net.BlockList();
+const hexWord = (high: number, low: number) =>
+	((high << 8) | low).toString(16);
 for (const [network, prefix] of [
 	["0.0.0.0", 8],
 	["10.0.0.0", 8],
@@ -55,14 +59,26 @@ for (const [network, prefix] of [
 	["169.254.0.0", 16],
 	["172.16.0.0", 12],
 	["192.0.0.0", 24],
+	["192.0.2.0", 24],
+	["192.88.99.0", 24],
 	["192.168.0.0", 16],
 	["198.18.0.0", 15],
+	["198.51.100.0", 24],
+	["203.0.113.0", 24],
 	["224.0.0.0", 3],
 ] as const) {
 	blockedRanges.addSubnet(network, prefix, "ipv4");
+	const [a, b, c, d] = network.split(".").map(Number);
+	const words = `${hexWord(a, b)}:${hexWord(c, d)}`;
+	blockedRanges.addSubnet(`64:ff9b::${words}`, 96 + prefix, "ipv6");
+	blockedRanges.addSubnet(`2002:${words}::`, 16 + prefix, "ipv6");
 }
 for (const [network, prefix] of [
 	["::", 127],
+	["64:ff9b:1::", 48],
+	["100::", 64],
+	["2001::", 32],
+	["2001:db8::", 32],
 	["fc00::", 7],
 	["fe80::", 10],
 	["ff00::", 8],
@@ -196,7 +212,16 @@ async function get(
 	allowAddress: (address: string, url: URL) => boolean,
 ): Promise<http.IncomingMessage> {
 	const hostname = url.hostname.replace(/^\[|\]$/g, "");
-	const addresses = await dns.promises.lookup(hostname, { all: true });
+	// The time limit also stops a DNS lookup that does not answer.
+	signal.throwIfAborted();
+	const addresses = await Promise.race([
+		dns.promises.lookup(hostname, { all: true }),
+		new Promise<never>((_, reject) => {
+			signal.addEventListener("abort", () => reject(signal.reason), {
+				once: true,
+			});
+		}),
+	]);
 	for (const { address } of addresses) {
 		if (!allowAddress(address, url)) {
 			throw new BlockedAddressError(url, address);

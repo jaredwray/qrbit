@@ -312,6 +312,22 @@ describe("QrBit.fetchLogo address rule", () => {
 			"169.254.169.254",
 		],
 		["a private address", () => "http://10.0.0.1/", "10.0.0.1"],
+		["a documentation address", () => "http://192.0.2.1/", "192.0.2.1"],
+		[
+			"an IPv6 documentation address",
+			() => "http://[2001:db8::1]/",
+			"2001:db8::1",
+		],
+		[
+			"a private address in NAT64 form",
+			() => "http://[64:ff9b::a00:1]/",
+			"64:ff9b::a00:1",
+		],
+		[
+			"a loopback address in 6to4 form",
+			() => "http://[2002:7f00:1::]/",
+			"2002:7f00:1::",
+		],
 	])("blocks %s by default", async (_, url, address) => {
 		routes["/logo.png"] = { body: png };
 		await expect(QrBit.fetchLogo(url())).rejects.toThrow(
@@ -421,6 +437,30 @@ describe("QArt codes with a URL image", () => {
 		expect(result.data).toBe("url string");
 		expect(errors).toEqual([]);
 		expect(hits["/logo.png"]).toBe(1);
+	});
+
+	it("does not use a cached logo that is larger than maxBytes", async () => {
+		routes["/logo.png"] = { body: png };
+		const cache = new Cacheable();
+		const image = new URL(`${base}/logo.png`);
+		await new QrBit({
+			text: "large",
+			cache,
+			qart: { image, fetchOptions: allowAll },
+		}).toSvg();
+
+		const errors: string[] = [];
+		const small = new QrBit({
+			text: "small",
+			cache,
+			qart: { image, fetchOptions: { ...allowAll, maxBytes: png.length - 1 } },
+		});
+		small.on("error", (message: string) => errors.push(message));
+		await small.toSvg();
+		expect(errors).toEqual([
+			`QArt image could not be loaded: No logo found for ${image.href}. Proceeding without QArt.`,
+		]);
+		expect(hits["/logo.png"]).toBe(2);
 	});
 
 	it("does not use a logo that a different address rule downloaded", async () => {

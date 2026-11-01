@@ -691,7 +691,9 @@ export class QrBit extends Hookified {
 			image = new URL(image);
 		}
 
-		const cacheKey = `fetch-logo:${addressRuleKey(fetchOptions)}:${image.href}`;
+		// The address rule and the size limit decide which downloads are
+		// accepted, so they are part of the key.
+		const cacheKey = `fetch-logo:${addressRuleKey(fetchOptions)}:${fetchOptions?.maxBytes ?? "default"}:${image.href}`;
 		const cached = await cache?.get<Buffer>(cacheKey);
 		if (cached) {
 			return Buffer.from(cached);
