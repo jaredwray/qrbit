@@ -239,7 +239,7 @@ interface QrOptions {
 }
 
 interface QArtOptions {
-  image: string | Buffer | URL;    // File path, image bytes, or a website or image URL
+  image: string | Buffer | URL;    // File path, image bytes, or a website or image URL (URL object or http(s) string)
   sizeRatio?: number;              // Image width as a fraction of the QR code width (default: 0.7)
   threshold?: number;              // Whiteness from 0 to 1 below which a module is dark (default: 0.5)
   version?: number;                // Lowest QR version, 1 to 40 (default: 14)
@@ -373,9 +373,9 @@ qr.errorCorrection = "High"; // equivalent
 ### qart
 Get or set the QArt options. A QArt code draws an image with the data modules. See [QArt Codes](#qart-codes).
 
-- `image` — a file path, the image bytes, or a URL. PNG, JPEG, WebP, GIF, ICO and SVG are supported.
+- `image` — a file path, the image bytes, or a URL. A URL is a `URL` object, or a string that starts with `http://` or `https://`. Other strings are file paths. PNG, JPEG, WebP, GIF, ICO and SVG are supported.
 - `sizeRatio` — the image width as a fraction of the QR code width (default: 0.7).
-- `threshold` — the whiteness from 0 to 1 below which a module is dark. The whiteness of a color is the smallest of its red, green and blue values, so black and strong colors are dark, and white and light grey are light (default: 0.5).
+- `threshold` — the whiteness from 0 to 1 below which a module is dark. A value outside this range rejects. The whiteness of a color is the smallest of its red, green and blue values, so black and strong colors are dark, and white and light grey are light (default: 0.5).
 - `version` — the lowest QR version (1 to 40). If the text needs a higher version, qrbit uses it (default: 14).
 - `errorCorrection` — the error correction level of the QArt code. It replaces `errorCorrection` for QArt output (default: "L").
 - `style` — the shape of the dark modules: `"dots"`, `"rounded"` or `"square"` (default: `"dots"`).
@@ -687,7 +687,7 @@ const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 Get the logo of a website, or the image at a URL. Use the result as `logo` or as `qart.image`.
 
 1. Download the URL. If the body is an image, return it.
-2. Otherwise, read the icon links of the page. SVG icons come first, then the largest icon.
+2. Otherwise, read the icon links of the page. SVG icons come first, then the largest icon. qrbit tries at most 8 icon links.
 3. Then try `/apple-touch-icon.png` and `/favicon.ico` at the site root.
 4. Return the first of these that is an image.
 

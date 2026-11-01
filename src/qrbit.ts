@@ -96,9 +96,11 @@ export type QArtColor = "image" | "foreground";
 export type QArtOptions = {
 	/**
 	 * The image to draw with the data modules: a file path, the image bytes,
-	 * or a URL. For a URL, qrbit gets the logo of that site, or the image at
-	 * that URL (see `QrBit.fetchLogo`). PNG, JPEG, WebP, GIF, ICO and SVG are
-	 * supported. Transparent areas of the image stay free for the QR data.
+	 * or a URL. A URL is a `URL` object, or a string that starts with
+	 * `http://` or `https://`. Other strings are file paths. For a URL, qrbit
+	 * gets the logo of that site, or the image at that URL (see
+	 * `QrBit.fetchLogo`). PNG, JPEG, WebP, GIF, ICO and SVG are
+	 * supported. The background of the image stays free for the QR data.
 	 * @type {string | Buffer | URL}
 	 */
 	image: string | Buffer | URL;
@@ -681,7 +683,12 @@ export class QrBit extends Hookified {
 		}
 
 		if (typeof image === "string") {
-			return fs.promises.readFile(image);
+			// A string with an http or https scheme is a URL. Other strings are
+			// file paths.
+			if (!/^https?:\/\//i.test(image)) {
+				return fs.promises.readFile(image);
+			}
+			image = new URL(image);
 		}
 
 		const cacheKey = `fetch-logo:${addressRuleKey(fetchOptions)}:${image.href}`;

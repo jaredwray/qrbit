@@ -280,6 +280,21 @@ describe("QrBit.fetchLogo", () => {
 		expect(hits["/loop"]).toBe(6);
 	});
 
+	it("tries at most 8 icon links of a page", async () => {
+		// Ten icon links that fail, best first. Only the best 8 are tried.
+		const links = Array.from(
+			{ length: 10 },
+			(_, i) =>
+				`<link rel="icon" sizes="${100 - i}x${100 - i}" href="/icon${i}.png">`,
+		);
+		routes["/"] = { body: html(links.join("")) };
+		routes["/favicon.ico"] = { body: ico };
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(ico);
+		expect(hits["/icon7.png"]).toBe(1);
+		expect(hits["/icon8.png"]).toBeUndefined();
+		expect(hits["/icon9.png"]).toBeUndefined();
+	});
+
 	it("ignores a redirect to a URL that is not http or https", async () => {
 		routes["/"] = { redirect: "file:///etc/passwd" };
 		routes["/favicon.ico"] = { body: ico };
@@ -392,6 +407,20 @@ describe("QArt codes with a URL image", () => {
 		expect(errors).toEqual([
 			`QArt image could not be loaded: No logo found for ${base}/. Proceeding without QArt.`,
 		]);
+	});
+
+	it("fetches the image of a URL string", async () => {
+		routes["/logo.png"] = { body: png };
+		const errors: string[] = [];
+		const qr = new QrBit({
+			text: "url string",
+			qart: { image: `${base}/logo.png`, fetchOptions: allowAll },
+		});
+		qr.on("error", (message: string) => errors.push(message));
+		const result = await QrBit.decodeDetailed(await qr.toPng());
+		expect(result.data).toBe("url string");
+		expect(errors).toEqual([]);
+		expect(hits["/logo.png"]).toBe(1);
 	});
 
 	it("does not use a logo that a different address rule downloaded", async () => {

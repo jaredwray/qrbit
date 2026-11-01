@@ -378,8 +378,18 @@ pub struct QArtSvgResult {
 #[napi]
 pub fn generate_qart_svg(options: QArtSvgOptions) -> Result<QArtSvgResult> {
     let size = options.size.unwrap_or(200);
-    let ec_level = parse_ec_level(Some(options.error_correction.as_deref().unwrap_or("L")));
     let failed = |e: String| Error::from_reason(format!("QArt generation failed: {}", e));
+    let error_correction = options.error_correction.as_deref().unwrap_or("L");
+    if !matches!(
+        error_correction.to_uppercase().as_str(),
+        "L" | "LOW" | "M" | "MEDIUM" | "Q" | "QUARTILE" | "H" | "HIGH"
+    ) {
+        return Err(failed(format!(
+            "errorCorrection must be L, M, Q or H, got \"{}\"",
+            error_correction
+        )));
+    }
+    let ec_level = parse_ec_level(Some(error_correction));
     let style =
         qart_svg::Style::parse(options.style.as_deref().unwrap_or("dots")).map_err(failed)?;
     let color_mode = match options.color.as_deref().unwrap_or("image") {

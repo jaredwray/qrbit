@@ -649,6 +649,9 @@ pub fn create(
             size_ratio
         ));
     }
+    if !(0.0..=1.0).contains(&threshold) {
+        return Err(format!("threshold must be from 0 to 1, got {}", threshold));
+    }
 
     let (version, payload) = nodeqr::encode_payload_for_version(text, ecl, min_version)?;
     let skeleton = nodeqr::function_matrix(version, ecl);

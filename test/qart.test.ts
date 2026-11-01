@@ -271,6 +271,12 @@ describe("QArt codes", () => {
 			/style must be "rounded", "dots" or "square"/,
 		],
 		["color", { color: "rainbow" }, /color must be "image" or "foreground"/],
+		[
+			"errorCorrection",
+			{ errorCorrection: "X" },
+			/errorCorrection must be L, M, Q or H, got "X"/,
+		],
+		["threshold", { threshold: 1.5 }, /threshold must be from 0 to 1, got 1.5/],
 	];
 	it.each(invalid)("rejects an invalid %s", async (_, options, message) => {
 		const qr = new QrBit({

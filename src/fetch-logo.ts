@@ -38,6 +38,10 @@ const htmlSearchLimit = 1024 * 1024;
 // The largest number of redirects that one download follows.
 const redirectLimit = 5;
 
+// The most icon links of one page that fetchLogo tries, so that a page with
+// many links cannot keep the caller busy for a long time.
+const iconLimit = 8;
+
 // Addresses that are not on the public internet: private, loopback,
 // link-local (cloud metadata), shared, benchmark, multicast and reserved
 // ranges. BlockList also applies the IPv4 ranges to IPv4-mapped IPv6
@@ -279,7 +283,8 @@ async function download(
  * Get the logo of a website, or the image at a URL.
  *
  * 1. Download the URL. If the body is an image, return it.
- * 2. Otherwise, read the icon links of the page (see `findIcons`).
+ * 2. Otherwise, read the icon links of the page (see `findIcons`), and
+ *    keep the best `iconLimit` links.
  * 3. Then try `/apple-touch-icon.png` and `/favicon.ico` at the site root.
  * 4. Return the first of these that is an image.
  *
@@ -315,7 +320,10 @@ export async function fetchLogo(
 	// After a redirect, the site at the final address gives the icons.
 	const site = page?.url ?? target;
 	const candidates = page
-		? findIcons(page.body.toString("utf8", 0, htmlSearchLimit), site)
+		? findIcons(page.body.toString("utf8", 0, htmlSearchLimit), site).slice(
+				0,
+				iconLimit,
+			)
 		: [];
 	candidates.push(
 		new URL("/apple-touch-icon.png", site),
