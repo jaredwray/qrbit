@@ -17,7 +17,7 @@ A fast QR code generator with logo embedding support, built with Rust as a nativ
 - **Fast SVG**: High-performance SVG rendering from a self-contained Rust QR engine — no JS QR library or node `canvas` required
 - **Cross-platform**: Works on iOS, Windows, Linux, and macOS
 - **Logo embedding**: Add custom logos to your QR codes with no need for node canvas!
-- **Mosaic QR codes**: Draw a logo with the data modules, as round dots in the colors of the logo. The QR code stays valid with no errors.
+- **QArt codes**: Draw a logo with the data modules, as round dots in the colors of the logo. The QR code stays valid with no errors.
 - **Error correction**: Configurable error correction levels (L, M, Q, H)
 - **Customizable**: Custom colors, sizes, and margins
 - **Multiple formats**: Generate SVG, PNG, JPEG, and WebP outputs
@@ -28,7 +28,7 @@ A fast QR code generator with logo embedding support, built with Rust as a nativ
 # Table of Contents
 - [Installation](#installation)
 - [Requirements](#requirements)
-- [Mosaic QR Codes](#mosaic-qr-codes)
+- [QArt Codes](#qart-codes)
 - [API](#api)
   - [Constructor](#constructoroptions-qroptions)
   - [Properties](#properties)
@@ -42,7 +42,7 @@ A fast QR code generator with logo embedding support, built with Rust as a nativ
     - [backgroundColor](#backgroundcolor)
     - [foregroundColor](#foregroundcolor)
     - [errorCorrection](#errorcorrection)
-    - [mosaic](#mosaic)
+    - [qart](#qart)
     - [cache](#cache)
   - [Methods](#methods)
     - [.toSvg()](#tosvgoptions-tooptions)
@@ -152,20 +152,20 @@ const qr = new QrBit({
 const png = await qr.toPng(); // buffer of the png!
 ```
 
-# Mosaic QR Codes
+# QArt Codes
 
-A mosaic QR code draws an image with its data modules. The image is not put on top of the code. The code stays a valid QR code with no errors, so it does not use up error correction.
+A QArt code draws an image with its data modules. The image is not put on top of the code. The code stays a valid QR code with no errors, so it does not use up error correction.
 
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
-  mosaic: { image: "./logo.svg" },
+  qart: { image: "./logo.svg" },
 });
-await qr.toPngFile("mosaic.png");
+await qr.toPngFile("qart.png");
 ```
 
-![Mosaic QR Code](examples/21_mosaic_svg_logo.png)
+![QArt Code](examples/21_qart_svg_logo.png)
 
 qrbit uses the QArt method by Russ Cox. Decoders stop at the end of the text, so the data bits after the text are free. Reed-Solomon codes are linear, so qrbit can select these free bits to put a wanted value in a module. Elimination over GF(2) selects the free bits in order of priority. The outline of the image comes first, then the modules nearer to the center.
 
@@ -190,7 +190,7 @@ const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
   foregroundColor: "#1e3a5f",
-  mosaic: { image: "./logo.png", style: "rounded", color: "foreground" },
+  qart: { image: "./logo.png", style: "rounded", color: "foreground" },
 });
 ```
 
@@ -207,7 +207,7 @@ You can also get the logo of a website. qrbit reads the icon links of the page, 
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
-  mosaic: { image: new URL("https://github.com") },
+  qart: { image: new URL("https://github.com") },
 });
 ```
 
@@ -234,16 +234,16 @@ interface QrOptions {
   backgroundColor?: string;        // Background color (default: "#FFFFFF")
   foregroundColor?: string;        // Foreground color (default: "#000000")
   errorCorrection?: ECLevel;       // "L"|"M"|"Q"|"H"|"Low"|"Medium"|"Quartile"|"High" (default: "M")
-  mosaic?: MosaicOptions;          // Draw an image with the data modules (default: undefined)
+  qart?: QArtOptions;          // Draw an image with the data modules (default: undefined)
   cache?: Cacheable | boolean;     // Caching configuration (default: true)
 }
 
-interface MosaicOptions {
+interface QArtOptions {
   image: string | Buffer | URL;    // File path, image bytes, or a website or image URL
   sizeRatio?: number;              // Image width as a fraction of the QR code width (default: 0.7)
   threshold?: number;              // Whiteness from 0 to 1 below which a module is dark (default: 0.5)
   version?: number;                // Lowest QR version, 1 to 40 (default: 14)
-  errorCorrection?: ECLevel;       // Error correction of the mosaic (default: "L")
+  errorCorrection?: ECLevel;       // Error correction of the QArt code (default: "L")
   style?: "dots" | "rounded" | "square"; // Shape of the dark modules (default: "dots")
   color?: "image" | "foreground";  // Source of the module colors (default: "image")
 }
@@ -369,22 +369,22 @@ qr.errorCorrection = "H";
 qr.errorCorrection = "High"; // equivalent
 ```
 
-### mosaic
-Get or set the mosaic options. A mosaic draws an image with the data modules. See [Mosaic QR Codes](#mosaic-qr-codes).
+### qart
+Get or set the QArt options. A QArt code draws an image with the data modules. See [QArt Codes](#qart-codes).
 
 - `image` — a file path, the image bytes, or a URL. PNG, JPEG, WebP, GIF, ICO and SVG are supported.
 - `sizeRatio` — the image width as a fraction of the QR code width (default: 0.7).
 - `threshold` — the whiteness from 0 to 1 below which a module is dark. The whiteness of a color is the smallest of its red, green and blue values, so black and strong colors are dark, and white and light grey are light (default: 0.5).
 - `version` — the lowest QR version (1 to 40). If the text needs a higher version, qrbit uses it (default: 14).
-- `errorCorrection` — the error correction level of the mosaic. It replaces `errorCorrection` for mosaic output (default: "L").
+- `errorCorrection` — the error correction level of the QArt code. It replaces `errorCorrection` for QArt output (default: "L").
 - `style` — the shape of the dark modules: `"dots"`, `"rounded"` or `"square"` (default: `"dots"`).
 - `color` — the source of the module colors. With `"image"`, the modules get the colors of the image. With `"foreground"`, all dark modules get `foregroundColor` (default: `"image"`).
 
-The mosaic option ignores the `logo` option and emits a `warn` event, because a logo covers data modules. If the image cannot be loaded, qrbit emits an `error` event and renders a standard QR code. If an invalid option is given or the image cannot be decoded, `toSvg()` rejects.
+The `qart` option ignores the `logo` option and emits a `warn` event, because a logo covers data modules. If the image cannot be loaded, qrbit emits an `error` event and renders a standard QR code. If an invalid option is given or the image cannot be decoded, `toSvg()` rejects.
 
 ```javascript
 const qr = new QrBit({ text: "Hello World" });
-qr.mosaic = { image: "./logo.png", version: 16, sizeRatio: 0.6, style: "rounded" };
+qr.qart = { image: "./logo.png", version: 16, sizeRatio: 0.6, style: "rounded" };
 ```
 
 ### cache
@@ -682,7 +682,7 @@ const webpBuffer = QrBit.convertSvgToWebp(svg, 400, 400);
 
 #### QrBit.fetchLogo(url: string | URL, options?: FetchLogoOptions)
 
-Get the logo of a website, or the image at a URL. Use the result as `logo` or as `mosaic.image`.
+Get the logo of a website, or the image at a URL. Use the result as `logo` or as `qart.image`.
 
 1. Download the URL. If the body is an image, return it.
 2. Otherwise, read the icon links of the page. SVG icons come first, then the largest icon.
@@ -1023,42 +1023,42 @@ await qr.toPngFile("20_ec_high.png");
 ```
 ![High Error Correction QR Code](examples/20_ec_high.png)
 
-## 21. Mosaic with an SVG Logo
+## 21. QArt Code with an SVG Logo
 QR code whose data modules draw a red lightning bolt. The modules are round dots in the color of the logo. The code stays valid with no errors.
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
-  mosaic: { image: "./test/fixtures/mosaic_bolt.svg" }
+  qart: { image: "./test/fixtures/qart_bolt.svg" }
 });
-await qr.toPngFile("21_mosaic_svg_logo.png");
+await qr.toPngFile("21_qart_svg_logo.png");
 ```
-![Mosaic with an SVG Logo](examples/21_mosaic_svg_logo.png)
+![QArt Code with an SVG Logo](examples/21_qart_svg_logo.png)
 
-## 22. Mosaic with a PNG Logo, Joined Modules and a Blue Theme
-Mosaic QR code with a PNG logo, version 10, and a smaller image area. The `rounded` style joins the dark modules into shapes with round corners, and `color: "foreground"` draws all modules in blue. The logo encloses its transparent center, so the center becomes light modules.
+## 22. QArt Code with a PNG Logo, Joined Modules and a Blue Theme
+QArt code with a PNG logo, version 10, and a smaller image area. The `rounded` style joins the dark modules into shapes with round corners, and `color: "foreground"` draws all modules in blue. The logo encloses its transparent center, so the center becomes light modules.
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
   foregroundColor: "#1e3a5f",
-  mosaic: { image: "./test/fixtures/test_logo_large.png", version: 10, sizeRatio: 0.6, style: "rounded", color: "foreground" }
+  qart: { image: "./test/fixtures/test_logo_large.png", version: 10, sizeRatio: 0.6, style: "rounded", color: "foreground" }
 });
-await qr.toSvgFile("22_mosaic_png_logo_blue.svg");
+await qr.toSvgFile("22_qart_png_logo_blue.svg");
 ```
-![Mosaic with a PNG Logo](examples/22_mosaic_png_logo_blue.svg)
+![QArt Code with a PNG Logo](examples/22_qart_png_logo_blue.svg)
 
-## 23. Mosaic with a Logo in Many Colors
-Mosaic QR code with a logo in four colors. Each dot gets the color of the logo at that point. The other dots get the most common color of the logo.
+## 23. QArt Code with a Logo in Many Colors
+QArt code with a logo in four colors. Each dot gets the color of the logo at that point. The other dots get the most common color of the logo.
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",
   size: 600,
-  mosaic: { image: "./test/fixtures/mosaic_petals.svg" }
+  qart: { image: "./test/fixtures/qart_petals.svg" }
 });
-await qr.toPngFile("23_mosaic_color_logo.png");
+await qr.toPngFile("23_qart_color_logo.png");
 ```
-![Mosaic with a Logo in Many Colors](examples/23_mosaic_color_logo.png)
+![QArt Code with a Logo in Many Colors](examples/23_qart_color_logo.png)
 
 These examples demonstrate the versatility and capabilities of QrBit for generating QR codes with various customizations, from simple text encoding to complex styled codes with embedded logos, supporting SVG, PNG, JPEG, and WebP formats.
 

@@ -10,7 +10,7 @@ import {
 	convertSvgToWebp as nativeConvertSvgToWebp,
 	decode as nativeDecode,
 	decodeDetailed as nativeDecodeDetailed,
-	generateMosaicSvg as nativeGenerateMosaicSvg,
+	generateQartSvg as nativeGenerateQartSvg,
 	generateQrCodeSvg as nativeGenerateQrCodeSvg,
 	generateQrSvg as nativeGenerateQrSvg,
 	generateQrSvgWithBuffer as nativeGenerateQrSvgWithBuffer,
@@ -38,21 +38,21 @@ export type ECLevel =
 const logoFileDoesNotExistMessage = (logo: string) =>
 	`Logo file not found: ${logo}. Proceeding without logo.`;
 
-const mosaicImageErrorMessage = (reason: string) =>
-	`Mosaic image could not be loaded: ${reason}. Proceeding without mosaic.`;
+const qartImageErrorMessage = (reason: string) =>
+	`QArt image could not be loaded: ${reason}. Proceeding without QArt.`;
 
-const mosaicIgnoresLogoMessage =
-	"The mosaic option ignores the logo option, because a logo covers data modules.";
+const qartIgnoresLogoMessage =
+	"The qart option ignores the logo option, because a logo covers data modules.";
 
-const mosaicLowMatchMessage = (matched: number, target: number) =>
-	`The mosaic image matched only ${matched} of ${target} modules. Use a higher version or a smaller sizeRatio.`;
+const qartLowMatchMessage = (matched: number, target: number) =>
+	`The QArt image matched only ${matched} of ${target} modules. Use a higher version or a smaller sizeRatio.`;
 
 // Below this fraction of matched modules, the image is too large or too
 // detailed for the QR version.
-const mosaicMatchWarningRatio = 0.9;
+const qartMatchWarningRatio = 0.9;
 
 /**
- * The shape of the dark modules of a mosaic.
+ * The shape of the dark modules of a QArt code.
  * - `"dots"`: each dark module is a round dot with space around it. The
  *   finder and alignment patterns are rings with a round hole and a round
  *   center. A dark area of the image gets a dot texture with some light
@@ -61,10 +61,10 @@ const mosaicMatchWarningRatio = 0.9;
  *   into shapes with round corners.
  * - `"square"`: each dark module is a square.
  */
-export type MosaicStyle = "dots" | "rounded" | "square";
+export type QArtStyle = "dots" | "rounded" | "square";
 
 /**
- * The source of the colors of the dark modules of a mosaic.
+ * The source of the colors of the dark modules of a QArt code.
  * - `"image"`: each module in the image gets the color of the image there.
  *   The other modules get the most common dark color of the image. qrbit
  *   makes a color darker if it is too near to the background color, and
@@ -72,9 +72,9 @@ export type MosaicStyle = "dots" | "rounded" | "square";
  *   the modules as dark.
  * - `"foreground"`: all dark modules get `foregroundColor`.
  */
-export type MosaicColor = "image" | "foreground";
+export type QArtColor = "image" | "foreground";
 
-export type MosaicOptions = {
+export type QArtOptions = {
 	/**
 	 * The image to draw with the data modules: a file path, the image bytes,
 	 * or a URL. For a URL, qrbit gets the logo of that site, or the image at
@@ -107,27 +107,27 @@ export type MosaicOptions = {
 	 */
 	version?: number;
 	/**
-	 * The error correction level of the mosaic. A lower level gives more
+	 * The error correction level of the QArt code. A lower level gives more
 	 * modules to the image. This value replaces `errorCorrection` for
-	 * mosaic output.
+	 * QArt output.
 	 * @type {ECLevel}
 	 * @default "L"
 	 */
 	errorCorrection?: ECLevel;
 	/**
 	 * The shape of the dark modules.
-	 * @type {MosaicStyle}
+	 * @type {QArtStyle}
 	 * @default "dots"
 	 */
-	style?: MosaicStyle;
+	style?: QArtStyle;
 	/**
 	 * The source of the colors of the dark modules. With `"image"`, the
 	 * modules get the colors of the image. With `"foreground"`, the modules
 	 * get `foregroundColor`.
-	 * @type {MosaicColor}
+	 * @type {QArtColor}
 	 * @default "image"
 	 */
-	color?: MosaicColor;
+	color?: QArtColor;
 };
 
 export type QrOptions = {
@@ -197,9 +197,9 @@ export type QrOptions = {
 	 * Draw an image with the data modules of the QR code. The QR code stays
 	 * valid with no errors, because qrbit selects the unused data bits so
 	 * that the modules show the image.
-	 * @type {MosaicOptions}
+	 * @type {QArtOptions}
 	 */
-	mosaic?: MosaicOptions;
+	qart?: QArtOptions;
 	/**
 	 * Caching is enabled by default. You can disable it by setting this option to false. You can also pass
 	 * a custom Cacheable instance.
@@ -254,7 +254,7 @@ export class QrBit extends Hookified {
 	private _backgroundColor: string;
 	private _foregroundColor: string;
 	private _errorCorrection: ECLevel;
-	private _mosaic: MosaicOptions | undefined;
+	private _qart: QArtOptions | undefined;
 	private _cache: Cacheable | undefined;
 	private _napi = {
 		convertSvgToJpeg: nativeConvertSvgToJpeg,
@@ -262,7 +262,7 @@ export class QrBit extends Hookified {
 		convertSvgToWebp: nativeConvertSvgToWebp,
 		decode: nativeDecode,
 		decodeDetailed: nativeDecodeDetailed,
-		generateMosaicSvg: nativeGenerateMosaicSvg,
+		generateQartSvg: nativeGenerateQartSvg,
 		generateQrCodeSvg: nativeGenerateQrCodeSvg,
 		generateQrSvg: nativeGenerateQrSvg,
 		generateQrSvgWithBuffer: nativeGenerateQrSvgWithBuffer,
@@ -288,7 +288,7 @@ export class QrBit extends Hookified {
 				: (options.logoBackgroundColor ?? this._backgroundColor);
 		this._logoPaddingRatio = options.logoPaddingRatio ?? 0.1;
 		this._errorCorrection = options.errorCorrection ?? "H";
-		this._mosaic = options.mosaic;
+		this._qart = options.qart;
 		if (options.cache !== undefined) {
 			// if it is boolean and true then create a new cacheable instance
 			if (options.cache === true) {
@@ -474,19 +474,19 @@ export class QrBit extends Hookified {
 	}
 
 	/**
-	 * Get the mosaic options.
-	 * @returns {MosaicOptions | undefined} The mosaic options or undefined if not set
+	 * Get the QArt options.
+	 * @returns {QArtOptions | undefined} The QArt options or undefined if not set
 	 */
-	public get mosaic(): MosaicOptions | undefined {
-		return this._mosaic;
+	public get qart(): QArtOptions | undefined {
+		return this._qart;
 	}
 
 	/**
-	 * Set the mosaic options.
-	 * @param value - The mosaic options or undefined to render a standard QR code
+	 * Set the QArt options.
+	 * @param value - The QArt options or undefined to render a standard QR code
 	 */
-	public set mosaic(value: MosaicOptions | undefined) {
-		this._mosaic = value;
+	public set qart(value: QArtOptions | undefined) {
+		this._qart = value;
 	}
 
 	/**
@@ -518,7 +518,7 @@ export class QrBit extends Hookified {
 
 	/**
 	 * Generate the SVG and tell if the result can go in the cache. The
-	 * standard QR code that replaces a failed mosaic cannot, because the
+	 * standard QR code that replaces a failed QArt code cannot, because the
 	 * image can be available on the next call.
 	 * @param {toOptions} options - Generation options
 	 * @returns {Promise<{ svg: string; cacheable: boolean }>} The SVG string and if it can be cached
@@ -533,8 +533,8 @@ export class QrBit extends Hookified {
 			renderKey = `napi-svg`;
 		}
 
-		if (this._mosaic) {
-			renderKey = `napi-mosaic-svg`;
+		if (this._qart) {
+			renderKey = `napi-qart-svg`;
 		}
 
 		// set all the options
@@ -559,12 +559,12 @@ export class QrBit extends Hookified {
 			}
 		}
 
-		const mosaicSvg = this._mosaic
-			? await this.toSvgMosaic(this._mosaic, cache)
+		const qartSvg = this._qart
+			? await this.toSvgQArt(this._qart, cache)
 			: undefined;
 
-		if (mosaicSvg !== undefined) {
-			result = mosaicSvg;
+		if (qartSvg !== undefined) {
+			result = qartSvg;
 		} else if (!this._logo) {
 			// Native Rust port of node-qrcode that produces byte-for-byte
 			// identical SVG output (path-based, crisp-edges, margin of 4 modules).
@@ -580,7 +580,7 @@ export class QrBit extends Hookified {
 			result = await this.toSvgNapi();
 		}
 
-		const cacheable = mosaicSvg !== undefined || !this._mosaic;
+		const cacheable = qartSvg !== undefined || !this._qart;
 		if (cache && cacheKey && cacheable) {
 			await cache.set(cacheKey, result);
 		}
@@ -589,53 +589,50 @@ export class QrBit extends Hookified {
 	}
 
 	/**
-	 * Generate the SVG of a mosaic QR code. Emits an error event and returns
+	 * Generate the SVG of a QArt code. Emits an error event and returns
 	 * undefined if the image cannot be loaded.
-	 * @param mosaic - The mosaic options
+	 * @param qart - The QArt options
 	 * @param cache - The cache for downloaded images, or undefined
 	 * @returns {Promise<string | undefined>} The SVG string, or undefined
 	 */
-	private async toSvgMosaic(
-		mosaic: MosaicOptions,
+	private async toSvgQArt(
+		qart: QArtOptions,
 		cache: Cacheable | undefined,
 	): Promise<string | undefined> {
 		if (this._logo) {
-			this.emit(QrBitEvents.warn, mosaicIgnoresLogoMessage);
+			this.emit(QrBitEvents.warn, qartIgnoresLogoMessage);
 		}
 
 		let image: Buffer;
 		try {
-			image = await this.resolveMosaicImage(mosaic.image, cache);
+			image = await this.resolveQArtImage(qart.image, cache);
 		} catch (error) {
 			this.emit(
 				QrBitEvents.error,
-				mosaicImageErrorMessage((error as Error).message),
+				qartImageErrorMessage((error as Error).message),
 			);
 			return undefined;
 		}
 
-		const result = this._napi.generateMosaicSvg({
+		const result = this._napi.generateQartSvg({
 			text: this._text,
 			image,
 			size: this._size,
 			margin: this._margin,
-			sizeRatio: mosaic.sizeRatio,
-			threshold: mosaic.threshold,
-			version: mosaic.version,
-			errorCorrection: mosaic.errorCorrection,
-			style: mosaic.style,
-			color: mosaic.color,
+			sizeRatio: qart.sizeRatio,
+			threshold: qart.threshold,
+			version: qart.version,
+			errorCorrection: qart.errorCorrection,
+			style: qart.style,
+			color: qart.color,
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
 		});
 
-		if (
-			result.matchedModules <
-			result.targetModules * mosaicMatchWarningRatio
-		) {
+		if (result.matchedModules < result.targetModules * qartMatchWarningRatio) {
 			this.emit(
 				QrBitEvents.warn,
-				mosaicLowMatchMessage(result.matchedModules, result.targetModules),
+				qartLowMatchMessage(result.matchedModules, result.targetModules),
 			);
 		}
 
@@ -643,12 +640,12 @@ export class QrBit extends Hookified {
 	}
 
 	/**
-	 * Load the bytes of a mosaic image. A downloaded image is kept in the cache.
+	 * Load the bytes of a QArt image. A downloaded image is kept in the cache.
 	 * @param image - A file path, the image bytes, or a URL
 	 * @param cache - The cache for downloaded images, or undefined
 	 * @returns {Promise<Buffer>} The image bytes
 	 */
-	private async resolveMosaicImage(
+	private async resolveQArtImage(
 		image: string | Buffer | URL,
 		cache: Cacheable | undefined,
 	): Promise<Buffer> {
@@ -1108,7 +1105,7 @@ export class QrBit extends Hookified {
 
 	/**
 	 * Get the logo of a website, or the image at a URL. Use the result as
-	 * `logo` or as `mosaic.image`. The function reads the icon links of the
+	 * `logo` or as `qart.image`. The function reads the icon links of the
 	 * page, then tries `/apple-touch-icon.png` and `/favicon.ico`. It does
 	 * not use a third-party favicon service. Only `http:` and `https:` URLs
 	 * are accepted. Validate URLs from untrusted sources before you call it.
@@ -1141,12 +1138,12 @@ export class QrBit extends Hookified {
 			backgroundColor: this._backgroundColor,
 			foregroundColor: this._foregroundColor,
 			errorCorrection: this._errorCorrection,
-			mosaic: this._mosaic && {
-				...this._mosaic,
+			qart: this._qart && {
+				...this._qart,
 				image:
-					this._mosaic.image instanceof URL
-						? this._mosaic.image.href
-						: this._mosaic.image,
+					this._qart.image instanceof URL
+						? this._qart.image.href
+						: this._qart.image,
 			},
 			renderKey,
 		};

@@ -1,4 +1,4 @@
-//! Mosaic QR codes: the data modules draw an image.
+//! QArt codes: the data modules draw an image.
 //!
 //! This module uses the QArt method (Russ Cox, 2012). Reed-Solomon codes are
 //! linear over GF(2): the XOR of two valid blocks is also a valid block. The
@@ -25,7 +25,7 @@ const SEED: u64 = 0x9E37_79B9_7F4A_7C15;
 /// light.
 const CONTRAST: f32 = 0.55;
 
-/// The largest luminance range of the module colors of one mosaic. A block
+/// The largest luminance range of the module colors of one QArt code. A block
 /// of pixels with two colors that differ by more than 24 levels gets a
 /// threshold between the two colors in jsQR, so the lighter color reads as
 /// light. The range of 0.08 is 20 levels.
@@ -44,7 +44,7 @@ const TEXTURE_DEPTH: isize = 2;
 /// the background color for the cell to be part of the background.
 const BACKGROUND_TOLERANCE: u8 = 32;
 
-pub struct MosaicOutput {
+pub struct QArtOutput {
     pub matrix: BitMatrix,
     pub version: usize,
     /// Non-function modules that the image gives a value to.
@@ -207,7 +207,7 @@ fn render_samples(image_bytes: &[u8], px: u32) -> Result<Vec<[f32; 4]>, String> 
 
     if image::guess_format(image_bytes).is_ok() {
         let decoded = image::load_from_memory(image_bytes)
-            .map_err(|e| format!("Failed to decode mosaic image: {}", e))?;
+            .map_err(|e| format!("Failed to decode QArt image: {}", e))?;
         let fitted = decoded
             .resize(px, px, image::imageops::FilterType::Triangle)
             .to_rgba8();
@@ -233,7 +233,7 @@ fn render_samples(image_bytes: &[u8], px: u32) -> Result<Vec<[f32; 4]>, String> 
         ..usvg::Options::default()
     };
     let tree = usvg::Tree::from_data(image_bytes, &options)
-        .map_err(|_| "Unsupported mosaic image format".to_string())?;
+        .map_err(|_| "Unsupported QArt image format".to_string())?;
     let size = tree.size();
     let scale = (px as f32 / size.width()).min(px as f32 / size.height());
     let dx = (px as f32 - size.width() * scale) / 2.0;
@@ -347,7 +347,7 @@ fn contrast_color(color: [u8; 3], background: [u8; 3]) -> [u8; 3] {
     with_luminance(color, target)
 }
 
-/// The color of each dark module of a mosaic, in row-major order. With
+/// The color of each dark module of a QArt code, in row-major order. With
 /// `ColorMode::Image`, each module gets the color of the image there, or
 /// the dominant color of the image. The colors move away from `background`
 /// so that decoders read them as dark, and their luminance range becomes at
@@ -355,7 +355,7 @@ fn contrast_color(color: [u8; 3], background: [u8; 3]) -> [u8; 3] {
 /// color when the image has no dark area, and the color of all modules with
 /// `ColorMode::Foreground`.
 pub fn module_colors(
-    output: &MosaicOutput,
+    output: &QArtOutput,
     mode: ColorMode,
     foreground: [u8; 3],
     background: [u8; 3],
@@ -639,7 +639,7 @@ pub fn create(
     size_ratio: f64,
     threshold: f64,
     texture: bool,
-) -> Result<MosaicOutput, String> {
+) -> Result<QArtOutput, String> {
     if !(1..=40).contains(&min_version) {
         return Err(format!("version must be from 1 to 40, got {}", min_version));
     }
@@ -776,7 +776,7 @@ pub fn create(
         .filter(|t| (matrix.get(t.row, t.col) == 1) == t.dark)
         .count();
 
-    Ok(MosaicOutput {
+    Ok(QArtOutput {
         matrix,
         version,
         target_modules: targets.len() as u32,

@@ -1,12 +1,12 @@
-//! SVG renderer for mosaic QR codes.
+//! SVG renderer for QArt codes.
 //!
 //! The coordinates of the SVG are in modules: module `(row, col)` fills the
 //! square from `(col, row)` to `(col + 1, row + 1)`, and the `viewBox` adds
 //! the margin. In the rounded and square styles, each horizontal run of
 //! dark modules with the same color is one subpath. In the dots style, the
 //! finder and alignment patterns are rings, and each other dark module is a
-//! `<use>` of one shared dot. A mosaic with one color is one `<path>`. A
-//! mosaic with more colors puts all shapes in one `<clipPath>` and paints
+//! `<use>` of one shared dot. A QArt code with one color is one `<path>`. A
+//! QArt code with more colors puts all shapes in one `<clipPath>` and paints
 //! the colors as plain squares inside it, so that anti-aliasing leaves no
 //! light line between two shapes of different colors.
 
@@ -112,7 +112,7 @@ fn rgb(color: [u8; 3]) -> String {
 }
 
 /// FNV-1a hash of `text`, for an id that is the same for the same content
-/// and different for different mosaics on one web page.
+/// and different for different QArt codes on one web page.
 fn fnv1a(text: &str) -> u64 {
     text.bytes().fold(0xcbf2_9ce4_8422_2325u64, |hash, byte| {
         (hash ^ byte as u64).wrapping_mul(0x0000_0100_0000_01b3)
@@ -228,7 +228,7 @@ struct Renderer<'a> {
     in_eye: Vec<bool>,
     /// Path data of the dark shapes, by color.
     shapes: BTreeMap<[u8; 3], String>,
-    /// Path data of plain squares that cover the shapes, by color. A mosaic
+    /// Path data of plain squares that cover the shapes, by color. A QArt code
     /// with more than one color paints these inside the clip of the shapes.
     squares: BTreeMap<[u8; 3], String>,
     /// Dark modules of the shapes of each color.
@@ -561,7 +561,7 @@ pub fn render(
         }
     } else if let Some(base) = renderer.base_color() {
         let shapes: String = renderer.shapes.values().map(String::as_str).collect();
-        let id = format!("qrbit-mosaic-{:016x}", fnv1a(&shapes));
+        let id = format!("qrbit-qart-{:016x}", fnv1a(&shapes));
         let _ = write!(
             svg,
             "<clipPath id=\"{id}\"><path d=\"{shapes}\"/></clipPath><g clip-path=\"url(#{id})\"><rect x=\"{origin}\" y=\"{origin}\" width=\"{view}\" height=\"{view}\" fill=\"{}\"/>",

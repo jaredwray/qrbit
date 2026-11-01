@@ -260,15 +260,15 @@ describe("QrBit.fetchLogo", () => {
 	});
 });
 
-describe("Mosaic QR codes with a URL image", () => {
+describe("QArt codes with a URL image", () => {
 	it("draws the fetched logo and keeps it in the cache", async () => {
 		routes["/"] = { body: html('<link rel="icon" href="/logo.svg">') };
 		routes["/logo.svg"] = { body: svg };
 		const cache = new Cacheable();
 		const image = new URL(`${base}/`);
 
-		const first = new QrBit({ text: "first", cache, mosaic: { image } });
-		const second = new QrBit({ text: "second", cache, mosaic: { image } });
+		const first = new QrBit({ text: "first", cache, qart: { image } });
+		const second = new QrBit({ text: "second", cache, qart: { image } });
 		for (const qr of [first, second]) {
 			const result = await QrBit.decodeDetailed(await qr.toPng());
 			expect(result.data).toBe(qr.text);
@@ -282,7 +282,7 @@ describe("Mosaic QR codes with a URL image", () => {
 		const errors: string[] = [];
 		const qr = new QrBit({
 			text: "favicon",
-			mosaic: { image: new URL(`${base}/`) },
+			qart: { image: new URL(`${base}/`) },
 		});
 		qr.on("error", (message: string) => errors.push(message));
 		const result = await QrBit.decodeDetailed(await qr.toPng());
@@ -295,7 +295,7 @@ describe("Mosaic QR codes with a URL image", () => {
 		const qr = new QrBit({
 			text: "no cache",
 			cache: false,
-			mosaic: { image: new URL(`${base}/logo.png`) },
+			qart: { image: new URL(`${base}/logo.png`) },
 		});
 		await qr.toSvg();
 		await qr.toSvg();
@@ -306,13 +306,13 @@ describe("Mosaic QR codes with a URL image", () => {
 		const errors: string[] = [];
 		const qr = new QrBit({
 			text: "no logo",
-			mosaic: { image: new URL(`${base}/`) },
+			qart: { image: new URL(`${base}/`) },
 		});
 		qr.on("error", (message: string) => errors.push(message));
 		const result = await QrBit.decodeDetailed(await qr.toPng());
 		expect(result.data).toBe("no logo");
 		expect(errors).toEqual([
-			`Mosaic image could not be loaded: No logo found for ${base}/. Proceeding without mosaic.`,
+			`QArt image could not be loaded: No logo found for ${base}/. Proceeding without QArt.`,
 		]);
 	});
 });

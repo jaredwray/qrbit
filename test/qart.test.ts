@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { Cacheable } from "cacheable";
 import { describe, expect, it } from "vitest";
-import { type MosaicOptions, type MosaicStyle, QrBit } from "../src/qrbit";
+import { type QArtOptions, type QArtStyle, QrBit } from "../src/qrbit";
 
 const testLogoPath = "test/fixtures/test_logo_large.png";
 const text = "https://github.com/jaredwray/qrbit";
@@ -16,7 +16,7 @@ const svgImage = (body: string, viewBox = "0 0 10 10") =>
 const square = (fill: string) =>
 	svgImage(`<rect width="10" height="10" fill="${fill}"/>`);
 
-const styles: MosaicStyle[] = ["rounded", "dots", "square"];
+const styles: QArtStyle[] = ["rounded", "dots", "square"];
 
 // Version 12 has 65 modules.
 const version = 12;
@@ -24,7 +24,7 @@ const modules = 17 + 4 * version;
 const size = modules * 10;
 
 /**
- * Read the modules that the `<path>` elements of a mosaic SVG cover. The
+ * Read the modules that the `<path>` elements of a QArt SVG cover. The
  * coordinates of the SVG are in modules. A dark module is inside a subpath
  * of a `<path>`: a run of modules or a ring. Inside one path, a subpath in
  * a subpath is a hole, so each subpath toggles its modules. The fills of
@@ -108,7 +108,7 @@ function usePositions(svg: string): number[][] {
 }
 
 /**
- * Read the module grid back from a mosaic SVG: the modules that the paths
+ * Read the module grid back from a QArt SVG: the modules that the paths
  * cover, and in the dots style each `<use>` of the shared shape.
  */
 function moduleGrid(svg: string): boolean[][] {
@@ -157,8 +157,8 @@ function lightRing(grid: boolean[][], from: number, to: number): number {
 	return light / ring;
 }
 
-async function renderGrid(mosaic: Omit<MosaicOptions, "version">) {
-	const qr = new QrBit({ text, size, mosaic: { version, ...mosaic } });
+async function renderGrid(qart: Omit<QArtOptions, "version">) {
+	const qr = new QrBit({ text, size, qart: { version, ...qart } });
 	return moduleGrid(await qr.toSvg({ cache: false }));
 }
 
@@ -179,8 +179,8 @@ function luminance(color: string): number {
 	return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
-describe("Mosaic QR codes", () => {
-	// One decode in each test, because each conversion of a dots mosaic
+describe("QArt codes", () => {
+	// One decode in each test, because each conversion of a dots QArt code
 	// takes up to one second in a debug build.
 	const sources: [string, string | Buffer][] = [
 		["SVG bytes", square("#000")],
@@ -196,21 +196,21 @@ describe("Mosaic QR codes", () => {
 	)(
 		"decodes to the exact text with an image from %s (%s)",
 		async (_, value, image) => {
-			const qr = new QrBit({ text: value, mosaic: { image } });
+			const qr = new QrBit({ text: value, qart: { image } });
 			const result = await decodeSvg(await qr.toSvg());
 			expect(result.valid).toBe(true);
 			expect(result.data).toBe(value);
 		},
 	);
 
-	// One format in each test, because each conversion of a round mosaic
+	// One format in each test, because each conversion of a round QArt code
 	// takes up to one second in a debug build.
 	it.each([
 		["PNG", (qr: QrBit) => qr.toPng()],
 		["JPEG", (qr: QrBit) => qr.toJpg()],
 		["WebP", (qr: QrBit) => qr.toWebp()],
 	])("decodes as %s output", async (_, render) => {
-		const qr = new QrBit({ text, size: 400, mosaic: { image: testLogoPath } });
+		const qr = new QrBit({ text, size: 400, qart: { image: testLogoPath } });
 		expect((await QrBit.decodeDetailed(await render(qr))).data).toBe(text);
 	});
 
@@ -218,7 +218,7 @@ describe("Mosaic QR codes", () => {
 		const qr = new QrBit({
 			text,
 			size: 400,
-			mosaic: { image: "test/fixtures/mosaic_petals.svg", style },
+			qart: { image: "test/fixtures/qart_petals.svg", style },
 		});
 		const svg = await qr.toSvg();
 		expect((await decodeSvg(svg)).data).toBe(text);
@@ -230,7 +230,7 @@ describe("Mosaic QR codes", () => {
 	});
 
 	it("uses version 14, error correction L and the dots style by default", async () => {
-		const qr = new QrBit({ text, mosaic: { image: square("#000") } });
+		const qr = new QrBit({ text, qart: { image: square("#000") } });
 		const svg = await qr.toSvg();
 		const result = await decodeSvg(svg);
 		expect(result.version).toBe(14);
@@ -238,12 +238,12 @@ describe("Mosaic QR codes", () => {
 		expect(svg).toContain("<use ");
 	});
 
-	it("uses the version and error correction from the mosaic options", async () => {
+	it("uses the version and error correction from the QArt options", async () => {
 		const qr = new QrBit({
 			text,
 			size: 500,
 			errorCorrection: "H",
-			mosaic: { image: square("#000"), version: 15, errorCorrection: "M" },
+			qart: { image: square("#000"), version: 15, errorCorrection: "M" },
 		});
 		const result = await decodeSvg(await qr.toSvg());
 		expect(result.version).toBe(15);
@@ -255,7 +255,7 @@ describe("Mosaic QR codes", () => {
 		const qr = new QrBit({
 			text: long,
 			size: 400,
-			mosaic: { image: square("#000"), version: 1 },
+			qart: { image: square("#000"), version: 1 },
 		});
 		const result = await decodeSvg(await qr.toSvg());
 		expect(result.data).toBe(long);
@@ -275,7 +275,7 @@ describe("Mosaic QR codes", () => {
 	it.each(invalid)("rejects an invalid %s", async (_, options, message) => {
 		const qr = new QrBit({
 			text,
-			mosaic: { image: square("#000"), ...options } as MosaicOptions,
+			qart: { image: square("#000"), ...options } as QArtOptions,
 		});
 		await expect(qr.toSvg()).rejects.toThrow(message);
 	});
@@ -283,9 +283,9 @@ describe("Mosaic QR codes", () => {
 	it("rejects image bytes that are not a supported image", async () => {
 		const qr = new QrBit({
 			text,
-			mosaic: { image: Buffer.from("not an image") },
+			qart: { image: Buffer.from("not an image") },
 		});
-		await expect(qr.toSvg()).rejects.toThrow(/Unsupported mosaic image format/);
+		await expect(qr.toSvg()).rejects.toThrow(/Unsupported QArt image format/);
 	});
 
 	it.each(styles)(
@@ -322,7 +322,7 @@ describe("Mosaic QR codes", () => {
 		const qr = new QrBit({
 			text,
 			size,
-			mosaic: { image: svgImage(""), version, style: "dots" },
+			qart: { image: svgImage(""), version, style: "dots" },
 		});
 		const svg = await qr.toSvg();
 		const paths = pathGrid(svg);
@@ -364,7 +364,7 @@ describe("Mosaic QR codes", () => {
 	it("does not load local files that an SVG image links to", async () => {
 		// A remote SVG must not read files on the server. If the linked
 		// black PNG loads, the area becomes dark instead of QR noise.
-		const black = path.join(os.tmpdir(), `qrbit-mosaic-${process.pid}.png`);
+		const black = path.join(os.tmpdir(), `qrbit-qart-${process.pid}.png`);
 		fs.writeFileSync(black, QrBit.convertSvgToPng(square("#000").toString()));
 		try {
 			const grid = await renderGrid({
@@ -393,7 +393,7 @@ describe("Mosaic QR codes", () => {
 		const qr = new QrBit({
 			text,
 			size,
-			mosaic: { image: svgImage(""), version, sizeRatio: 0.5 },
+			qart: { image: svgImage(""), version, sizeRatio: 0.5 },
 		});
 		qr.on("warn", (message: string) => warnings.push(message));
 		const ratio = darkRatio(moduleGrid(await qr.toSvg()), 16, 49);
@@ -494,7 +494,7 @@ describe("Mosaic QR codes", () => {
 		const qr = new QrBit({
 			text,
 			size: 400,
-			mosaic: {
+			qart: {
 				image: svgImage(
 					`<rect width="5" height="10" fill="#E53935"/><rect x="7" width="3" height="10" fill="#1E78C8"/>`,
 				),
@@ -513,10 +513,10 @@ describe("Mosaic QR codes", () => {
 		// patterns are red. Blue covers only its modules.
 		// The top row of the finder pattern is one run with sharp corners.
 		expect(svg).toMatch(
-			/<clipPath id="qrbit-mosaic-[0-9a-f]{16}"><path d="[^"]*M0 0h7v1h-7z/,
+			/<clipPath id="qrbit-qart-[0-9a-f]{16}"><path d="[^"]*M0 0h7v1h-7z/,
 		);
 		expect(svg).toMatch(
-			/<g clip-path="url\(#qrbit-mosaic-[0-9a-f]{16}\)"><rect [^>]*fill="rgb\(229,57,53\)"/,
+			/<g clip-path="url\(#qrbit-qart-[0-9a-f]{16}\)"><rect [^>]*fill="rgb\(229,57,53\)"/,
 		);
 		const grid = moduleGrid(svg);
 		expect(grid[0].slice(0, 8)).toEqual([...Array(7).fill(true), false]);
@@ -533,7 +533,7 @@ describe("Mosaic QR codes", () => {
 		// mean color would make a third color there.
 		const qr = new QrBit({
 			text,
-			mosaic: {
+			qart: {
 				image: svgImage(
 					`<rect width="6" height="10" fill="#E53935"/><rect x="6" width="4" height="10" fill="#1E78C8"/>`,
 				),
@@ -549,7 +549,7 @@ describe("Mosaic QR codes", () => {
 	});
 
 	it("makes a light image color darker so that it reads as dark", async () => {
-		const qr = new QrBit({ text, mosaic: { image: square("#FFD600") } });
+		const qr = new QrBit({ text, qart: { image: square("#FFD600") } });
 		const svg = await qr.toSvg();
 		const [color] = fillColors(svg).filter((c) => c !== "rgb(255,255,255)");
 		const [r, g, b] = color.match(/\d+/g)?.map(Number) ?? [];
@@ -566,7 +566,7 @@ describe("Mosaic QR codes", () => {
 		const qr = new QrBit({
 			text,
 			backgroundColor: "#000000",
-			mosaic: { image: square("#000") },
+			qart: { image: square("#000") },
 		});
 		const svg = await qr.toSvg();
 		const [color] = fillColors(svg).filter((c) => c !== "rgb(0,0,0)");
@@ -580,7 +580,7 @@ describe("Mosaic QR codes", () => {
 		// its threshold between the two colors.
 		const qr = new QrBit({
 			text,
-			mosaic: {
+			qart: {
 				image: svgImage(
 					`<rect width="5" height="10" fill="#000"/><rect x="7" width="3" height="10" fill="#FFD600"/>`,
 				),
@@ -602,7 +602,7 @@ describe("Mosaic QR codes", () => {
 		const qr = new QrBit({
 			text,
 			foregroundColor: "#445566",
-			mosaic: { image: svgImage("") },
+			qart: { image: svgImage("") },
 		});
 		expect(fillColors(await qr.toSvg())).toEqual([
 			"rgb(255,255,255)",
@@ -615,7 +615,7 @@ describe("Mosaic QR codes", () => {
 			text,
 			backgroundColor: "#112233",
 			foregroundColor: "#445566",
-			mosaic: { image: square("#E53935"), color: "foreground" },
+			qart: { image: square("#E53935"), color: "foreground" },
 		});
 		expect(fillColors(await qr.toSvg())).toEqual([
 			"rgb(17,34,51)",
@@ -627,7 +627,7 @@ describe("Mosaic QR codes", () => {
 		const warnings: string[] = [];
 		const qr = new QrBit({
 			text,
-			mosaic: {
+			qart: {
 				image: square("#000"),
 				version: 3,
 				errorCorrection: "H",
@@ -639,13 +639,13 @@ describe("Mosaic QR codes", () => {
 		expect(result.data).toBe(text);
 		expect(warnings).toHaveLength(1);
 		expect(warnings[0]).toMatch(
-			/^The mosaic image matched only \d+ of \d+ modules\. Use a higher version or a smaller sizeRatio\.$/,
+			/^The QArt image matched only \d+ of \d+ modules\. Use a higher version or a smaller sizeRatio\.$/,
 		);
 	});
 
 	it("does not warn when the image fits the version", async () => {
 		const warnings: string[] = [];
-		const qr = new QrBit({ text, mosaic: { image: testLogoPath } });
+		const qr = new QrBit({ text, qart: { image: testLogoPath } });
 		qr.on("warn", (message: string) => warnings.push(message));
 		await qr.toSvg();
 		expect(warnings).toEqual([]);
@@ -656,13 +656,13 @@ describe("Mosaic QR codes", () => {
 		const qr = new QrBit({
 			text,
 			logo: testLogoPath,
-			mosaic: { image: square("#000") },
+			qart: { image: square("#000") },
 		});
 		qr.on("warn", (message: string) => warnings.push(message));
 		const svg = await qr.toSvg();
 		expect(svg).not.toContain("<image");
 		expect(warnings).toEqual([
-			"The mosaic option ignores the logo option, because a logo covers data modules.",
+			"The qart option ignores the logo option, because a logo covers data modules.",
 		]);
 	});
 
@@ -670,7 +670,7 @@ describe("Mosaic QR codes", () => {
 		const errors: string[] = [];
 		const qr = new QrBit({
 			text,
-			mosaic: { image: "/non/existent/mosaic.png" },
+			qart: { image: "/non/existent/qart.png" },
 		});
 		qr.on("error", (message: string) => errors.push(message));
 
@@ -680,17 +680,17 @@ describe("Mosaic QR codes", () => {
 		expect((await decodeSvg(svg)).data).toBe(text);
 		expect(errors).toHaveLength(2);
 		expect(errors[0]).toMatch(
-			/^Mosaic image could not be loaded: .*mosaic\.png.*\. Proceeding without mosaic\.$/,
+			/^QArt image could not be loaded: .*qart\.png.*\. Proceeding without QArt\.$/,
 		);
 	});
 
 	it.each(["toPng", "toJpg", "toWebp"] as const)(
-		"does not cache the %s output of a failed mosaic",
+		"does not cache the %s output of a failed QArt code",
 		async (method) => {
 			const errors: string[] = [];
 			const qr = new QrBit({
 				text,
-				mosaic: { image: "/non/existent/mosaic.png" },
+				qart: { image: "/non/existent/qart.png" },
 			});
 			qr.on("error", (message: string) => errors.push(message));
 
@@ -702,19 +702,19 @@ describe("Mosaic QR codes", () => {
 		},
 	);
 
-	it("caches the mosaic SVG", async () => {
+	it("caches the QArt SVG", async () => {
 		const cache = new Cacheable();
-		const qr = new QrBit({ text, cache, mosaic: { image: square("#000") } });
+		const qr = new QrBit({ text, cache, qart: { image: square("#000") } });
 		const svg = await qr.toSvg();
-		const key = await qr.generateCacheKey("napi-mosaic-svg");
+		const key = await qr.generateCacheKey("napi-qart-svg");
 		expect(await cache.get(key)).toBe(svg);
 		expect(await qr.toSvg()).toBe(svg);
 	});
 
-	it("changes the cache key when a mosaic option changes", async () => {
-		const qr = new QrBit({ text, mosaic: { image: testLogoPath } });
+	it("changes the cache key when a qart option changes", async () => {
+		const qr = new QrBit({ text, qart: { image: testLogoPath } });
 		const keys = new Set<string>();
-		keys.add(await qr.generateCacheKey("napi-mosaic-svg"));
+		keys.add(await qr.generateCacheKey("napi-qart-svg"));
 		for (const change of [
 			{ image: square("#000") },
 			{ image: new URL("https://example.com/") },
@@ -725,34 +725,34 @@ describe("Mosaic QR codes", () => {
 			{ style: "dots" as const },
 			{ color: "foreground" as const },
 		]) {
-			qr.mosaic = { image: testLogoPath, ...change };
-			keys.add(await qr.generateCacheKey("napi-mosaic-svg"));
+			qr.qart = { image: testLogoPath, ...change };
+			keys.add(await qr.generateCacheKey("napi-qart-svg"));
 		}
 		expect(keys.size).toBe(9);
 
-		qr.mosaic = undefined;
-		expect(keys.has(await qr.generateCacheKey("napi-mosaic-svg"))).toBe(false);
+		qr.qart = undefined;
+		expect(keys.has(await qr.generateCacheKey("napi-qart-svg"))).toBe(false);
 	});
 
 	it("gives the same cache key for URL images with the same address", async () => {
 		const first = new QrBit({
 			text,
-			mosaic: { image: new URL("https://example.com/") },
+			qart: { image: new URL("https://example.com/") },
 		});
 		const second = new QrBit({
 			text,
-			mosaic: { image: new URL("https://example.com/") },
+			qart: { image: new URL("https://example.com/") },
 		});
-		expect(await first.generateCacheKey("napi-mosaic-svg")).toBe(
-			await second.generateCacheKey("napi-mosaic-svg"),
+		expect(await first.generateCacheKey("napi-qart-svg")).toBe(
+			await second.generateCacheKey("napi-qart-svg"),
 		);
 	});
 
-	it("gets and sets the mosaic options", () => {
+	it("gets and sets the QArt options", () => {
 		const qr = new QrBit({ text });
-		expect(qr.mosaic).toBeUndefined();
-		const mosaic = { image: testLogoPath, version: 10 };
-		qr.mosaic = mosaic;
-		expect(qr.mosaic).toBe(mosaic);
+		expect(qr.qart).toBeUndefined();
+		const qart = { image: testLogoPath, version: 10 };
+		qr.qart = qart;
+		expect(qr.qart).toBe(qart);
 	});
 });

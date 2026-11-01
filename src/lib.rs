@@ -2,8 +2,8 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use quircs::Quirc;
 
-mod mosaic;
-mod mosaic_svg;
+mod qart;
+mod qart_svg;
 mod nodeqr;
 use nodeqr::{BitMatrix, EcLevel};
 
@@ -338,7 +338,7 @@ pub fn generate_qr_svg_with_buffer(options: QrOptionsWithBuffer) -> Result<Strin
 }
 
 #[napi(object)]
-pub struct MosaicSvgOptions {
+pub struct QArtSvgOptions {
     pub text: String,
     /// Image to draw with the data modules (PNG, JPEG, WebP, GIF, ICO or SVG).
     pub image: Buffer,
@@ -365,7 +365,7 @@ pub struct MosaicSvgOptions {
 }
 
 #[napi(object)]
-pub struct MosaicSvgResult {
+pub struct QArtSvgResult {
     pub svg: String,
     pub version: u32,
     /// Non-function modules that the image gives a value to.
@@ -376,15 +376,15 @@ pub struct MosaicSvgResult {
 
 /// Generate a QR code SVG whose data modules draw an image.
 #[napi]
-pub fn generate_mosaic_svg(options: MosaicSvgOptions) -> Result<MosaicSvgResult> {
+pub fn generate_qart_svg(options: QArtSvgOptions) -> Result<QArtSvgResult> {
     let size = options.size.unwrap_or(200);
     let ec_level = parse_ec_level(Some(options.error_correction.as_deref().unwrap_or("L")));
-    let failed = |e: String| Error::from_reason(format!("Mosaic generation failed: {}", e));
+    let failed = |e: String| Error::from_reason(format!("QArt generation failed: {}", e));
     let style =
-        mosaic_svg::Style::parse(options.style.as_deref().unwrap_or("dots")).map_err(failed)?;
+        qart_svg::Style::parse(options.style.as_deref().unwrap_or("dots")).map_err(failed)?;
     let color_mode = match options.color.as_deref().unwrap_or("image") {
-        "image" => mosaic::ColorMode::Image,
-        "foreground" => mosaic::ColorMode::Foreground,
+        "image" => qart::ColorMode::Image,
+        "foreground" => qart::ColorMode::Foreground,
         other => {
             return Err(failed(format!(
                 "color must be \"image\" or \"foreground\", got \"{}\"",
@@ -397,14 +397,14 @@ pub fn generate_mosaic_svg(options: MosaicSvgOptions) -> Result<MosaicSvgResult>
     let foreground =
         parse_optional_color(options.foreground_color.as_deref())?.unwrap_or([0, 0, 0, 255]);
 
-    let output = mosaic::create(
+    let output = qart::create(
         &options.text,
         ec_level,
         options.version.unwrap_or(14) as usize,
         &options.image,
         options.size_ratio.unwrap_or(0.7),
         options.threshold.unwrap_or(0.5),
-        style == mosaic_svg::Style::Dots,
+        style == qart_svg::Style::Dots,
     )
     .map_err(failed)?;
 
@@ -412,10 +412,10 @@ pub fn generate_mosaic_svg(options: MosaicSvgOptions) -> Result<MosaicSvgResult>
         .margin
         .unwrap_or_else(|| (4.0 * size as f64 / output.matrix.size as f64).round() as u32);
     let rgb = |c: [u8; 4]| [c[0], c[1], c[2]];
-    let colors = mosaic::module_colors(&output, color_mode, rgb(foreground), rgb(background));
+    let colors = qart::module_colors(&output, color_mode, rgb(foreground), rgb(background));
 
-    Ok(MosaicSvgResult {
-        svg: mosaic_svg::render(
+    Ok(QArtSvgResult {
+        svg: qart_svg::render(
             &output.matrix,
             &colors,
             size,
