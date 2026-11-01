@@ -62,6 +62,10 @@ async function listen(target: http.Server): Promise<string> {
 	return `http://127.0.0.1:${(target.address() as AddressInfo).port}`;
 }
 
+// The test servers listen on a loopback address, which qrbit blocks by
+// default.
+const allowAll = { allowAddress: () => true };
+
 const html = (head: string) =>
 	`<!doctype html><html><head>${head}</head></html>`;
 
@@ -86,7 +90,7 @@ beforeEach(() => {
 describe("QrBit.fetchLogo", () => {
 	it("returns the image when the URL is an image", async () => {
 		routes["/logo.png"] = { body: png };
-		expect(await QrBit.fetchLogo(`${base}/logo.png`)).toEqual(png);
+		expect(await QrBit.fetchLogo(`${base}/logo.png`, allowAll)).toEqual(png);
 	});
 
 	it.each([
@@ -97,7 +101,9 @@ describe("QrBit.fetchLogo", () => {
 		["SVG", svg],
 	])("recognizes a %s image", async (_, body) => {
 		routes["/image"] = { body };
-		expect(await QrBit.fetchLogo(new URL(`${base}/image`))).toEqual(body);
+		expect(await QrBit.fetchLogo(new URL(`${base}/image`), allowAll)).toEqual(
+			body,
+		);
 	});
 
 	it.each([
@@ -108,7 +114,7 @@ describe("QrBit.fetchLogo", () => {
 		],
 	])("does not accept %s as an image", async (_, body) => {
 		routes["/"] = { body };
-		await expect(QrBit.fetchLogo(`${base}/`)).rejects.toThrow(
+		await expect(QrBit.fetchLogo(`${base}/`, allowAll)).rejects.toThrow(
 			`No logo found for ${base}/`,
 		);
 	});
@@ -133,7 +139,7 @@ describe("QrBit.fetchLogo", () => {
 		]) {
 			routes[path] = { body: png };
 		}
-		await QrBit.fetchLogo(base);
+		await QrBit.fetchLogo(base, allowAll);
 		expect(hits["/big.png"]).toBe(1);
 		expect(hits["/touch.png"]).toBeUndefined();
 		expect(hits["/style.css"]).toBeUndefined();
@@ -149,7 +155,7 @@ describe("QrBit.fetchLogo", () => {
 		};
 		routes["/tiny.png"] = { body: png };
 		routes["/touch.png"] = { body: png };
-		await QrBit.fetchLogo(base);
+		await QrBit.fetchLogo(base, allowAll);
 		expect(hits["/touch.png"]).toBe(1);
 		expect(hits["/tiny.png"]).toBeUndefined();
 	});
@@ -165,7 +171,7 @@ describe("QrBit.fetchLogo", () => {
 		routes["/big.png"] = { body: png };
 		routes["/vector"] = { body: svg };
 		routes["/vector.svg"] = { body: svg };
-		expect(await QrBit.fetchLogo(base)).toEqual(svg);
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(svg);
 		expect(hits["/big.png"]).toBeUndefined();
 	});
 
@@ -175,21 +181,25 @@ describe("QrBit.fetchLogo", () => {
 				<link rel="icon" sizes="512x512" href="http://[bad">
 				<link rel="icon" sizes="256x256" href="/missing.png">
 				<link rel="icon" sizes="128x128" href="/page.html">
+				<link rel="icon" sizes="96x96" href="/moved.png">
 				<link rel="icon" sizes="64x64" href="/good.png">
 			`),
 		};
 		routes["/page.html"] = { body: html("") };
+		// A redirect status without a location is a failed request.
+		routes["/moved.png"] = { status: 302 };
 		routes["/good.png"] = { body: png };
-		expect(await QrBit.fetchLogo(base)).toEqual(png);
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(png);
 		expect(hits["/missing.png"]).toBe(1);
 		expect(hits["/page.html"]).toBe(1);
+		expect(hits["/moved.png"]).toBe(1);
 	});
 
 	it("resolves relative icon links against the address after redirects", async () => {
 		routes["/"] = { redirect: "/home/" };
 		routes["/home/"] = { body: html('<link rel="icon" href="icon.png">') };
 		routes["/home/icon.png"] = { body: png };
-		expect(await QrBit.fetchLogo(base)).toEqual(png);
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(png);
 	});
 
 	it("decodes character references in icon links", async () => {
@@ -201,7 +211,7 @@ describe("QrBit.fetchLogo", () => {
 			`),
 		};
 		routes["/hex"] = { body: png };
-		expect(await QrBit.fetchLogo(base)).toEqual(png);
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(png);
 		const host = new URL(base).host;
 		expect(requests).toEqual([
 			`${host}/`,
@@ -216,18 +226,18 @@ describe("QrBit.fetchLogo", () => {
 		routes["/"] = { redirect: `${other}/` };
 		routes[`${otherHost}/`] = { body: html("") };
 		routes[`${otherHost}/favicon.ico`] = { body: ico };
-		expect(await QrBit.fetchLogo(base)).toEqual(ico);
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(ico);
 		expect(requests).toContain(`${otherHost}/favicon.ico`);
 	});
 
 	it("falls back to /apple-touch-icon.png and then /favicon.ico", async () => {
 		routes["/"] = { body: html("") };
 		routes["/apple-touch-icon.png"] = { body: png };
-		expect(await QrBit.fetchLogo(base)).toEqual(png);
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(png);
 
 		delete routes["/apple-touch-icon.png"];
 		routes["/favicon.ico"] = { body: ico };
-		expect(await QrBit.fetchLogo(base)).toEqual(ico);
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(ico);
 	});
 
 	it("ignores a response that is larger than maxBytes", async () => {
@@ -236,19 +246,23 @@ describe("QrBit.fetchLogo", () => {
 			body: Buffer.concat([png, Buffer.alloc(4096)]),
 		};
 		routes["/favicon.ico"] = { body: ico };
-		expect(await QrBit.fetchLogo(base, { maxBytes: ico.length })).toEqual(ico);
+		expect(
+			await QrBit.fetchLogo(base, { ...allowAll, maxBytes: ico.length }),
+		).toEqual(ico);
 	});
 
 	it("ignores a response that takes longer than the timeout", async () => {
 		routes["/"] = { body: png, delay: 500 };
 		routes["/favicon.ico"] = { body: ico };
-		expect(await QrBit.fetchLogo(base, { timeout: 50 })).toEqual(ico);
+		expect(await QrBit.fetchLogo(base, { ...allowAll, timeout: 50 })).toEqual(
+			ico,
+		);
 	});
 
 	it("rejects when no image is found", async () => {
-		await expect(QrBit.fetchLogo(`${base}/nothing/here`)).rejects.toThrow(
-			`No logo found for ${base}/nothing/here`,
-		);
+		await expect(
+			QrBit.fetchLogo(`${base}/nothing/here`, allowAll),
+		).rejects.toThrow(`No logo found for ${base}/nothing/here`);
 		expect(hits["/apple-touch-icon.png"]).toBe(1);
 		expect(hits["/favicon.ico"]).toBe(1);
 	});
@@ -257,6 +271,62 @@ describe("QrBit.fetchLogo", () => {
 		await expect(QrBit.fetchLogo("file:///etc/passwd")).rejects.toThrow(
 			"Only http and https URLs are supported: file:///etc/passwd",
 		);
+	});
+
+	it("stops after 5 redirects", async () => {
+		routes["/loop"] = { redirect: "/loop" };
+		routes["/favicon.ico"] = { body: ico };
+		expect(await QrBit.fetchLogo(`${base}/loop`, allowAll)).toEqual(ico);
+		expect(hits["/loop"]).toBe(6);
+	});
+
+	it("ignores a redirect to a URL that is not http or https", async () => {
+		routes["/"] = { redirect: "file:///etc/passwd" };
+		routes["/favicon.ico"] = { body: ico };
+		expect(await QrBit.fetchLogo(base, allowAll)).toEqual(ico);
+	});
+});
+
+describe("QrBit.fetchLogo address rule", () => {
+	it.each([
+		["a loopback address", () => `${base}/logo.png`, "127.0.0.1"],
+		["an IPv6 loopback address", () => "http://[::1]:9/logo.png", "::1"],
+		[
+			"a cloud metadata address",
+			() => "http://169.254.169.254/latest/meta-data/",
+			"169.254.169.254",
+		],
+		["a private address", () => "http://10.0.0.1/", "10.0.0.1"],
+	])("blocks %s by default", async (_, url, address) => {
+		routes["/logo.png"] = { body: png };
+		await expect(QrBit.fetchLogo(url())).rejects.toThrow(
+			`The address ${address} of ${new URL(url()).href} is not allowed.`,
+		);
+		expect(requests).toEqual([]);
+	});
+
+	// Allow the first test server only, as an allowlist of one site.
+	const firstServerOnly = {
+		allowAddress: (_: string, url: URL) => url.origin === base,
+	};
+
+	it("checks each redirect of the page", async () => {
+		routes["/"] = { redirect: `${other}/logo.png` };
+		routes["/logo.png"] = { body: png };
+		await expect(QrBit.fetchLogo(base, firstServerOnly)).rejects.toThrow(
+			`of ${other}/logo.png is not allowed.`,
+		);
+		expect(requests).toEqual([`${new URL(base).host}/`]);
+	});
+
+	it("skips an icon link to an address that is not allowed", async () => {
+		routes["/"] = {
+			body: html(`<link rel="icon" sizes="512x512" href="${other}/big.png">`),
+		};
+		routes["/big.png"] = { body: png };
+		routes["/favicon.ico"] = { body: ico };
+		expect(await QrBit.fetchLogo(base, firstServerOnly)).toEqual(ico);
+		expect(requests).not.toContain(`${new URL(other).host}/big.png`);
 	});
 });
 
@@ -267,8 +337,16 @@ describe("QArt codes with a URL image", () => {
 		const cache = new Cacheable();
 		const image = new URL(`${base}/`);
 
-		const first = new QrBit({ text: "first", cache, qart: { image } });
-		const second = new QrBit({ text: "second", cache, qart: { image } });
+		const first = new QrBit({
+			text: "first",
+			cache,
+			qart: { image, fetchOptions: allowAll },
+		});
+		const second = new QrBit({
+			text: "second",
+			cache,
+			qart: { image, fetchOptions: allowAll },
+		});
 		for (const qr of [first, second]) {
 			const result = await QrBit.decodeDetailed(await qr.toPng());
 			expect(result.data).toBe(qr.text);
@@ -282,7 +360,7 @@ describe("QArt codes with a URL image", () => {
 		const errors: string[] = [];
 		const qr = new QrBit({
 			text: "favicon",
-			qart: { image: new URL(`${base}/`) },
+			qart: { image: new URL(`${base}/`), fetchOptions: allowAll },
 		});
 		qr.on("error", (message: string) => errors.push(message));
 		const result = await QrBit.decodeDetailed(await qr.toPng());
@@ -295,7 +373,7 @@ describe("QArt codes with a URL image", () => {
 		const qr = new QrBit({
 			text: "no cache",
 			cache: false,
-			qart: { image: new URL(`${base}/logo.png`) },
+			qart: { image: new URL(`${base}/logo.png`), fetchOptions: allowAll },
 		});
 		await qr.toSvg();
 		await qr.toSvg();
@@ -306,7 +384,7 @@ describe("QArt codes with a URL image", () => {
 		const errors: string[] = [];
 		const qr = new QrBit({
 			text: "no logo",
-			qart: { image: new URL(`${base}/`) },
+			qart: { image: new URL(`${base}/`), fetchOptions: allowAll },
 		});
 		qr.on("error", (message: string) => errors.push(message));
 		const result = await QrBit.decodeDetailed(await qr.toPng());
@@ -314,5 +392,31 @@ describe("QArt codes with a URL image", () => {
 		expect(errors).toEqual([
 			`QArt image could not be loaded: No logo found for ${base}/. Proceeding without QArt.`,
 		]);
+	});
+
+	it("does not use a logo that a different address rule downloaded", async () => {
+		// The first code allows the loopback address and puts the logo in the
+		// shared cache. The second code has the default rule, so it must not
+		// get that logo from the cache.
+		routes["/logo.png"] = { body: png };
+		const cache = new Cacheable();
+		const image = new URL(`${base}/logo.png`);
+		const allowed = new QrBit({
+			text: "same",
+			cache,
+			qart: { image, fetchOptions: allowAll },
+		});
+		await allowed.toSvg();
+		expect(hits["/logo.png"]).toBe(1);
+
+		const errors: string[] = [];
+		const blocked = new QrBit({ text: "same", cache, qart: { image } });
+		blocked.on("error", (message: string) => errors.push(message));
+		const svg = await blocked.toSvg();
+		expect(svg).toBe(await new QrBit({ text: "same" }).toSvg());
+		expect(errors).toEqual([
+			`QArt image could not be loaded: The address 127.0.0.1 of ${image.href} is not allowed. qrbit requests only public addresses. Use the allowAddress option to allow other addresses. Proceeding without QArt.`,
+		]);
+		expect(hits["/logo.png"]).toBe(1);
 	});
 });

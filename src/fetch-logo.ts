@@ -1,4 +1,8 @@
 import { Buffer } from "node:buffer";
+import dns from "node:dns";
+import http from "node:http";
+import https from "node:https";
+import net from "node:net";
 
 export type FetchLogoOptions = {
 	/**
@@ -14,12 +18,67 @@ export type FetchLogoOptions = {
 	 * @default 5242880
 	 */
 	maxBytes?: number;
+	/**
+	 * Return true to allow a request to an IP address. qrbit calls this
+	 * function for each request, redirect, icon link and fallback, with each
+	 * address that the host name resolves to, and connects only to an
+	 * allowed address. The default allows only public addresses, so a page
+	 * cannot make your server request a private network, a loopback address
+	 * or a cloud metadata service.
+	 * @type {(address: string, url: URL) => boolean}
+	 */
+	allowAddress?: (address: string, url: URL) => boolean;
 };
 
 type Download = { url: URL; body: Buffer };
 
 // Only the start of an HTML page is searched for icon links.
 const htmlSearchLimit = 1024 * 1024;
+
+// The largest number of redirects that one download follows.
+const redirectLimit = 5;
+
+// Addresses that are not on the public internet: private, loopback,
+// link-local (cloud metadata), shared, benchmark, multicast and reserved
+// ranges. BlockList also applies the IPv4 ranges to IPv4-mapped IPv6
+// addresses.
+const blockedRanges = new net.BlockList();
+for (const [network, prefix] of [
+	["0.0.0.0", 8],
+	["10.0.0.0", 8],
+	["100.64.0.0", 10],
+	["127.0.0.0", 8],
+	["169.254.0.0", 16],
+	["172.16.0.0", 12],
+	["192.0.0.0", 24],
+	["192.168.0.0", 16],
+	["198.18.0.0", 15],
+	["224.0.0.0", 3],
+] as const) {
+	blockedRanges.addSubnet(network, prefix, "ipv4");
+}
+for (const [network, prefix] of [
+	["::", 127],
+	["fc00::", 7],
+	["fe80::", 10],
+	["ff00::", 8],
+] as const) {
+	blockedRanges.addSubnet(network, prefix, "ipv6");
+}
+
+/** True if the address is on the public internet. */
+function isPublicAddress(address: string): boolean {
+	return !blockedRanges.check(address, net.isIPv4(address) ? "ipv4" : "ipv6");
+}
+
+/** A request to an address that `allowAddress` does not allow. */
+class BlockedAddressError extends Error {
+	constructor(url: URL, address: string) {
+		super(
+			`The address ${address} of ${url.href} is not allowed. qrbit requests only public addresses. Use the allowAddress option to allow other addresses`,
+		);
+	}
+}
 
 const namedReferences: Record<string, string> = {
 	amp: "&",
@@ -123,33 +182,95 @@ function findIcons(html: string, base: URL): URL[] {
 }
 
 /**
- * Download a URL. Returns undefined if the request fails, the status is not
- * 2xx, the time limit expires, or the body is larger than `maxBytes`.
+ * Send one GET request. The host name is resolved first, and each of its
+ * addresses must be allowed. The request then goes to the first allowed
+ * address, so a second DNS answer cannot change the destination.
+ */
+async function get(
+	url: URL,
+	signal: AbortSignal,
+	allowAddress: (address: string, url: URL) => boolean,
+): Promise<http.IncomingMessage> {
+	const hostname = url.hostname.replace(/^\[|\]$/g, "");
+	const addresses = await dns.promises.lookup(hostname, { all: true });
+	for (const { address } of addresses) {
+		if (!allowAddress(address, url)) {
+			throw new BlockedAddressError(url, address);
+		}
+	}
+	// IPv4 first, because many servers have no IPv6 route.
+	const { address } =
+		addresses.find(({ family }) => family === 4) ?? addresses[0];
+
+	const client = url.protocol === "https:" ? https : http;
+	return new Promise((resolve, reject) => {
+		client
+			.get(
+				{
+					host: address,
+					port: url.port,
+					path: `${url.pathname}${url.search}`,
+					servername: net.isIP(hostname) ? undefined : hostname,
+					headers: { host: url.host, "user-agent": "qrbit" },
+					signal,
+				},
+				resolve,
+			)
+			.on("error", reject);
+	});
+}
+
+/**
+ * Download a URL, and follow up to `redirectLimit` redirects. Returns
+ * undefined if a request fails, the status is not 2xx, a redirect goes to a
+ * URL that is not http or https, the time limit expires, or the body is
+ * larger than `maxBytes`. Throws `BlockedAddressError` if `allowAddress`
+ * does not allow an address of the URL or of a redirect.
  */
 async function download(
 	url: URL,
 	timeout: number,
 	maxBytes: number,
+	allowAddress: (address: string, url: URL) => boolean,
 ): Promise<Download | undefined> {
+	const signal = AbortSignal.timeout(timeout);
+	let current = url;
 	try {
-		const response = await fetch(url, { signal: AbortSignal.timeout(timeout) });
-		if (!response.ok) {
-			await response.body?.cancel();
-			return undefined;
-		}
-
-		const chunks: Buffer[] = [];
-		let total = 0;
-		for await (const chunk of response.body as AsyncIterable<Uint8Array>) {
-			total += chunk.length;
-			if (total > maxBytes) {
+		for (let redirects = 0; redirects <= redirectLimit; redirects++) {
+			if (current.protocol !== "http:" && current.protocol !== "https:") {
 				return undefined;
 			}
-			chunks.push(Buffer.from(chunk));
-		}
 
-		return { url: new URL(response.url), body: Buffer.concat(chunks) };
-	} catch {
+			const response = await get(current, signal, allowAddress);
+			const status = response.statusCode as number;
+			const location = response.headers.location;
+			if (status >= 300 && status < 400 && location) {
+				response.resume();
+				current = new URL(location, current);
+				continue;
+			}
+			if (status < 200 || status >= 300) {
+				response.resume();
+				return undefined;
+			}
+
+			const chunks: Buffer[] = [];
+			let total = 0;
+			for await (const chunk of response as AsyncIterable<Buffer>) {
+				total += chunk.length;
+				if (total > maxBytes) {
+					response.destroy();
+					return undefined;
+				}
+				chunks.push(chunk);
+			}
+			return { url: current, body: Buffer.concat(chunks) };
+		}
+		return undefined;
+	} catch (error) {
+		if (error instanceof BlockedAddressError) {
+			throw error;
+		}
 		return undefined;
 	}
 }
@@ -163,12 +284,15 @@ async function download(
  * 4. Return the first of these that is an image.
  *
  * Only `http:` and `https:` URLs are accepted. The function does not use a
- * third-party favicon service. Do not pass a URL from an untrusted source
- * without validation, because the request goes from your server.
+ * third-party favicon service. Each request, redirect, icon link and
+ * fallback goes only to addresses that `allowAddress` allows (by default,
+ * public addresses). An icon link or a fallback to a blocked address is
+ * skipped.
  * @param url - The website or image URL
- * @param options - Time and size limits
+ * @param options - Time and size limits, and the address rule
  * @returns {Promise<Buffer>} The image bytes
- * @throws {Error} If the URL is not http or https, or if no image is found
+ * @throws {Error} If the URL is not http or https, if the page or one of
+ * its redirects goes to a blocked address, or if no image is found
  */
 export async function fetchLogo(
 	url: string | URL,
@@ -181,8 +305,9 @@ export async function fetchLogo(
 
 	const timeout = options.timeout ?? 5000;
 	const maxBytes = options.maxBytes ?? 5 * 1024 * 1024;
+	const allowAddress = options.allowAddress ?? isPublicAddress;
 
-	const page = await download(target, timeout, maxBytes);
+	const page = await download(target, timeout, maxBytes, allowAddress);
 	if (page && isImage(page.body)) {
 		return page.body;
 	}
@@ -198,7 +323,12 @@ export async function fetchLogo(
 	);
 
 	for (const candidate of candidates) {
-		const icon = await download(candidate, timeout, maxBytes);
+		const icon = await download(
+			candidate,
+			timeout,
+			maxBytes,
+			allowAddress,
+		).catch(() => undefined);
 		if (icon && isImage(icon.body)) {
 			return icon.body;
 		}

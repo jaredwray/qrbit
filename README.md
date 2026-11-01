@@ -211,7 +211,7 @@ const qr = new QrBit({
 });
 ```
 
-> **Note:** The request goes from your server. Do not pass a URL from an untrusted source without validation. Only `http:` and `https:` URLs are accepted.
+> **Note:** The requests go from your server. qrbit requests only public IP addresses: it checks each request, redirect, icon link and fallback after the DNS lookup, and connects only to an address that it checked. So a page cannot make your server request a private network, a loopback address or a cloud metadata service. Only `http:` and `https:` URLs are accepted. To change the rule, set `fetchOptions.allowAddress`.
 
 # API
 
@@ -246,6 +246,7 @@ interface QArtOptions {
   errorCorrection?: ECLevel;       // Error correction of the QArt code (default: "L")
   style?: "dots" | "rounded" | "square"; // Shape of the dark modules (default: "dots")
   color?: "image" | "foreground";  // Source of the module colors (default: "image")
+  fetchOptions?: FetchLogoOptions; // Download options when image is a URL (see QrBit.fetchLogo)
 }
 
 interface toOptions {
@@ -379,6 +380,7 @@ Get or set the QArt options. A QArt code draws an image with the data modules. S
 - `errorCorrection` — the error correction level of the QArt code. It replaces `errorCorrection` for QArt output (default: "L").
 - `style` — the shape of the dark modules: `"dots"`, `"rounded"` or `"square"` (default: `"dots"`).
 - `color` — the source of the module colors. With `"image"`, the modules get the colors of the image. With `"foreground"`, all dark modules get `foregroundColor` (default: `"image"`).
+- `fetchOptions` — the options of the download when `image` is a URL: `timeout`, `maxBytes` and `allowAddress` (see [QrBit.fetchLogo](#qrbitfetchlogourl-string--url-options-fetchlogooptions)). By default, qrbit requests only public addresses.
 
 The `qart` option ignores the `logo` option and emits a `warn` event, because a logo covers data modules. If the image cannot be loaded, qrbit emits an `error` event and renders a standard QR code. If an invalid option is given or the image cannot be decoded, `toSvg()` rejects.
 
@@ -693,6 +695,7 @@ Get the logo of a website, or the image at a URL. Use the result as `logo` or as
 - `url: string | URL` - The website or image URL. Only `http:` and `https:` are accepted.
 - `options.timeout?: number` - The time limit for each request in milliseconds (default: 5000)
 - `options.maxBytes?: number` - The largest response body to accept, in bytes (default: 5242880)
+- `options.allowAddress?: (address: string, url: URL) => boolean` - Return true to allow a request to an IP address. qrbit calls it for each request, redirect, icon link and fallback, with each address of the host name. The default allows only public addresses.
 
 **Returns:** Promise<Buffer> - The image bytes. The promise rejects if no image is found.
 
@@ -701,7 +704,13 @@ const logo = await QrBit.fetchLogo("https://github.com");
 const qr = new QrBit({ text: "https://github.com", logo });
 ```
 
-> **Note:** The request goes from your server. Do not pass a URL from an untrusted source without validation.
+> **Note:** The requests go from your server. By default, qrbit requests only public IP addresses, and it checks each redirect, icon link and fallback after the DNS lookup. If the page or one of its redirects goes to a blocked address, the promise rejects. An icon link to a blocked address is skipped. To get a logo from your own network, allow its addresses:
+>
+> ```javascript
+> const logo = await QrBit.fetchLogo("http://intranet.example/", {
+>   allowAddress: (address) => address.startsWith("10.1."),
+> });
+> ```
 
 # Benchmarks
 

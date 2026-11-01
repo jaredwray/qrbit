@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Cacheable } from "cacheable";
@@ -50,6 +51,24 @@ const qartLowMatchMessage = (matched: number, target: number) =>
 // Below this fraction of matched modules, the image is too large or too
 // detailed for the QR version.
 const qartMatchWarningRatio = 0.9;
+
+// A cache key for each address rule of a download, so that a logo that one
+// rule downloads is never used for a different rule. The default rule has a
+// fixed key. Each custom rule function gets a random key in this process.
+const addressRuleKeys = new WeakMap<object, string>();
+
+function addressRuleKey(options: FetchLogoOptions | undefined): string {
+	const rule = options?.allowAddress;
+	if (!rule) {
+		return "public";
+	}
+	let key = addressRuleKeys.get(rule);
+	if (!key) {
+		key = randomUUID();
+		addressRuleKeys.set(rule, key);
+	}
+	return key;
+}
 
 /**
  * The shape of the dark modules of a QArt code.
@@ -128,6 +147,13 @@ export type QArtOptions = {
 	 * @default "image"
 	 */
 	color?: QArtColor;
+	/**
+	 * The options of the download when `image` is a URL: the time limit, the
+	 * size limit and the address rule (see `QrBit.fetchLogo`). By default,
+	 * qrbit requests only public addresses.
+	 * @type {FetchLogoOptions}
+	 */
+	fetchOptions?: FetchLogoOptions;
 };
 
 export type QrOptions = {
@@ -605,7 +631,7 @@ export class QrBit extends Hookified {
 
 		let image: Buffer;
 		try {
-			image = await this.resolveQArtImage(qart.image, cache);
+			image = await this.resolveQArtImage(qart.image, cache, qart.fetchOptions);
 		} catch (error) {
 			this.emit(
 				QrBitEvents.error,
@@ -648,6 +674,7 @@ export class QrBit extends Hookified {
 	private async resolveQArtImage(
 		image: string | Buffer | URL,
 		cache: Cacheable | undefined,
+		fetchOptions: FetchLogoOptions | undefined,
 	): Promise<Buffer> {
 		if (Buffer.isBuffer(image)) {
 			return image;
@@ -657,13 +684,13 @@ export class QrBit extends Hookified {
 			return fs.promises.readFile(image);
 		}
 
-		const cacheKey = `fetch-logo:${image.href}`;
+		const cacheKey = `fetch-logo:${addressRuleKey(fetchOptions)}:${image.href}`;
 		const cached = await cache?.get<Buffer>(cacheKey);
 		if (cached) {
 			return Buffer.from(cached);
 		}
 
-		const logo = await fetchLogo(image);
+		const logo = await fetchLogo(image, fetchOptions);
 		await cache?.set(cacheKey, logo);
 		return logo;
 	}
@@ -1108,9 +1135,10 @@ export class QrBit extends Hookified {
 	 * `logo` or as `qart.image`. The function reads the icon links of the
 	 * page, then tries `/apple-touch-icon.png` and `/favicon.ico`. It does
 	 * not use a third-party favicon service. Only `http:` and `https:` URLs
-	 * are accepted. Validate URLs from untrusted sources before you call it.
+	 * are accepted. Each request, redirect, icon link and fallback goes only
+	 * to public addresses, unless `options.allowAddress` allows others.
 	 * @param url - The website or image URL
-	 * @param options - Time and size limits for each request
+	 * @param options - Time and size limits for each request, and the address rule
 	 * @returns {Promise<Buffer>} The image bytes
 	 * @throws {Error} If the URL is not http or https, or if no image is found
 	 */
@@ -1144,6 +1172,10 @@ export class QrBit extends Hookified {
 					this._qart.image instanceof URL
 						? this._qart.image.href
 						: this._qart.image,
+				fetchOptions: this._qart.fetchOptions && {
+					...this._qart.fetchOptions,
+					allowAddress: addressRuleKey(this._qart.fetchOptions),
+				},
 			},
 			renderKey,
 		};
