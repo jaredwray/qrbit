@@ -172,8 +172,9 @@ qrbit uses the QArt method by Russ Cox. Decoders stop at the end of the text, so
 The rules for the image are:
 
 - Opaque dark areas and opaque strong colors become dark modules. Opaque white and light grey areas become light modules. The `threshold` option sets the limit.
-- Transparent areas stay free for the QR data, so they show as QR noise.
-- Transparent modules next to a dark area become light, so that the shape stands out.
+- The background of the image stays free for the QR data, so it shows as QR noise. The background is the transparent area that touches the edge of the image, or a plain light area that fills most of the edge. A light shape that only touches the edge, such as the stem of a letter, stays light.
+- Background modules next to a dark area become light, so that the shape stands out.
+- A transparent hole inside the image becomes light modules.
 - Function patterns (finder, timing and alignment patterns) do not change. The modules that hold the text do not change.
 
 The dark modules get the colors of the image. A module in the image gets the color of the image at that point. The other modules get the most common dark color of the image. Decoders read a module as dark only if its luminance is far from the background and near the other dark modules. So qrbit makes a color darker (or lighter on a dark background) if it is too near to the background color. qrbit also keeps all module colors in a small luminance range around the most common color. The hue of a color does not change. Set `color: "foreground"` to draw all dark modules in `foregroundColor`.
@@ -195,7 +196,7 @@ const qr = new QrBit({
 
 To get a good result:
 
-- Use a logo with a transparent background and a simple shape.
+- Use a logo with a transparent or plain light background and a simple shape.
 - Use a higher `version` for more detail. Each version adds 4 modules to each side.
 - Use a smaller `sizeRatio` if qrbit emits a `warn` event about matched modules.
 - Use a large `size` for print. The default margin is a quiet zone of 4 modules.
@@ -1035,7 +1036,7 @@ await qr.toPngFile("21_mosaic_svg_logo.png");
 ![Mosaic with an SVG Logo](examples/21_mosaic_svg_logo.png)
 
 ## 22. Mosaic with a PNG Logo, Joined Modules and a Blue Theme
-Mosaic QR code with a PNG logo, version 10, and a smaller image area. The `rounded` style joins the dark modules into shapes with round corners, and `color: "foreground"` draws all modules in blue. The transparent center of the logo shows as QR data.
+Mosaic QR code with a PNG logo, version 10, and a smaller image area. The `rounded` style joins the dark modules into shapes with round corners, and `color: "foreground"` draws all modules in blue. The logo encloses its transparent center, so the center becomes light modules.
 ```javascript
 const qr = new QrBit({
   text: "https://github.com/jaredwray/qrbit",

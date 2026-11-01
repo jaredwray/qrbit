@@ -139,6 +139,24 @@ function darkRatio(
 	return dark / ((to - from) * (colTo - colFrom));
 }
 
+/** Fraction of light modules on the square ring from `from` to `to`. */
+function lightRing(grid: boolean[][], from: number, to: number): number {
+	let light = 0;
+	let ring = 0;
+	for (let i = from; i <= to; i++) {
+		for (const [row, col] of [
+			[from, i],
+			[to, i],
+			[i, from],
+			[i, to],
+		]) {
+			ring++;
+			light += grid[row][col] ? 0 : 1;
+		}
+	}
+	return light / ring;
+}
+
 async function renderGrid(mosaic: Omit<MosaicOptions, "version">) {
 	const qr = new QrBit({ text, size, mosaic: { version, ...mosaic } });
 	return moduleGrid(await qr.toSvg({ cache: false }));
@@ -395,21 +413,59 @@ describe("Mosaic QR codes", () => {
 			sizeRatio: 30 / modules,
 		});
 		expect(darkRatio(grid, 27, 37)).toBeGreaterThan(0.85);
+		expect(lightRing(grid, 26, 37)).toBeGreaterThan(0.9);
+	});
 
-		let light = 0;
-		let ring = 0;
-		for (let i = 26; i <= 37; i++) {
-			for (const [row, col] of [
-				[26, i],
-				[37, i],
-				[i, 26],
-				[i, 37],
-			]) {
-				ring++;
-				light += grid[row][col] ? 0 : 1;
-			}
+	it("leaves a plain light background around a dark shape to the QR data", async () => {
+		// The light grey background touches the edge of the image, so it is
+		// free like a transparent background. The dark square covers modules
+		// 27 to 36, with a light halo around it.
+		const grid = await renderGrid({
+			image: svgImage(
+				`<rect width="30" height="30" fill="#F2F2F2"/><rect x="10" y="10" width="10" height="10" fill="#000"/>`,
+				"0 0 30 30",
+			),
+			sizeRatio: 30 / modules,
+		});
+		expect(darkRatio(grid, 27, 37)).toBeGreaterThan(0.85);
+		expect(lightRing(grid, 26, 37)).toBeGreaterThan(0.9);
+		for (const [from, to] of [
+			[18, 25],
+			[39, 46],
+		]) {
+			expect(darkRatio(grid, from, to)).toBeGreaterThan(0.2);
+			expect(darkRatio(grid, from, to)).toBeLessThan(0.8);
 		}
-		expect(light / ring).toBeGreaterThan(0.9);
+	});
+
+	it("makes a transparent hole inside a dark shape light", async () => {
+		// The dark frame covers the whole image. The background cannot reach
+		// the transparent hole at modules 18 to 24, so the hole is light. The
+		// hole is away from the alignment pattern at (32, 32).
+		const grid = await renderGrid({
+			image: svgImage(
+				`<path d="M0 0h30v30H0z M2 2h7v7H2z" fill="#000" fill-rule="evenodd"/>`,
+				"0 0 30 30",
+			),
+			sizeRatio: 30 / modules,
+		});
+		expect(darkRatio(grid, 19, 24)).toBeLessThan(0.1);
+		expect(darkRatio(grid, 36, 45, 18, 45)).toBeGreaterThan(0.85);
+	});
+
+	it("keeps a light shape that touches the edge of the image light", async () => {
+		// The white bar goes down to the bottom edge, like the stem of a
+		// letter in a round logo. It fills only a small part of the edge, so
+		// it is not a background. The bar covers columns 36 to 40 and rows 30
+		// to 46, away from the alignment pattern at (32, 32).
+		const grid = await renderGrid({
+			image: svgImage(
+				`<rect x="3" y="3" width="24" height="27" fill="#000"/><rect x="19" y="13" width="5" height="17" fill="#fff"/>`,
+				"0 0 30 30",
+			),
+			sizeRatio: 30 / modules,
+		});
+		expect(darkRatio(grid, 31, 46, 37, 40)).toBeLessThan(0.1);
 	});
 
 	it("uses the threshold to select dark and light modules", async () => {

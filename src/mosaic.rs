@@ -40,6 +40,10 @@ const TEXTURE_RATE: u32 = 6;
 /// starts. The edge of the area stays exact.
 const TEXTURE_DEPTH: isize = 2;
 
+/// The largest difference per channel, in levels, between a light cell and
+/// the background color for the cell to be part of the background.
+const BACKGROUND_TOLERANCE: u8 = 32;
+
 pub struct MosaicOutput {
     pub matrix: BitMatrix,
     pub version: usize,
@@ -386,13 +390,89 @@ pub fn module_colors(
         .collect()
 }
 
+/// The cells of the background of the image: the transparent cells and the
+/// light cells of the background color that a 4-connected path of such
+/// cells joins to the edge of the image area. The background color is the
+/// most common color of the opaque light cells on the edge, if cells of that
+/// color fill more than half of the edge. A light shape that only touches
+/// the edge, such as the stem of a letter, is not a background. A
+/// transparent cell that the background does not reach is a hole in the
+/// image.
+fn background_cells(cells: &[Option<Cell>], area: usize) -> Vec<bool> {
+    let is_edge = |i: usize| {
+        let (y, x) = (i / area, i % area);
+        y == 0 || x == 0 || y == area - 1 || x == area - 1
+    };
+    let near = |cell: &Cell, color: [u8; 3]| {
+        !cell.dark
+            && cell
+                .color
+                .iter()
+                .zip(color)
+                .all(|(&c, b)| c.abs_diff(b) <= BACKGROUND_TOLERANCE)
+    };
+
+    let mut edge_bins = ColorBins::default();
+    for (i, cell) in cells.iter().enumerate() {
+        if let Some(cell) = cell {
+            if is_edge(i) && !cell.dark {
+                edge_bins.add(cell.color.map(f32::from), cell.coverage);
+            }
+        }
+    }
+    let edge: Vec<usize> = (0..area * area).filter(|&i| is_edge(i)).collect();
+    let background_color = edge_bins.largest().filter(|&color| {
+        let filled = edge
+            .iter()
+            .filter(|&&i| matches!(&cells[i], Some(cell) if near(cell, color)))
+            .count();
+        2 * filled > edge.len()
+    });
+    let passable = |i: usize| match (&cells[i], background_color) {
+        (None, _) => true,
+        (Some(cell), Some(color)) => near(cell, color),
+        (Some(_), None) => false,
+    };
+
+    let mut background = vec![false; area * area];
+    let mut stack: Vec<usize> = (0..area * area)
+        .filter(|&i| is_edge(i) && passable(i))
+        .collect();
+    for &i in &stack {
+        background[i] = true;
+    }
+    while let Some(i) = stack.pop() {
+        let (y, x) = (i / area, i % area);
+        let mut visit = |j: usize| {
+            if !background[j] && passable(j) {
+                background[j] = true;
+                stack.push(j);
+            }
+        };
+        if x > 0 {
+            visit(i - 1);
+        }
+        if x + 1 < area {
+            visit(i + 1);
+        }
+        if y > 0 {
+            visit(i - area);
+        }
+        if y + 1 < area {
+            visit(i + area);
+        }
+    }
+    background
+}
+
 /// The wanted value of the modules inside the centered image area, with a
 /// priority, and the colors of the image. Each module with at least half
 /// coverage gets the value of the image there: dark if the whiteness (the
 /// smallest RGB channel) of its average color is below `threshold`.
-/// Transparent modules next to a dark module become light, so that the
-/// shape stands out. Other transparent modules stay free. Edge modules
-/// come first, then the modules nearer to the center.
+/// The background of the image is free, and a background module next to a
+/// dark module becomes light, so that the shape stands out. A transparent
+/// hole inside the image becomes light. Edge modules come first, then the
+/// modules nearer to the center.
 fn sample_targets(
     image_bytes: &[u8],
     skeleton: &BitMatrix,
@@ -456,8 +536,23 @@ fn sample_targets(
         }
     }
 
-    // Some(true) = dark, Some(false) = light, None = transparent.
-    let cells: Vec<Option<bool>> = cells.iter().map(|c| c.map(|c| c.dark)).collect();
+    // Some(true) = dark, Some(false) = light, None = free. The background
+    // is free, and a transparent hole in the image is light.
+    let has_dark = cells.iter().flatten().any(|cell| cell.dark);
+    let background = if has_dark {
+        background_cells(&cells, area)
+    } else {
+        vec![false; area * area]
+    };
+    let cells: Vec<Option<bool>> = cells
+        .iter()
+        .enumerate()
+        .map(|(i, cell)| match cell {
+            _ if background[i] => None,
+            None => has_dark.then_some(false),
+            Some(cell) => Some(cell.dark),
+        })
+        .collect();
     let neighbor = |cells: &[Option<bool>], my: usize, mx: usize, oy: isize, ox: isize| {
         let (ny, nx) = (my as isize + oy, mx as isize + ox);
         if ny < 0 || nx < 0 || ny as usize >= area || nx as usize >= area {
