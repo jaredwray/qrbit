@@ -234,7 +234,7 @@ interface QrOptions {
   backgroundColor?: string;        // Background color (default: "#FFFFFF")
   foregroundColor?: string;        // Foreground color (default: "#000000")
   errorCorrection?: ECLevel;       // "L"|"M"|"Q"|"H"|"Low"|"Medium"|"Quartile"|"High" (default: "M")
-  qart?: QArtOptions;          // Draw an image with the data modules (default: undefined)
+  qart?: QArtOptions;              // Draw an image with the data modules (default: undefined)
   cache?: Cacheable | boolean;     // Caching configuration (default: true)
 }
 

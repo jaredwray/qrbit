@@ -30,7 +30,10 @@ QrBit is a fast QR code generator with logo embedding support, built with Rust (
 - `src/qrbit.ts` - Main TypeScript class with QR code generation logic
 - `src/lib.rs` - Rust native module: napi bindings, logo embedding, SVG to PNG/JPEG/WebP conversion, decoding
 - `src/nodeqr.rs` - Rust port of `node-qrcode` (encoder + SVG renderer) producing byte-identical SVG output
-- `test/` - Vitest test files (`test/parity.test.ts` asserts SVG parity with `node-qrcode`)
+- `src/qart.rs` - QArt solver: image sampling, background and hole rules, free-bit elimination, module colors
+- `src/qart_svg.rs` - SVG renderer for QArt codes (dots, rounded and square styles)
+- `src/fetch-logo.ts` - Gets the logo of a website for the `qart` option (`QrBit.fetchLogo`)
+- `test/` - Vitest test files (`test/parity.test.ts` asserts SVG parity with `node-qrcode`, `test/qart.test.ts` tests QArt codes)
 - `benchmark/` - Performance benchmark scripts
 - `examples/` - Generated example QR codes
 
