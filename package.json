@@ -41,7 +41,7 @@
 		"benchmark:logo": "tsx benchmark/qrcode-logo.ts",
 		"benchmark": "pnpm build:release && pnpm benchmark:svg && pnpm benchmark:png && pnpm benchmark:jpg && pnpm benchmark:webp && pnpm benchmark:logo",
 		"benchmark:readme": "pnpm build:release && pnpm tsx benchmark/update-readme.ts",
-		"generate-examples": "rimraf ./examples && pnpm tsx ./scripts/generate-examples.ts",
+		"generate-examples": "pnpm tsx ./scripts/generate-examples.ts",
 		"artifacts": "napi artifacts",
 		"version": "napi version"
 	},

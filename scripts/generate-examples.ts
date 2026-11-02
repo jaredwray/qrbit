@@ -13,6 +13,14 @@ async function ensureDirectory(dirPath: string): Promise<void> {
 
 async function generateExample(spec: ExampleSpec): Promise<void> {
 	const qr = new QrBit(buildOptions(spec));
+	// Drop a previous file for this example when its format changes. Other
+	// files in the directory, such as the QArt website screenshots, stay.
+	const existing = await fs.promises.readdir(OUTPUT_DIR);
+	await Promise.all(
+		existing
+			.filter((file) => file.startsWith(`${spec.name}.`))
+			.map((file) => fs.promises.unlink(path.join(OUTPUT_DIR, file))),
+	);
 	const filename = path.join(OUTPUT_DIR, `${spec.name}.${spec.format}`);
 	switch (spec.format) {
 		case "png":
