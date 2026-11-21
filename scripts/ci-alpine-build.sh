@@ -23,6 +23,14 @@ rustup-init -y --no-modify-path --profile minimal --default-toolchain stable --t
 PATH="${HOME}/.cargo/bin:${PATH}"
 export PATH
 
+# For aarch64-unknown-linux-musl, napi-rs sets the Cargo linker variable to
+# aarch64-linux-musl-gcc, a cross-compile linker. This variable overrides
+# .cargo/config.toml, and Alpine does not have that linker. This build is
+# native, so set the linker to clang, as .cargo/config.toml does. napi-rs
+# does not change a linker variable that is already set.
+linker_var="CARGO_TARGET_$(printf '%s' "$target" | tr 'a-z-' 'A-Z_')_LINKER"
+export "${linker_var}=clang"
+
 node_modules/.bin/napi build --platform --release --output-dir src --no-js \
 	--dts generated-napi.d.ts --target "$target"
 node_modules/.bin/tsdown
