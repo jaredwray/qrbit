@@ -4,14 +4,17 @@ import { createRequire } from "node:module";
 /**
  * Hand-written napi-rs loader. Stock `@napi-rs/cli` bindings spawn `ldd` and
  * try optional packages for triples this package does not ship. This file
- * loads only the five published `.node` artifacts and detects musl via
+ * loads only the eight published `.node` artifacts and detects musl via
  * `/usr/bin/ldd` and `process.report`.
  */
 export const SUPPORTED_NATIVE_BINDINGS = [
 	"qrbit.darwin-arm64.node",
 	"qrbit.darwin-x64.node",
+	"qrbit.linux-arm64-gnu.node",
+	"qrbit.linux-arm64-musl.node",
 	"qrbit.linux-x64-gnu.node",
 	"qrbit.linux-x64-musl.node",
+	"qrbit.win32-arm64-msvc.node",
 	"qrbit.win32-x64-msvc.node",
 ] as const;
 
@@ -184,11 +187,21 @@ export function resolveNativeBindingName(
 			return "qrbit.darwin-x64.node";
 		}
 	} else if (platform === "linux") {
+		if (arch === "arm64") {
+			return isMusl
+				? "qrbit.linux-arm64-musl.node"
+				: "qrbit.linux-arm64-gnu.node";
+		}
 		if (arch === "x64") {
 			return isMusl ? "qrbit.linux-x64-musl.node" : "qrbit.linux-x64-gnu.node";
 		}
-	} else if (platform === "win32" && arch === "x64") {
-		return "qrbit.win32-x64-msvc.node";
+	} else if (platform === "win32") {
+		if (arch === "arm64") {
+			return "qrbit.win32-arm64-msvc.node";
+		}
+		if (arch === "x64") {
+			return "qrbit.win32-x64-msvc.node";
+		}
 	}
 
 	throw new Error(

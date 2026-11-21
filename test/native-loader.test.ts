@@ -32,12 +32,15 @@ describe("native loader policy", () => {
 		}
 	});
 
-	it("lists only the five published bindings", () => {
+	it("lists only the eight published bindings", () => {
 		expect(SUPPORTED_NATIVE_BINDINGS).toEqual([
 			"qrbit.darwin-arm64.node",
 			"qrbit.darwin-x64.node",
+			"qrbit.linux-arm64-gnu.node",
+			"qrbit.linux-arm64-musl.node",
 			"qrbit.linux-x64-gnu.node",
 			"qrbit.linux-x64-musl.node",
+			"qrbit.win32-arm64-msvc.node",
 			"qrbit.win32-x64-msvc.node",
 		]);
 	});
@@ -198,18 +201,27 @@ describe("resolveNativeBindingName", () => {
 		expect(SUPPORTED_NATIVE_BINDINGS).toContain(resolveNativeBindingName());
 	});
 
-	it("resolves the five published triples", () => {
+	it("resolves the eight published triples", () => {
 		expect(resolveNativeBindingName("darwin", "arm64")).toBe(
 			"qrbit.darwin-arm64.node",
 		);
 		expect(resolveNativeBindingName("darwin", "x64")).toBe(
 			"qrbit.darwin-x64.node",
 		);
+		expect(resolveNativeBindingName("linux", "arm64", false)).toBe(
+			"qrbit.linux-arm64-gnu.node",
+		);
+		expect(resolveNativeBindingName("linux", "arm64", true)).toBe(
+			"qrbit.linux-arm64-musl.node",
+		);
 		expect(resolveNativeBindingName("linux", "x64", false)).toBe(
 			"qrbit.linux-x64-gnu.node",
 		);
 		expect(resolveNativeBindingName("linux", "x64", true)).toBe(
 			"qrbit.linux-x64-musl.node",
+		);
+		expect(resolveNativeBindingName("win32", "arm64")).toBe(
+			"qrbit.win32-arm64-msvc.node",
 		);
 		expect(resolveNativeBindingName("win32", "x64")).toBe(
 			"qrbit.win32-x64-msvc.node",
@@ -232,11 +244,11 @@ describe("resolveNativeBindingName", () => {
 		expect(() => resolveNativeBindingName("darwin", "ia32")).toThrow(
 			/Unsupported platform darwin-ia32/,
 		);
-		expect(() => resolveNativeBindingName("linux", "arm64", false)).toThrow(
-			/Unsupported platform linux-arm64/,
+		expect(() => resolveNativeBindingName("linux", "arm", false)).toThrow(
+			/Unsupported platform linux-arm\./,
 		);
-		expect(() => resolveNativeBindingName("win32", "arm64")).toThrow(
-			/Unsupported platform win32-arm64/,
+		expect(() => resolveNativeBindingName("win32", "ia32")).toThrow(
+			/Unsupported platform win32-ia32/,
 		);
 		expect(() => resolveNativeBindingName("freebsd", "x64")).toThrow(
 			/Unsupported platform freebsd-x64/,
