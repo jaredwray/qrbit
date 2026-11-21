@@ -70,9 +70,9 @@ jobs:
             target: x86_64-pc-windows-msvc
             triple: win32-x64-msvc
             test: true
-          # SocketDev/action has no Windows arm64 sfw binary, so this job
-          # cannot use windows-11-arm. The x64 runner cross-compiles the
-          # binding and cannot run it, so the tests do not run.
+          # SocketDev/action has no sfw binary for Windows arm64. Thus this
+          # job cannot use windows-11-arm. The x64 runner cross-compiles the
+          # binding and cannot load it. Thus the test-win32-arm64 job loads it.
           - os: windows-latest
             arch: arm64
             target: aarch64-pc-windows-msvc
@@ -177,6 +177,7 @@ jobs:
         with:
           name: qa-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.target }}
           path: dist/qrbit.${{ matrix.triple }}.node
+          if-no-files-found: error
 
   # GitHub Actions cannot run JavaScript actions in an Alpine job container on
   # arm64 runners. Thus the runner installs node_modules with the musl builds
@@ -216,6 +217,7 @@ jobs:
           ALPINE_IMAGE: node:22.23.2-alpine3.24@sha256:b6f26b36c8ff49624cfdac716b8ea1138d606df02586a77d364bb5536a634f85
         run: |
           docker run --rm \
+            --env CI \
             --volume "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}" \
             --workdir "${GITHUB_WORKSPACE}" \
             "${ALPINE_IMAGE}" \
@@ -226,10 +228,40 @@ jobs:
         with:
           name: qa-ubuntu-24.04-arm-arm64-aarch64-unknown-linux-musl
           path: dist/qrbit.linux-arm64-musl.node
+          if-no-files-found: error
+
+  # The build-artifacts job cross-compiles the Windows arm64 binding on x64.
+  # This job loads that binding on Windows arm64. The job installs no npm
+  # packages, thus it does not need sfw.
+  test-win32-arm64:
+    name: test-win32-arm64
+    needs: [build-artifacts]
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Download Artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: qa-windows-latest-arm64-aarch64-pc-windows-msvc
+          path: artifacts
+
+      - name: Smoke Test
+        run: node scripts/smoke-native.cjs artifacts/qrbit.win32-arm64-msvc.node
 
   build-release:
     name: build-release
-    needs: [build-artifacts, build-artifacts-linux-arm64-musl, aikido-gate]
+    needs: [build-artifacts, build-artifacts-linux-arm64-musl, test-win32-arm64, aikido-gate]
     runs-on: ubuntu-latest
 
     # OIDC Trusted Publishing requires id-token: write so pnpm can mint an
@@ -285,6 +317,20 @@ jobs:
       - name: Show Dist
         run: |
             ls -alh ./dist
+
+      # Stop the release if a native binding is missing from dist.
+      - name: Check Native Bindings
+        run: |
+          node --input-type=module -e '
+            import { existsSync } from "node:fs";
+            import { SUPPORTED_NATIVE_BINDINGS } from "./dist/native.js";
+            const missing = SUPPORTED_NATIVE_BINDINGS.filter((name) => !existsSync(`dist/${name}`));
+            if (missing.length > 0) {
+              console.error(`dist is missing native bindings: ${missing.join(", ")}`);
+              process.exit(1);
+            }
+            console.log(`dist holds all ${SUPPORTED_NATIVE_BINDINGS.length} native bindings.`);
+          '
 
       # Stages via OIDC Trusted Publishing (no token). The trusted publisher
       # on npmjs.com must be stage-only so this job cannot publish live.

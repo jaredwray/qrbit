@@ -145,14 +145,15 @@ jobs:
           ALPINE_IMAGE: node:22.23.2-alpine3.24@sha256:b6f26b36c8ff49624cfdac716b8ea1138d606df02586a77d364bb5536a634f85
         run: |
           docker run --rm \
+            --env CI \
             --volume "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}" \
             --workdir "${GITHUB_WORKSPACE}" \
             "${ALPINE_IMAGE}" \
             sh scripts/ci-alpine-build.sh aarch64-unknown-linux-musl
 
-  # SocketDev/action has no Windows arm64 sfw binary, so this job cannot use
-  # windows-11-arm. The x64 runner cross-compiles the binding to make sure
-  # that it builds. The runner cannot load the binding, so no tests run.
+  # SocketDev/action has no sfw binary for Windows arm64. Thus this job cannot
+  # use windows-11-arm. The x64 runner cross-compiles the binding and cannot
+  # load it. Thus the test-windows-arm64 job loads it.
   build-windows-arm64:
     name: build-windows-arm64
     runs-on: windows-latest
@@ -192,3 +193,38 @@ jobs:
 
       - name: Build
         run: pnpm napi build --platform --release --output-dir src --no-js --dts generated-napi.d.ts --target aarch64-pc-windows-msvc
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: qrbit-win32-arm64-msvc
+          path: src/qrbit.win32-arm64-msvc.node
+          if-no-files-found: error
+
+  # This job loads the Windows arm64 binding from build-windows-arm64 on
+  # Windows arm64. The job installs no npm packages, thus it does not need sfw.
+  test-windows-arm64:
+    name: tests-windows-arm64
+    needs: [build-windows-arm64]
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Download Artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: qrbit-win32-arm64-msvc
+          path: artifacts
+
+      - name: Smoke Test
+        run: node scripts/smoke-native.cjs artifacts/qrbit.win32-arm64-msvc.node
