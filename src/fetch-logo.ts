@@ -260,11 +260,10 @@ async function get(
  */
 async function download(
 	url: URL,
-	timeout: number,
+	signal: AbortSignal,
 	maxBytes: number,
 	allowAddress: (address: string, url: URL) => boolean,
 ): Promise<Download | undefined> {
-	const signal = AbortSignal.timeout(timeout);
 	let current = url;
 	try {
 		for (let redirects = 0; redirects <= redirectLimit; redirects++) {
@@ -344,7 +343,12 @@ export async function fetchLogo(
 	const maxBytes = options.maxBytes ?? 5 * 1024 * 1024;
 	const allowAddress = options.allowAddress ?? isPublicAddress;
 
-	const page = await download(target, timeout, maxBytes, allowAddress);
+	const page = await download(
+		target,
+		AbortSignal.timeout(timeout),
+		maxBytes,
+		allowAddress,
+	);
 	if (page && isImage(page.body)) {
 		return page.body;
 	}
@@ -364,16 +368,16 @@ export async function fetchLogo(
 		new URL("/favicon.ico", site),
 	]);
 
-	// All icon downloads together have one time limit.
-	const deadline = Date.now() + timeout;
+	// All icon downloads share one time limit. The loop stops when this
+	// signal aborts, so the next icon does not start.
+	const signal = AbortSignal.timeout(timeout);
 	for (const candidate of candidates) {
-		const remaining = deadline - Date.now();
-		if (remaining <= 0) {
+		if (signal.aborted) {
 			break;
 		}
 		const icon = await download(
 			candidate,
-			remaining,
+			signal,
 			maxBytes,
 			allowAddress,
 		).catch(() => undefined);
